@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Alert, Card, CardBody, CardHeader, EmptyState, PageHeader, Stat, Table, Td, Th, THead, Tr } from "@/components/ui";
-import { SubmitButton } from "@/components/ui-client";
+import { ActionForm, SubmitButton } from "@/components/ui-client";
 import { db } from "@/server/db";
 import { requireSubrinhoUser } from "@/server/auth/session";
 import { getOwnedCoupon } from "@/server/admin/coupons";
@@ -13,7 +13,6 @@ import { ACTIVE_CATEGORIES, CATEGORY_LABEL, FUTURE_CATEGORIES } from "@/server/s
 import { brl, dateTime, orderNumber } from "@/lib/format";
 import { ActiveBadge, Fit, OrderStatusBadge, ReadOnlyNotice } from "../../../_components/bits";
 import { InlineActionButton } from "../../../_components/inline-action";
-import { StickyActionForm } from "../../../_components/sticky-form";
 import { toLocalInput } from "../../../_lib/dates";
 import { isUuid } from "../../../_lib/form";
 import { canDo, PERMS } from "../../../_lib/labels";
@@ -76,7 +75,7 @@ export default async function SubrinhoCouponPage({
           <CardHeader title="Configuração" />
           <CardBody className="py-5">
             {!canEdit && <ReadOnlyNotice>Somente Administradores podem alterar cupons.</ReadOnlyNotice>}
-            <StickyActionForm action={updateSubrinhoCouponAction} className="mt-2 space-y-6">
+            <ActionForm action={updateSubrinhoCouponAction} className="mt-2 space-y-6">
               <input type="hidden" name="id" value={c.id} />
               <fieldset disabled={!canEdit} className="disabled:opacity-80">
                 <CouponFields
@@ -105,7 +104,7 @@ export default async function SubrinhoCouponPage({
                   <SubmitButton>Salvar cupom</SubmitButton>
                 </div>
               )}
-            </StickyActionForm>
+            </ActionForm>
           </CardBody>
         </Card>
 

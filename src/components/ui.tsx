@@ -127,7 +127,7 @@ export function Stat({ label, value, hint, tone = "default", icon }: { label: st
         <span>{label}</span>
         {icon}
       </div>
-      <div className="mt-2 text-2xl font-black tracking-tight tabular">{value}</div>
+      <div className="mt-2 min-w-0 text-2xl font-black tracking-tight tabular [overflow-wrap:anywhere]">{value}</div>
       {hint && <div className={cn("mt-1 text-xs", sub)}>{hint}</div>}
     </div>
   );
@@ -148,7 +148,7 @@ export function EmptyState({ title, description, action, icon }: { title: string
 
 export function Table({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("overflow-x-auto", className)}>
+    <div className={cn("relative overflow-x-auto", className)}>
       <table className="w-full min-w-full text-left text-sm">{children}</table>
     </div>
   );

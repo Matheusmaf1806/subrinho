@@ -20,7 +20,7 @@ import {
   Tr,
   buttonClass,
 } from "@/components/ui";
-import { Modal, SubmitButton } from "@/components/ui-client";
+import { ActionForm, Modal, SubmitButton } from "@/components/ui-client";
 import { db } from "@/server/db";
 import { requireSubrinhoUser } from "@/server/auth/session";
 import { listAffiliateUsers } from "@/server/admin/affiliates";
@@ -29,7 +29,6 @@ import { listOrdersForSubrinho } from "@/server/orders/queries";
 import { affiliatePayouts, getAffiliateWithStats } from "@/server/subrinho/affiliates";
 import { brl, date, dateTime, orderNumber, pct } from "@/lib/format";
 import { ActiveBadge, Fit, InfoList, OrderStatusBadge, PayoutStatusBadge, ReadOnlyNotice, SectionTitle } from "../../../_components/bits";
-import { StickyActionForm } from "../../../_components/sticky-form";
 import { periodLabel } from "../../../_lib/dates";
 import { isUuid } from "../../../_lib/form";
 import { canDo, PERMS, SCOPE_LABEL } from "../../../_lib/labels";
@@ -101,13 +100,13 @@ export default async function AffiliateDetailPage({
           <CardHeader title="Cadastro" subtitle="Dados da agência, da loja e para repasse" />
           <CardBody className="py-5">
             {canEdit ? (
-              <StickyActionForm action={updateAffiliateAction} className="space-y-6">
+              <ActionForm action={updateAffiliateAction} className="space-y-6">
                 <input type="hidden" name="id" value={a.id} />
                 <AffiliateFields a={a} />
                 <div className="flex justify-end">
                   <SubmitButton>Salvar alterações</SubmitButton>
                 </div>
-              </StickyActionForm>
+              </ActionForm>
             ) : (
               <div className="space-y-4">
                 <ReadOnlyNotice />
@@ -142,7 +141,7 @@ export default async function AffiliateDetailPage({
                       </>
                     }
                   >
-                    <StickyActionForm action={addAffiliateUserAction} resetOnSuccess className="space-y-4">
+                    <ActionForm action={addAffiliateUserAction} resetOnSuccess className="space-y-4">
                       <input type="hidden" name="affiliateId" value={a.id} />
                       <Field label="Nome">
                         <Input name="name" required maxLength={120} autoComplete="off" />
@@ -160,7 +159,7 @@ export default async function AffiliateDetailPage({
                         </Select>
                       </Field>
                       <SubmitButton pendingText="Criando…">Criar usuário</SubmitButton>
-                    </StickyActionForm>
+                    </ActionForm>
                   </Modal>
                 )
               }

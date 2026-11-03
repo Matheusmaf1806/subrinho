@@ -163,6 +163,19 @@ export async function closeFortnight(tx: Tx, f: Fortnight, by: { type: "CRON" | 
     }
     created.push(payout);
   }
+  // Ao refechar: afiliado que não tem mais vendas pagas no período (ex.: estorno) não fica com repasse antigo.
+  const stale = await tx
+    .select()
+    .from(payouts)
+    .where(and(eq(payouts.periodStart, f.start), eq(payouts.status, "SCHEDULED")));
+  for (const p of stale) {
+    if (byAff.has(p.affiliateId)) continue;
+    await tx
+      .update(payouts)
+      .set({ status: "CANCELLED", amount: "0.00", ordersCount: 0, notes: "Cancelado no refechamento: sem vendas pagas no período" })
+      .where(eq(payouts.id, p.id));
+    await tx.update(orders).set({ payoutId: null }).where(eq(orders.payoutId, p.id));
+  }
   return { reportId, summary, payouts: created };
 }
 
@@ -243,6 +256,7 @@ export async function markPayoutPaid(tx: Tx, payoutId: string, userId: string, n
   const [p] = await tx.select().from(payouts).where(eq(payouts.id, payoutId));
   if (!p) throw new Error("Repasse não encontrado");
   if (p.status === "PAID") return p;
+  if (p.status === "CANCELLED") throw new Error("Repasse cancelado não pode ser marcado como pago");
   const [u] = await tx
     .update(payouts)
     .set({ status: "PAID", paidAt: new Date(), paidById: userId, notes: notes ?? p.notes })

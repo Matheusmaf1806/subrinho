@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Download, FileChartColumn } from "lucide-react";
 import { Badge, ButtonLink, Card, CardBody, CardHeader, EmptyState, Field, Input, PageHeader, Table, Td, Th, THead, Tr } from "@/components/ui";
-import { SubmitButton } from "@/components/ui-client";
+import { ActionForm, SubmitButton } from "@/components/ui-client";
 import { db } from "@/server/db";
 import { requireSubrinhoUser } from "@/server/auth/session";
 import { lastClosedFortnight } from "@/server/payouts/calendar";
@@ -10,7 +10,6 @@ import { d } from "@/server/pricing/money";
 import { addDays, todayLocal } from "@/lib/tz";
 import { brl, date, dateTime } from "@/lib/format";
 import { ReadOnlyNotice } from "../../_components/bits";
-import { StickyActionForm } from "../../_components/sticky-form";
 import { periodLabel } from "../../_lib/dates";
 import { canDo, PERMS } from "../../_lib/labels";
 import { supplierName } from "../../_lib/rules";
@@ -67,12 +66,12 @@ export default async function SubrinhoReportsPage() {
               </p>
             </div>
             {canClose ? (
-              <StickyActionForm action={closeFortnightAction} className="space-y-3">
+              <ActionForm action={closeFortnightAction} className="space-y-3">
                 <Field label="Qualquer data da quinzena" hint="Fecha a quinzena que contém esta data (precisa já ter terminado).">
                   <Input type="date" name="date" defaultValue={last.start} max={addDays(today, -1)} required />
                 </Field>
                 <SubmitButton pendingText="Fechando…">Fechar quinzena</SubmitButton>
-              </StickyActionForm>
+              </ActionForm>
             ) : (
               <ReadOnlyNotice>Somente Administradores e Financeiro podem fechar quinzenas.</ReadOnlyNotice>
             )}

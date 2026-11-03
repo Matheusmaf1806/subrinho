@@ -210,7 +210,7 @@ export default async function AfiliadoMargensPage() {
                     </div>
                   </summary>
                   <div className="bg-cream/30 px-5 pb-4">
-                    <div className="overflow-x-auto rounded-xl border border-line bg-white">
+                    <div className="relative overflow-x-auto rounded-xl border border-line bg-white">
                       <table className="w-full text-left text-sm">
                         <thead className="border-b border-line bg-cream/60 text-xs font-bold uppercase tracking-wide text-muted">
                           <tr>

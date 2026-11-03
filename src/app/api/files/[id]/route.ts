@@ -26,7 +26,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     headers: {
       "Content-Type": f.mimeType,
       "Content-Length": String(f.size),
-      "Content-Disposition": `inline; filename="${encodeURIComponent(f.filename)}"`,
+      "Content-Disposition": `inline; filename="${f.filename.replace(/[^\x20-\x7e]/g, "_").replace(/"/g, "")}"; filename*=UTF-8''${encodeURIComponent(f.filename)}`,
       "Cache-Control": "private, no-store",
       "X-Content-Type-Options": "nosniff",
     },

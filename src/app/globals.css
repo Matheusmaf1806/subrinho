@@ -60,3 +60,8 @@ dialog::backdrop {
 .tabular {
   font-variant-numeric: tabular-nums;
 }
+
+/* Filhos de grid não esticam a trilha por causa de conteúdo largo (tabelas roláveis, valores longos). */
+:where(.grid) > * {
+  min-width: 0;
+}

@@ -1,7 +1,7 @@
 "use client";
 
 /** Formulários compactos (para células de tabela) ligados a Server Actions no formato ActionState. */
-import { useActionState, type ReactNode } from "react";
+import { startTransition, useActionState, type FormEvent, type ReactNode } from "react";
 import { cn, inputClass } from "@/components/ui";
 import { SubmitButton, type ActionState } from "@/components/ui-client";
 
@@ -13,6 +13,20 @@ function Hidden({ fields }: { fields: Record<string, string | null | undefined> 
       {Object.entries(fields).map(([k, v]) => (v === null || v === undefined ? null : <input key={k} type="hidden" name={k} value={v} />))}
     </>
   );
+}
+
+/**
+ * Envia via startTransition no onSubmit: o React não limpa os campos (como faria com action=)
+ * e o <SubmitButton> continua mostrando o estado de envio via useFormStatus.
+ */
+function submitWith(dispatch: (fd: FormData) => void, confirmMessage?: string) {
+  return (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (confirmMessage && !confirm(confirmMessage)) return;
+    const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLElement | null;
+    const fd = new FormData(e.currentTarget, submitter);
+    startTransition(() => dispatch(fd));
+  };
 }
 
 function Feedback({ state, okText }: { state: ActionState; okText?: string }) {
@@ -54,9 +68,7 @@ export function InlineActionButton({
     <form
       action={formAction}
       className={cn("inline-flex flex-wrap items-center", className)}
-      onSubmit={(e) => {
-        if (confirmMessage && !confirm(confirmMessage)) e.preventDefault();
-      }}
+      onSubmit={submitWith(formAction, confirmMessage)}
     >
       <Hidden fields={fields} />
       <SubmitButton size="sm" variant={variant} pendingText={pendingText}>
@@ -87,7 +99,7 @@ export function InlinePercentForm({
 }) {
   const [state, formAction] = useActionState(action, null);
   return (
-    <form action={formAction} className="flex flex-wrap items-center gap-2">
+    <form action={formAction} onSubmit={submitWith(formAction)} className="flex flex-wrap items-center gap-2">
       <Hidden fields={fields} />
       <div className="relative w-24">
         <input

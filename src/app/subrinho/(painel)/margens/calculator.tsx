@@ -152,8 +152,8 @@ export function PriceCalculator({ defaults }: { defaults: CalculatorDefaults }) 
         {field("calc-ms", "Margem Subrinho", ms, setMs, { suffix: "%" })}
         {field("calc-ma", "Margem afiliado", ma, setMa, { suffix: "%" })}
         {field("calc-fee", "Taxa parcelado", fee, setFee, { suffix: "%" })}
-        <div className="flex items-end gap-2">
-          <button type="button" onClick={applyCurrent} className={buttonClass("outline", "sm", "h-10 flex-1")} title="Câmbio vigente, margem padrão Subrinho, margem padrão do afiliado e taxa configurada">
+        <div className="flex flex-wrap items-end gap-2">
+          <button type="button" onClick={applyCurrent} className={buttonClass("outline", "sm", "h-10 min-w-0 flex-1")} title="Câmbio vigente, margem padrão Subrinho, margem padrão do afiliado e taxa configurada">
             Valores atuais
           </button>
           <button type="button" onClick={reset} className={buttonClass("ghost", "sm", "h-10")} title="Exemplo da especificação">

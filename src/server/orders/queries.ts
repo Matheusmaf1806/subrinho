@@ -27,14 +27,21 @@ function filterConds(f: OrderFilters): SQL[] {
   if (f.to) conds.push(lt(orders.createdAt, startOfLocalDay(addDays(f.to, 1))));
   if (f.q) {
     const q = `%${f.q.trim()}%`;
-    const num = Number(f.q.replace(/\D/g, ""));
+    const digits = f.q.replace(/\D/g, "");
+    const num = Number(digits);
     const ors: SQL[] = [
       sql`${orders.customerData}->>'name' ilike ${q}`,
       sql`${orders.customerData}->>'email' ilike ${q}`,
       sql`${orders.payerData}->>'name' ilike ${q}`,
-      sql`${orders.payerData}->>'document' ilike ${q}`,
+      sql`${orders.payerData}->>'email' ilike ${q}`,
     ];
-    if (num) ors.push(eq(orders.number, num));
+    if (digits.length >= 3) {
+      // CPF/CNPJ com ou sem pontuação
+      const dq = `%${digits}%`;
+      ors.push(sql`regexp_replace(coalesce(${orders.payerData}->>'document', ''), '[^0-9]', '', 'g') like ${dq}`);
+      ors.push(sql`regexp_replace(coalesce(${orders.customerData}->>'document', ''), '[^0-9]', '', 'g') like ${dq}`);
+    }
+    if (num > 0 && num <= 2147483647) ors.push(eq(orders.number, num));
     conds.push(or(...ors)!);
   }
   return conds;

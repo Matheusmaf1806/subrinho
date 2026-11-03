@@ -33,7 +33,16 @@ export async function getSettings(tx: Tx): Promise<PlatformSettings> {
   const rows = await tx.select().from(settings);
   const out: Record<string, unknown> = { ...DEFAULT_SETTINGS };
   for (const r of rows) if (r.key in DEFAULT_SETTINGS) out[r.key] = r.value;
-  return out as PlatformSettings;
+  // Garante os tipos (o jsonb pode devolver "9.68" como número).
+  return {
+    installmentFeePct: String(out.installmentFeePct),
+    maxInstallments: Number(out.maxInstallments),
+    fallbackSubrinhoMarginPct: String(out.fallbackSubrinhoMarginPct),
+    fallbackAffiliateMarginPct: String(out.fallbackAffiliateMarginPct),
+    maxAffiliateMarginPct: String(out.maxAffiliateMarginPct),
+    payoutBusinessDays: Number(out.payoutBusinessDays),
+    pixExpirationMinutes: Number(out.pixExpirationMinutes),
+  };
 }
 
 export async function updateSettings(tx: Tx, patch: Partial<PlatformSettings>) {

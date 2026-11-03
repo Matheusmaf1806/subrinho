@@ -2,7 +2,7 @@ import Form from "next/form";
 import Link from "next/link";
 import { Banknote, CircleCheck, Paperclip, Search, Upload } from "lucide-react";
 import { ButtonLink, Card, CardHeader, EmptyState, Field, PageHeader, Select, Stat, Table, Td, Textarea, Th, THead, Tr, buttonClass } from "@/components/ui";
-import { CopyButton, Modal, SubmitButton } from "@/components/ui-client";
+import { ActionForm, CopyButton, Modal, SubmitButton } from "@/components/ui-client";
 import { db } from "@/server/db";
 import { requireSubrinhoUser } from "@/server/auth/session";
 import { openPayoutForecast } from "@/server/subrinho/dashboard";
@@ -12,7 +12,6 @@ import { brl, date, dateTime, PAYOUT_STATUS_LABEL } from "@/lib/format";
 import { todayLocal } from "@/lib/tz";
 import { sum } from "@/server/pricing/money";
 import { Fit, PayoutStatusBadge } from "../../_components/bits";
-import { StickyActionForm } from "../../_components/sticky-form";
 import { isIsoDate, periodLabel } from "../../_lib/dates";
 import { isUuid } from "../../_lib/form";
 import { canDo, PERMS } from "../../_lib/labels";
@@ -227,7 +226,7 @@ export default async function SubrinhoPayoutsPage({ searchParams }: { searchPara
                                 </>
                               }
                             >
-                              <StickyActionForm action={markPayoutPaidAction} className="space-y-4">
+                              <ActionForm action={markPayoutPaidAction} className="space-y-4">
                                 <input type="hidden" name="payoutId" value={p.id} />
                                 <div className="rounded-xl bg-cream/70 p-3 text-sm">
                                   <p>
@@ -240,7 +239,7 @@ export default async function SubrinhoPayoutsPage({ searchParams }: { searchPara
                                 </Field>
                                 <ProofInput id={`paid-files-${p.id}`} />
                                 <SubmitButton pendingText="Salvando…">Confirmar pagamento</SubmitButton>
-                              </StickyActionForm>
+                              </ActionForm>
                             </Modal>
                           )}
                           {p.status !== "CANCELLED" && (
@@ -253,7 +252,7 @@ export default async function SubrinhoPayoutsPage({ searchParams }: { searchPara
                                 </>
                               }
                             >
-                              <StickyActionForm action={uploadPayoutProofAction} resetOnSuccess className="space-y-4">
+                              <ActionForm action={uploadPayoutProofAction} resetOnSuccess className="space-y-4">
                                 <input type="hidden" name="payoutId" value={p.id} />
                                 <p className="text-sm text-muted">
                                   {a.name} · {periodLabel(p.periodStart, p.periodEnd)} · {brl(p.amount)}
@@ -263,7 +262,7 @@ export default async function SubrinhoPayoutsPage({ searchParams }: { searchPara
                                   <Textarea name="note" maxLength={1000} className="min-h-16" />
                                 </Field>
                                 <SubmitButton pendingText="Enviando…">Anexar</SubmitButton>
-                              </StickyActionForm>
+                              </ActionForm>
                             </Modal>
                           )}
                         </div>

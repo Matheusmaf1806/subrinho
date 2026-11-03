@@ -1,6 +1,6 @@
 import { CalendarDays, UserPlus } from "lucide-react";
 import { Badge, Card, CardBody, CardHeader, EmptyState, Field, Input, PageHeader, Select, Table, Td, Th, THead, Tr, buttonClass } from "@/components/ui";
-import { Modal, SubmitButton } from "@/components/ui-client";
+import { ActionForm, Modal, SubmitButton } from "@/components/ui-client";
 import { db } from "@/server/db";
 import { requireSubrinhoUser } from "@/server/auth/session";
 import { getSettings } from "@/server/settings";
@@ -10,7 +10,6 @@ import { todayLocal } from "@/lib/tz";
 import { dateTime, weekdayDate } from "@/lib/format";
 import { ActiveBadge, ReadOnlyNotice, SectionTitle } from "../../_components/bits";
 import { InlineActionButton } from "../../_components/inline-action";
-import { StickyActionForm } from "../../_components/sticky-form";
 import { canDo, PERMS, ROLE_LABEL } from "../../_lib/labels";
 import { addHolidayAction, createSubrinhoUserAction, deleteHolidayAction, toggleSubrinhoUserAction, updateSettingsAction } from "./actions";
 
@@ -43,7 +42,7 @@ export default async function SubrinhoSettingsPage() {
       <Card className="mt-4">
         <CardHeader title="Parâmetros da plataforma" subtitle="Valem para novos preços, carrinhos e cobranças" />
         <CardBody className="py-5">
-          <StickyActionForm action={updateSettingsAction}>
+          <ActionForm action={updateSettingsAction}>
             <fieldset disabled={!canEdit} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
               <legend className="sr-only">Parâmetros</legend>
               <Field label="Taxa do parcelado" hint="Embutida no preço parcelado (0 a 99,99%)">
@@ -88,7 +87,7 @@ export default async function SubrinhoSettingsPage() {
                 </div>
               )}
             </fieldset>
-          </StickyActionForm>
+          </ActionForm>
         </CardBody>
       </Card>
 
@@ -98,7 +97,7 @@ export default async function SubrinhoSettingsPage() {
           <CardHeader title="Feriados extras" subtitle="Ex.: feriados municipais/estaduais sem expediente bancário" />
           {canEdit && (
             <CardBody className="border-b border-line">
-              <StickyActionForm action={addHolidayAction} resetOnSuccess className="grid gap-3 sm:grid-cols-[auto_1fr_auto] sm:items-end">
+              <ActionForm action={addHolidayAction} resetOnSuccess className="grid gap-3 sm:grid-cols-[auto_1fr_auto] sm:items-end">
                 <Field label="Data">
                   <Input type="date" name="date" required />
                 </Field>
@@ -106,7 +105,7 @@ export default async function SubrinhoSettingsPage() {
                   <Input name="name" required minLength={2} maxLength={120} placeholder="Aniversário de São Paulo" />
                 </Field>
                 <SubmitButton>Adicionar</SubmitButton>
-              </StickyActionForm>
+              </ActionForm>
             </CardBody>
           )}
           {extra.length === 0 ? (
@@ -182,7 +181,7 @@ export default async function SubrinhoSettingsPage() {
                   </>
                 }
               >
-                <StickyActionForm action={createSubrinhoUserAction} resetOnSuccess className="space-y-4">
+                <ActionForm action={createSubrinhoUserAction} resetOnSuccess className="space-y-4">
                   <Field label="Nome">
                     <Input name="name" required maxLength={120} autoComplete="off" />
                   </Field>
@@ -202,7 +201,7 @@ export default async function SubrinhoSettingsPage() {
                     </Select>
                   </Field>
                   <SubmitButton pendingText="Criando…">Criar usuário</SubmitButton>
-                </StickyActionForm>
+                </ActionForm>
               </Modal>
             )
           }

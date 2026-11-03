@@ -155,7 +155,7 @@ export function ItemBreakdown({ item: i, index, rules, paymentMethod }: { item: 
       </div>
       {!check.ok && check.detail && <p className="border-b border-line bg-red-50 px-5 py-2 text-xs font-semibold text-red-800">Recalculo do item: {check.detail}</p>}
 
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
         <table className="w-full min-w-[640px] text-sm">
           <caption className="sr-only">Cálculo do preço do item {i.title}</caption>
           <thead className="border-b border-line text-left text-xs font-bold uppercase tracking-wide text-muted">
