@@ -50,22 +50,22 @@ export default async function SubrinhoPanelLayout({ children }: { children: Reac
     <PanelShell
       brand={
         <Link href="/subrinho" aria-label="Painel Subrinho — início">
-          <SubrinhoLogo tone="light" size="sm" />
+          <SubrinhoLogo tone="brand" size="sm" />
         </Link>
       }
       badge={
-        <span className="inline-flex rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wider text-cream">
+        <span className="inline-flex rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-white">
           Painel Subrinho
         </span>
       }
       nav={NAV}
       user={
         <div className="flex items-center gap-3">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-cream text-sm font-black text-brand" aria-hidden>
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-surface text-sm font-semibold text-brand" aria-hidden>
             {initials || "S"}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate font-extrabold text-white">{user.name}</p>
+            <p className="truncate font-semibold text-white">{user.name}</p>
             <p className="truncate text-xs text-white/75">{ROLE_LABEL[user.role]}</p>
           </div>
           <form action={logoutSubrinho}>

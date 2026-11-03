@@ -54,14 +54,16 @@ export default async function AfiliadoDashboardPage() {
         }
       />
 
-      <section aria-label="Indicadores" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <section aria-label="Indicadores" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         <Stat
+          className="xl:col-span-2"
           label="Vendas pagas na quinzena"
           value={brl(fortnightSales.toFixed(2))}
           hint={`${fortnightOrders.length} pedido${fortnightOrders.length === 1 ? "" : "s"} · ${fortnightLabel(f.start, f.end)}`}
           icon={<Receipt className="h-4 w-4" aria-hidden />}
         />
         <Stat
+          className="xl:col-span-2"
           tone="brand"
           label="Sua comissão na quinzena"
           value={brl(fortnightCommission.toFixed(2))}
@@ -69,13 +71,15 @@ export default async function AfiliadoDashboardPage() {
           icon={<CalendarClock className="h-4 w-4" aria-hidden />}
         />
         <Stat
+          className="xl:col-span-2"
           label="Total a receber"
           value={brl(payouts.toReceive)}
           hint="Repasses agendados + quinzenas em aberto"
           icon={<Wallet className="h-4 w-4" aria-hidden />}
         />
-        <Stat tone="dark" label="Total recebido" value={brl(payouts.receivedTotal)} hint="Repasses já pagos pela Subrinho" />
+        <Stat className="xl:col-span-3" tone="dark" label="Total recebido" value={brl(payouts.receivedTotal)} hint="Repasses já pagos pela Subrinho" />
         <Stat
+          className="sm:col-span-2 xl:col-span-3"
           label="Carrinhos abertos"
           value={openCarts.length}
           hint={`${cartsWithItems} com itens ativos`}
@@ -103,7 +107,7 @@ export default async function AfiliadoDashboardPage() {
             title="Últimos pedidos"
             subtitle="Pedidos mais recentes da sua loja"
             actions={
-              <Link href="/afiliado/pedidos" className="inline-flex items-center gap-1 text-sm font-bold text-brand hover:text-brand-700">
+              <Link href="/afiliado/pedidos" className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:text-brand-700">
                 Ver todos <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
             }
@@ -118,9 +122,9 @@ export default async function AfiliadoDashboardPage() {
             <ul className="divide-y divide-line">
               {latest.map((o) => (
                 <li key={o.id}>
-                  <Link href={`/afiliado/pedidos/${o.id}`} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-5 py-3 hover:bg-cream/50">
+                  <Link href={`/afiliado/pedidos/${o.id}`} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-5 py-3 hover:bg-surface/50">
                     <div className="min-w-0">
-                      <p className="text-sm font-extrabold text-ink">
+                      <p className="text-sm font-semibold text-ink">
                         {orderNumber(o.number)} <span className="font-semibold text-muted">· {o.customerName}</span>
                       </p>
                       <p className="text-xs text-muted">
@@ -129,8 +133,8 @@ export default async function AfiliadoDashboardPage() {
                     </div>
                     <div className="flex items-center gap-3 text-right">
                       <div>
-                        <p className="text-sm font-extrabold tabular text-ink">{brl(o.amountPaid)}</p>
-                        <p className="text-xs font-bold tabular text-success">+ {brl(o.commission)}</p>
+                        <p className="text-sm font-semibold tabular text-ink">{brl(o.amountPaid)}</p>
+                        <p className="text-xs font-semibold tabular text-success">+ {brl(o.commission)}</p>
                       </div>
                       <Badge tone={statusTone(o.status)}>{ORDER_STATUS_LABEL[o.status] ?? o.status}</Badge>
                     </div>
@@ -146,7 +150,7 @@ export default async function AfiliadoDashboardPage() {
             title="Próximos repasses"
             subtitle="Sua comissão é paga 5 dias úteis após o fechamento da quinzena"
             actions={
-              <Link href="/afiliado/financeiro" className="inline-flex items-center gap-1 text-sm font-bold text-brand hover:text-brand-700">
+              <Link href="/afiliado/financeiro" className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:text-brand-700">
                 Financeiro <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
             }
@@ -163,18 +167,18 @@ export default async function AfiliadoDashboardPage() {
                 <li key={p.key} className="flex items-center justify-between gap-3 px-5 py-3">
                   <div className="flex min-w-0 items-center gap-3">
                     <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl bg-brand-50 leading-none text-brand-700" aria-hidden>
-                      <span className="text-lg font-black">{p.date ? p.date.slice(8, 10) : "—"}</span>
-                      {p.date && <span className="mt-0.5 text-[10px] font-extrabold uppercase">{monthShort(p.date)}</span>}
+                      <span className="text-lg font-semibold">{p.date ? p.date.slice(8, 10) : "—"}</span>
+                      {p.date && <span className="mt-0.5 text-[10px] font-semibold uppercase">{monthShort(p.date)}</span>}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-extrabold text-ink">{p.date ? date(p.date) : "Data a definir"}</p>
+                      <p className="text-sm font-semibold text-ink">{p.date ? date(p.date) : "Data a definir"}</p>
                       <p className="truncate text-xs text-muted">
                         {fortnightLabel(p.periodStart, p.periodEnd)} · {p.orders} pedido{p.orders === 1 ? "" : "s"}
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-extrabold tabular text-ink">{brl(p.amount)}</p>
+                    <p className="text-sm font-semibold tabular text-ink">{brl(p.amount)}</p>
                     <Badge tone={p.status === "SCHEDULED" ? "info" : "warning"}>{PAYOUT_STATUS_LABEL[p.status]}</Badge>
                   </div>
                 </li>

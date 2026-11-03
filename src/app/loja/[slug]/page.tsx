@@ -1,16 +1,47 @@
 import Link from "next/link";
-import { BadgePercent, CreditCard, Headphones, QrCode } from "lucide-react";
 import { db } from "@/server/db";
 import { searchCatalog } from "@/server/catalog";
 import { adaptersFor } from "@/server/suppliers/registry";
 import { INSURANCE_REGIONS } from "@/server/suppliers/mock/single-page";
 import { FlightPath } from "@/components/brand";
+import { ArrowChip, ButtonLink, cn } from "@/components/ui";
+import { photo, type PhotoKey } from "@/lib/images";
 import { getStore, getStorePricing } from "./_lib/store";
 import { COMING_SOON, STORE_CATEGORIES } from "./_components/category";
 import { ChipSearch, InsuranceSearch, LodgingSearch, TicketsSearch } from "./_components/search-forms";
 import { SearchTabs } from "./_components/search-tabs";
-import { parseSearch, supplierParams } from "./_components/search-params";
+import { parseSearch, supplierParams, toQuery } from "./_components/search-params";
 import { ProductCard } from "./_components/product-card";
+
+const CATEGORY_TILE: Record<string, { image: PhotoKey; line: string }> = {
+  ingressos: { image: "colosseumAerial", line: "Parques, museus e passeios com data marcada" },
+  hospedagem: { image: "tropicalResort", line: "O melhor preço entre vários fornecedores" },
+  casas: { image: "villaPool", line: "Casas com piscina perto dos parques" },
+  "seguro-viagem": { image: "planeWing", line: "Planos para o mundo todo" },
+  chip: { image: "phone", line: "eSIM com ativação imediata" },
+};
+
+const DESTINATIONS: { name: string; image: PhotoKey; country: string }[] = [
+  { name: "Roma", image: "colosseum", country: "Itália" },
+  { name: "Orlando", image: "castle2", country: "Estados Unidos" },
+  { name: "Paris", image: "eiffel", country: "França" },
+  { name: "Lisboa", image: "lisbon", country: "Portugal" },
+  { name: "Nova York", image: "nycSkyline", country: "Estados Unidos" },
+  { name: "Florença", image: "florence", country: "Itália" },
+];
+
+function SectionTitle({ title, href, cta = "Ver todos" }: { title: string; href?: string; cta?: string }) {
+  return (
+    <div className="mb-8 flex items-end justify-between gap-4">
+      <h2 className="max-w-3xl text-[clamp(2rem,4vw,3.25rem)] font-semibold leading-[0.98] tracking-[-0.045em] text-ink">{title}</h2>
+      {href && (
+        <ButtonLink href={href} variant="outline" className="shrink-0">
+          {cta} →
+        </ButtonLink>
+      )}
+    </div>
+  );
+}
 
 export default async function StoreHome({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -45,89 +76,151 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
 
   return (
     <main>
-      <section className="relative overflow-hidden bg-accent text-white">
-        <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-white/10" />
-        <div className="pointer-events-none absolute -bottom-40 -left-20 h-96 w-96 rounded-full bg-black/10" />
-        <FlightPath className="pointer-events-none absolute right-6 top-10 hidden h-28 w-52 text-white/50 md:block" />
-        <div className="relative mx-auto max-w-7xl px-4 pb-10 pt-12 sm:px-6 sm:pt-16">
-          <h1 className="max-w-2xl text-4xl font-black leading-[1.05] tracking-tight sm:text-6xl">
-            Viaje mais.
-            <br />
-            <span className="text-white/80">Pague em 10x.</span>
-          </h1>
-          <p className="mt-4 max-w-xl text-base text-white/85 sm:text-lg">
-            Ingressos, hospedagem, casas, seguro viagem e chip em um só carrinho — com o atendimento da {store.name}.
-          </p>
-          <div className="mt-8 rounded-3xl bg-white/10 p-3 backdrop-blur sm:p-4">
-            <SearchTabs tabs={tabs} />
+      {/* ───────── Hero ───────── */}
+      <section className="px-3 pt-3 sm:px-4">
+        <div className="relative mx-auto max-w-[1440px] overflow-hidden rounded-[2rem] bg-accent text-white sm:rounded-[2.5rem]">
+          <FlightPath className="pointer-events-none absolute left-[38%] top-10 hidden h-28 w-56 text-white/40 lg:block" />
+          <div className="grid gap-8 px-6 pb-44 pt-12 sm:px-12 sm:pt-16 lg:grid-cols-[1.15fr_1fr] lg:pb-48">
+            <div className="flex flex-col justify-between">
+              <div>
+                <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3.5 py-1.5 text-[13px] font-semibold backdrop-blur">
+                  <span className="h-1.5 w-1.5 rounded-full bg-white" /> {store.name}
+                </span>
+                <h1 className="display mt-6 text-[clamp(3.4rem,7.2vw,7.5rem)]">
+                  Viaje mais.
+                  <br />
+                  Pague em 10x.
+                </h1>
+                <p className="mt-6 max-w-md text-[17px] leading-relaxed text-white/85">
+                  Ingressos, hotéis, casas, seguro viagem e chip no mesmo carrinho — com o atendimento da {store.name}.
+                </p>
+              </div>
+            </div>
+            <div className="hidden grid-cols-[1.15fr_1fr] gap-3 lg:grid">
+              <div className="relative overflow-hidden rounded-[2rem]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={photo("heroWoman", 900, 1200)} alt="Viajante sorrindo" className="h-full w-full object-cover" />
+                <span className="absolute bottom-4 left-4 rounded-full bg-white px-4 py-2 text-sm font-semibold text-ink">10x sem juros em tudo</span>
+              </div>
+              <div className="grid grid-rows-[1fr_1.25fr] gap-3">
+                <div className="flex flex-col justify-between rounded-[2rem] bg-ink p-6">
+                  <p className="text-[13px] font-medium text-white/60">Melhor preço</p>
+                  <p className="text-6xl font-semibold leading-none tracking-[-0.06em]">Pix</p>
+                  <p className="text-[13px] text-white/60">aprovação na hora</p>
+                </div>
+                <div className="overflow-hidden rounded-[2rem]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={photo("travelerCity", 700, 800)} alt="Viajante com mochila" className="h-full w-full object-cover" />
+                </div>
+              </div>
+            </div>
           </div>
+        </div>
+        <div className="relative mx-auto -mt-36 max-w-[1440px] px-3 sm:px-8">
+          <SearchTabs tabs={tabs} />
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {STORE_CATEGORIES.map((c) => {
-            const Icon = c.icon;
+      {/* ───────── Categorias (bento) ───────── */}
+      <section className="mx-auto mt-24 max-w-[1440px] px-4 sm:px-8">
+        <SectionTitle title="Tudo para a viagem, em um só carrinho." />
+        <div className="grid auto-rows-[220px] grid-cols-2 gap-3 lg:auto-rows-[260px] lg:grid-cols-4">
+          {STORE_CATEGORIES.map((c, i) => {
+            const t = CATEGORY_TILE[c.slug];
             return (
-              <Link key={c.slug} href={`${base}/${c.slug}`} className="group rounded-2xl border border-line bg-white p-5 transition hover:-translate-y-0.5 hover:border-accent hover:shadow-lg">
-                <span className="grid h-11 w-11 place-items-center rounded-xl bg-cream text-accent group-hover:bg-accent group-hover:text-white">
-                  <Icon className="h-5 w-5" />
-                </span>
-                <p className="mt-3 font-extrabold text-ink">{c.short}</p>
-                <p className="text-xs text-muted">Ver opções →</p>
+              <Link
+                key={c.slug}
+                href={`${base}/${c.slug}`}
+                className={cn("group relative overflow-hidden rounded-[2rem] bg-ink text-white", i === 0 && "col-span-2 row-span-2")}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={photo(t.image, i === 0 ? 1400 : 800)} alt="" className="absolute inset-0 h-full w-full object-cover opacity-90 transition duration-700 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                <ArrowChip tone="light" className="absolute right-4 top-4 transition group-hover:bg-accent group-hover:text-white" />
+                <div className="absolute inset-x-0 bottom-0 p-5 sm:p-7">
+                  <p className={cn("font-semibold leading-none tracking-[-0.04em]", i === 0 ? "text-[clamp(2.25rem,4vw,3.75rem)]" : "text-2xl sm:text-[1.75rem]")}>{c.short}</p>
+                  <p className={cn("mt-2 text-white/80", i === 0 ? "text-base" : "hidden text-sm sm:block")}>{t.line}</p>
+                </div>
               </Link>
             );
           })}
         </div>
-        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
-          <span className="font-bold text-muted">Em breve:</span>
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          <span className="mr-1 text-[13px] font-semibold text-muted">Em breve</span>
           {COMING_SOON.map((c) => (
-            <span key={c.label} className="inline-flex items-center gap-1 rounded-full border border-dashed border-line px-3 py-1 font-semibold text-muted">
+            <span key={c.label} className="inline-flex items-center gap-1.5 rounded-full bg-surface px-3.5 py-2 text-[13px] font-medium text-ink/70">
               <c.icon className="h-3.5 w-3.5" /> {c.label}
             </span>
           ))}
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="mb-4 flex items-end justify-between">
-          <h2 className="text-2xl font-black text-ink">Ingressos e experiências</h2>
-          <Link href={`${base}/ingressos`} className="text-sm font-bold text-accent">
-            Ver todos →
-          </Link>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* ───────── Ingressos ───────── */}
+      <section className="mx-auto mt-28 max-w-[1440px] px-4 sm:px-8">
+        <SectionTitle title="Ingressos e experiências" href={`${base}/ingressos`} />
+        <div className="grid gap-x-5 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
           {tickets.slice(0, 4).map((p) => (
-            <ProductCard key={`${p.supplierCode}-${p.productId}`} p={p} href={`${base}/ingressos/${p.supplierCode}/${p.productId}`} note="por adulto" />
-          ))}
-        </div>
-
-        <div className="mb-4 mt-12 flex items-end justify-between">
-          <h2 className="text-2xl font-black text-ink">Hotéis em destaque</h2>
-          <Link href={`${base}/hospedagem`} className="text-sm font-bold text-accent">
-            Ver todos →
-          </Link>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {hotels.slice(0, 4).map((p) => (
-            <ProductCard key={`${p.supplierCode}-${p.productId}`} p={p} href={`${base}/hospedagem/${p.supplierCode}/${p.productId}`} note="5 noites · 2 adultos" />
+            <ProductCard key={`${p.supplierCode}-${p.productId}`} p={p} href={`${base}/ingressos/${p.supplierCode}/${p.productId}`} note="adulto" />
           ))}
         </div>
       </section>
 
-      <section className="mx-auto mt-14 max-w-7xl px-4 sm:px-6">
-        <div className="grid gap-4 rounded-3xl bg-plum p-6 text-white sm:grid-cols-4 sm:p-8">
-          {[
-            { icon: CreditCard, t: "10x sem juros", d: "Em todos os produtos, no cartão." },
-            { icon: QrCode, t: "Melhor preço no Pix", d: "Pagamento à vista com aprovação imediata." },
-            { icon: BadgePercent, t: "Cupons de desconto", d: "Aplique seu cupom no carrinho." },
-            { icon: Headphones, t: `Atendimento ${store.name}`, d: "Gente de verdade cuidando da sua viagem." },
-          ].map((x) => (
-            <div key={x.t}>
-              <x.icon className="h-6 w-6 text-brand-200" />
-              <p className="mt-2 font-extrabold">{x.t}</p>
-              <p className="text-sm text-white/70">{x.d}</p>
-            </div>
+      {/* ───────── Promo ───────── */}
+      <section className="mx-auto mt-28 grid max-w-[1440px] gap-3 px-3 sm:px-4 lg:grid-cols-3">
+        <div className="flex min-h-[380px] flex-col justify-between rounded-[2rem] bg-ink p-8 text-white sm:rounded-[2.5rem] sm:p-10">
+          <p className="text-[15px] text-white/60">Em todos os produtos</p>
+          <p className="text-[clamp(6rem,12vw,10rem)] font-semibold leading-[0.8] tracking-[-0.07em]">
+            10x<span className="text-accent">.</span>
+          </p>
+          <p className="text-2xl font-semibold leading-tight tracking-[-0.03em]">sem juros no cartão</p>
+        </div>
+        <div className="relative min-h-[380px] overflow-hidden rounded-[2rem] sm:rounded-[2.5rem]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={photo("airportBoard", 1000)} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/75 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 p-8 text-white sm:p-10">
+            <p className="text-[clamp(2rem,3vw,2.75rem)] font-semibold leading-[0.98] tracking-[-0.045em]">Gente de verdade cuidando da sua viagem.</p>
+            <p className="mt-3 text-[15px] text-white/75">Atendimento {store.name}</p>
+          </div>
+        </div>
+        <div className="flex min-h-[380px] flex-col justify-between rounded-[2rem] bg-surface p-8 sm:rounded-[2.5rem] sm:p-10">
+          <p className="text-[15px] text-muted">No Pix</p>
+          <p className="text-[clamp(5rem,10vw,8.5rem)] font-semibold leading-[0.8] tracking-[-0.07em] text-accent">Pix</p>
+          <div>
+            <p className="text-2xl font-semibold leading-tight tracking-[-0.03em]">Melhor preço e aprovação na hora.</p>
+            <p className="mt-2 text-[15px] text-muted">E ainda dá para usar cupom de desconto no carrinho.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ───────── Hotéis ───────── */}
+      <section className="mx-auto mt-28 max-w-[1440px] px-4 sm:px-8">
+        <SectionTitle title="Hotéis em destaque" href={`${base}/hospedagem`} />
+        <div className="grid gap-x-5 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
+          {hotels.slice(0, 4).map((p) => (
+            <ProductCard key={`${p.supplierCode}-${p.productId}`} p={p} href={`${base}/hospedagem/${p.supplierCode}/${p.productId}`} note="5 noites" />
+          ))}
+        </div>
+      </section>
+
+      {/* ───────── Destinos ───────── */}
+      <section className="mx-auto mt-28 max-w-[1440px] px-4 sm:px-8">
+        <SectionTitle title="Para onde vamos?" />
+        <div className="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 sm:-mx-8 sm:px-8">
+          {DESTINATIONS.map((x) => (
+            <Link
+              key={x.name}
+              href={`${base}/hospedagem?${toQuery({ destino: x.name })}`}
+              className="group relative h-[360px] w-[260px] shrink-0 snap-start overflow-hidden rounded-[2rem] bg-ink text-white"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={photo(x.image, 700, 1000)} alt={x.name} className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 p-6">
+                <p className="text-xs font-medium text-white/70">{x.country}</p>
+                <p className="text-3xl font-semibold tracking-[-0.04em]">{x.name}</p>
+              </div>
+            </Link>
           ))}
         </div>
       </section>

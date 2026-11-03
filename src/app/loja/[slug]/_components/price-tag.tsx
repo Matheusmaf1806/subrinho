@@ -10,6 +10,7 @@ export function PriceTag({
   size = "md",
   note,
   className,
+  invert,
 }: {
   pix: Decimal | string;
   plan: InstallmentPlan;
@@ -17,17 +18,20 @@ export function PriceTag({
   size?: "sm" | "md" | "lg";
   note?: string;
   className?: string;
+  invert?: boolean;
 }) {
+  const sub = invert ? "text-white/60" : "text-muted";
   return (
     <div className={cn("leading-tight", className)}>
-      {from && <div className="text-xs font-semibold text-muted">a partir de</div>}
-      <div className={cn("font-black tracking-tight text-ink tabular", size === "lg" ? "text-3xl" : size === "sm" ? "text-lg" : "text-2xl")}>
-        {brl(pix)} <span className="text-sm font-bold text-accent">no Pix</span>
+      {from && <div className={cn("text-xs font-medium", sub)}>a partir de</div>}
+      <div className={cn("flex items-baseline gap-1.5 font-semibold tracking-[-0.035em] tabular", size === "lg" ? "text-[2.5rem] leading-none" : size === "sm" ? "text-xl" : "text-[1.75rem]")}>
+        {brl(pix)}
+        <span className={cn("text-[13px] font-semibold tracking-normal", invert ? "text-white" : "text-accent")}>no Pix</span>
       </div>
-      <div className="text-sm text-muted tabular">
-        ou <strong className="text-ink">{plan.count}x de {brl(plan.installment)}</strong> sem juros ({brl(plan.total)})
+      <div className={cn("mt-1 text-[13px] tabular", sub)}>
+        ou <span className={invert ? "text-white" : "text-ink"}>{plan.count}x de {brl(plan.installment)}</span> sem juros
       </div>
-      {note && <div className="mt-0.5 text-xs text-muted">{note}</div>}
+      {note && <div className={cn("mt-1 text-xs", sub)}>{note}</div>}
     </div>
   );
 }

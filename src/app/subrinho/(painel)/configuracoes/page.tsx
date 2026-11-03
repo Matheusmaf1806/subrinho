@@ -224,7 +224,7 @@ export default async function SubrinhoSettingsPage() {
             {users.map((u) => (
               <Tr key={u.id}>
                 <Td>
-                  <div className="font-bold">
+                  <div className="font-semibold">
                     {u.name} {u.id === user.id && <span className="text-xs font-semibold text-muted">(você)</span>}
                   </div>
                   <div className="break-all text-xs text-muted">{u.email}</div>

@@ -86,6 +86,15 @@ docs/                   Regras de negócio
 Stack: Next.js 16 (App Router, Server Actions), React 19, TypeScript, Tailwind CSS 4, Drizzle ORM, PostgreSQL,
 decimal.js (nunca float para dinheiro), Vitest.
 
+### Identidade visual
+
+- Uma cor de marca chapada (vermelho Subrinho `#E4113F`, ou a cor de cada afiliado na loja) + preto + branco + cinza
+  neutro; tipografia **Inter Tight** com títulos grandes e apertados (classe `display`); botões em pílula; cards sem
+  bordas pesadas. Tokens em `src/app/globals.css`, componentes em `src/components/ui.tsx`.
+- Fotos: Unsplash (licença livre, inclusive uso comercial), servidas pelo CDN `images.unsplash.com`. O mapa de fotos
+  está em `src/lib/images.ts` — para trocar uma foto, troque o ID. Quando a API real de um fornecedor enviar imagens,
+  elas substituem as fotos de exemplo automaticamente (`imageUrl` da cotação).
+
 ## Integrações — o que falta plugar
 
 - **Fornecedores:** hoje todos usam catálogo simulado com a mesma interface que a integração real vai usar

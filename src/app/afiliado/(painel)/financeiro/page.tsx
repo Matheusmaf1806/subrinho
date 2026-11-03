@@ -73,7 +73,7 @@ export default async function AfiliadoFinanceiroPage() {
                       <Td className="whitespace-nowrap font-semibold">{fortnightLabel(p.periodStart, p.periodEnd)}</Td>
                       <Td className="text-right tabular">{p.orders}</Td>
                       <Td className="text-right tabular whitespace-nowrap">{brl(p.grossSales)}</Td>
-                      <Td className="text-right font-extrabold tabular whitespace-nowrap">{brl(p.amount)}</Td>
+                      <Td className="text-right font-semibold tabular whitespace-nowrap">{brl(p.amount)}</Td>
                       <Td className="whitespace-nowrap font-semibold">{p.date ? date(p.date) : "—"}</Td>
                       <Td>
                         <Badge tone={p.status === "SCHEDULED" ? "info" : "warning"}>{PAYOUT_STATUS_LABEL[p.status]}</Badge>
@@ -110,7 +110,7 @@ export default async function AfiliadoFinanceiroPage() {
                       <Td className="whitespace-nowrap font-semibold">{fortnightLabel(p.periodStart, p.periodEnd)}</Td>
                       <Td className="text-right tabular">{p.ordersCount}</Td>
                       <Td className="text-right tabular whitespace-nowrap">{brl(p.grossSales)}</Td>
-                      <Td className="text-right font-extrabold tabular whitespace-nowrap text-success">{brl(p.amount)}</Td>
+                      <Td className="text-right font-semibold tabular whitespace-nowrap text-success">{brl(p.amount)}</Td>
                       <Td className="whitespace-nowrap text-muted">{date(p.scheduledDate)}</Td>
                       <Td className="whitespace-nowrap">
                         {p.paidAt ? dateTime(p.paidAt) : "—"}
@@ -127,7 +127,7 @@ export default async function AfiliadoFinanceiroPage() {
                                   href={fileHref(pr.fileId)}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex max-w-[14rem] items-center gap-1.5 text-sm font-bold text-brand hover:text-brand-700 hover:underline"
+                                  className="inline-flex max-w-[14rem] items-center gap-1.5 text-sm font-semibold text-brand hover:text-brand-700 hover:underline"
                                   title={pr.filename}
                                 >
                                   <FileText className="h-4 w-4 shrink-0" aria-hidden />
@@ -175,7 +175,7 @@ export default async function AfiliadoFinanceiroPage() {
                 <DetailRow label="Conta">{affiliate.bankAccount || "—"}</DetailRow>
               </dl>
               {user.role === "ADMIN" ? (
-                <Link href="/afiliado/loja#dados-bancarios" className="mt-3 inline-flex text-sm font-bold text-brand hover:text-brand-700">
+                <Link href="/afiliado/loja#dados-bancarios" className="mt-3 inline-flex text-sm font-semibold text-brand hover:text-brand-700">
                   Alterar dados bancários →
                 </Link>
               ) : (
@@ -190,7 +190,7 @@ export default async function AfiliadoFinanceiroPage() {
               {fortnights.map((f, i) => (
                 <li key={f.start} className="flex items-center justify-between gap-3 px-5 py-3">
                   <div>
-                    <p className="text-sm font-bold text-ink">{fortnightLabel(f.start, f.end)}</p>
+                    <p className="text-sm font-semibold text-ink">{fortnightLabel(f.start, f.end)}</p>
                     <p className="text-xs text-muted">{i === 0 ? "Quinzena atual (parcial)" : `${f.half}ª quinzena`}</p>
                   </div>
                   <ReportLink periodStart={f.start} compact />

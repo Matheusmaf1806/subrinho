@@ -127,7 +127,7 @@ export default async function AfiliadoPedidosPage({ searchParams }: { searchPara
                 {list.map((o) => (
                   <Tr key={o.id}>
                     <Td>
-                      <Link href={`/afiliado/pedidos/${o.id}`} className="font-extrabold text-brand hover:text-brand-700 hover:underline">
+                      <Link href={`/afiliado/pedidos/${o.id}`} className="font-semibold text-brand hover:text-brand-700 hover:underline">
                         {orderNumber(o.number)}
                       </Link>
                       <div className="mt-1">
@@ -143,8 +143,8 @@ export default async function AfiliadoPedidosPage({ searchParams }: { searchPara
                       {o.payerName !== o.customerName && <span className="block text-xs text-muted">pagador diferente da conta</span>}
                     </Td>
                     <Td className="whitespace-nowrap">{paymentLabel(o.paymentMethod, o.installments)}</Td>
-                    <Td className="text-right font-bold tabular whitespace-nowrap">{brl(o.amountPaid)}</Td>
-                    <Td className="text-right font-bold tabular whitespace-nowrap text-success">{brl(o.commission)}</Td>
+                    <Td className="text-right font-semibold tabular whitespace-nowrap">{brl(o.amountPaid)}</Td>
+                    <Td className="text-right font-semibold tabular whitespace-nowrap text-success">{brl(o.commission)}</Td>
                     <Td className="whitespace-nowrap">
                       {o.status === "PAID" ? (
                         <>

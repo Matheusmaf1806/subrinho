@@ -64,30 +64,30 @@ export default async function AfiliadoMargensPage() {
         <CardBody className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-3 text-sm text-ink">
             <p>
-              A sua margem é aplicada <strong>“por dentro”</strong> sobre o preço base da Subrinho: <span className="font-bold">preço = base ÷ (1 − margem)</span>.
+              A sua margem é aplicada <strong>“por dentro”</strong> sobre o preço base da Subrinho: <span className="font-semibold">preço = base ÷ (1 − margem)</span>.
               Assim, uma margem de 8% significa que 8% do preço final de cada item fica com você.
             </p>
             <ol className="space-y-1.5">
               <li className="flex gap-2">
-                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand text-[11px] font-black text-white">1</span>
+                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand text-[11px] font-semibold text-white">1</span>
                 <span>
                   <strong>Tipo de ingresso</strong> (ex.: “Coliseu + Vaticano”)
                 </span>
               </li>
               <li className="flex gap-2">
-                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand text-[11px] font-black text-white">2</span>
+                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand text-[11px] font-semibold text-white">2</span>
                 <span>
                   <strong>Ingresso</strong>, para todos os tipos (ex.: “Coliseu”)
                 </span>
               </li>
               <li className="flex gap-2">
-                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand text-[11px] font-black text-white">3</span>
+                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand text-[11px] font-semibold text-white">3</span>
                 <span>
                   <strong>Categoria</strong> (Ingressos, Hospedagem, Casas…)
                 </span>
               </li>
               <li className="flex gap-2">
-                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand text-[11px] font-black text-white">4</span>
+                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand text-[11px] font-semibold text-white">4</span>
                 <span>
                   <strong>Margem padrão</strong> da agência
                 </span>
@@ -112,7 +112,7 @@ export default async function AfiliadoMargensPage() {
         <CardHeader title="Margem padrão" subtitle="Vale para tudo que não tiver uma regra mais específica." />
         <CardBody className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-3xl font-black tabular text-ink">{pct(ov.defaultEffective.pct)}</p>
+            <p className="text-3xl font-semibold tabular text-ink">{pct(ov.defaultEffective.pct)}</p>
             <p className="mt-1 text-sm text-muted">
               {ov.defaultRule ? "Definida pela sua agência." : `Você ainda não definiu — vale o padrão da plataforma (${pct(ov.fallbackPct)}).`}
             </p>
@@ -149,8 +149,8 @@ export default async function AfiliadoMargensPage() {
           <tbody>
             {ov.categories.map((c) => (
               <Tr key={c.category}>
-                <Td className="font-bold">{CATEGORY_LABEL[c.category]}</Td>
-                <Td className="text-right text-base font-black tabular">{pct(c.effective.pct)}</Td>
+                <Td className="font-semibold">{CATEGORY_LABEL[c.category]}</Td>
+                <Td className="text-right text-base font-semibold tabular">{pct(c.effective.pct)}</Td>
                 <Td>
                   <SourceBadge e={c.effective} own={!!c.rule} />
                 </Td>
@@ -192,9 +192,9 @@ export default async function AfiliadoMargensPage() {
               const hasOwn = !!p.rule || p.options.some((o) => o.rule);
               return (
                 <details key={p.key} className="group" open={hasOwn}>
-                  <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 px-5 py-4 hover:bg-cream/40 [&::-webkit-details-marker]:hidden">
+                  <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 px-5 py-4 hover:bg-surface/40 [&::-webkit-details-marker]:hidden">
                     <div className="min-w-0">
-                      <p className="font-extrabold text-ink">
+                      <p className="font-semibold text-ink">
                         <span className="mr-1.5 inline-block text-muted transition group-open:rotate-90" aria-hidden>
                           ›
                         </span>
@@ -205,14 +205,14 @@ export default async function AfiliadoMargensPage() {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-base font-black tabular text-ink">{pct(p.effective.pct)}</span>
+                      <span className="text-base font-semibold tabular text-ink">{pct(p.effective.pct)}</span>
                       <SourceBadge e={p.effective} own={!!p.rule} />
                     </div>
                   </summary>
-                  <div className="bg-cream/30 px-5 pb-4">
+                  <div className="bg-surface/30 px-5 pb-4">
                     <div className="relative overflow-x-auto rounded-xl border border-line bg-white">
                       <table className="w-full text-left text-sm">
-                        <thead className="border-b border-line bg-cream/60 text-xs font-bold uppercase tracking-wide text-muted">
+                        <thead className="border-b border-line bg-surface/60 text-xs font-semibold uppercase tracking-wide text-muted">
                           <tr>
                             <th className="px-4 py-2.5">Aplica-se a</th>
                             <th className="px-4 py-2.5 text-right">Margem</th>
@@ -223,10 +223,10 @@ export default async function AfiliadoMargensPage() {
                         <tbody>
                           <tr className="border-b border-line/70 bg-brand-50/30">
                             <td className="px-4 py-3 align-top">
-                              <p className="font-extrabold text-ink">Todos os tipos deste ingresso</p>
+                              <p className="font-semibold text-ink">Todos os tipos deste ingresso</p>
                               <p className="text-xs text-muted">Regra do ingresso inteiro</p>
                             </td>
-                            <td className="px-4 py-3 text-right align-top font-black tabular">{pct(p.effective.pct)}</td>
+                            <td className="px-4 py-3 text-right align-top font-semibold tabular">{pct(p.effective.pct)}</td>
                             <td className="px-4 py-3 align-top">
                               <SourceBadge e={p.effective} own={!!p.rule} />
                             </td>
@@ -249,10 +249,10 @@ export default async function AfiliadoMargensPage() {
                           {p.options.map((o) => (
                             <tr key={o.key} className="border-b border-line/70 last:border-0">
                               <td className="px-4 py-3 align-top">
-                                <p className="font-bold text-ink">{o.title}</p>
+                                <p className="font-semibold text-ink">{o.title}</p>
                                 {o.description && <p className="max-w-sm text-xs text-muted">{o.description}</p>}
                               </td>
-                              <td className="px-4 py-3 text-right align-top font-black tabular">{pct(o.effective.pct)}</td>
+                              <td className="px-4 py-3 text-right align-top font-semibold tabular">{pct(o.effective.pct)}</td>
                               <td className="px-4 py-3 align-top">
                                 <SourceBadge e={o.effective} own={!!o.rule} />
                               </td>
@@ -308,14 +308,14 @@ export default async function AfiliadoMargensPage() {
               {ov.specificRules.map((r) => (
                 <Tr key={r.id}>
                   <Td>
-                    <p className="font-bold text-ink">{r.title}</p>
-                    {r.optionTitle && <p className="text-sm text-plum">{r.optionTitle}</p>}
+                    <p className="font-semibold text-ink">{r.title}</p>
+                    {r.optionTitle && <p className="text-sm text-ink">{r.optionTitle}</p>}
                     {!r.inCatalog && <Badge tone="warning">não está mais no catálogo</Badge>}
                   </Td>
                   <Td>
                     <Badge tone={r.scope === "PRODUCT_OPTION" ? "brand" : "info"}>{MARGIN_SCOPE_LABEL[r.scope]}</Badge>
                   </Td>
-                  <Td className="text-right text-base font-black tabular">{pct(r.pct)}</Td>
+                  <Td className="text-right text-base font-semibold tabular">{pct(r.pct)}</Td>
                   <Td className="whitespace-nowrap text-muted">{dateTime(r.updatedAt)}</Td>
                   {canEdit && (
                     <Td>

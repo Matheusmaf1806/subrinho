@@ -23,17 +23,17 @@ export default async function LodgingPage({ params, searchParams }: { params: Pr
   const note = `${nights} noite${nights > 1 ? "s" : ""} · ${paxSummary({ rooms: d.quartos, adults: d.adultos, children: d.criancas })}`;
   return (
     <main>
-      <ListingHeader title="Hospedagem" subtitle="Hotéis no mundo todo, com o melhor preço entre nossos fornecedores.">
+      <ListingHeader eyebrow="Hospedagem" image="palmPool" title="Hotéis no mundo todo." subtitle="Comparamos vários fornecedores e mostramos o melhor preço para a sua estadia.">
         <LodgingSearch action={base} d={d} destinations={destinations} minDate={minDate} />
       </ListingHeader>
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-        <p className="mb-4 text-sm text-muted">
+      <div className="mx-auto max-w-[1440px] px-4 pb-8 pt-12 sm:px-8">
+        <p className="mb-8 text-[15px] text-muted">
           {results.length} hotel(is){d.destino ? ` em “${d.destino}”` : ""} · {date(d.checkin)} a {date(d.checkout)} · {note}
         </p>
         {results.length === 0 ? (
           <NoResults what="hotel" />
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid gap-x-5 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {results.map((p) => (
               <ProductCard key={`${p.supplierCode}-${p.productId}`} p={p} href={`${base}/${p.supplierCode}/${p.productId}?${q}`} note={`total da estadia · ${note}`} />
             ))}

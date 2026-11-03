@@ -85,7 +85,7 @@ export default async function AfiliadoPedidoDetalhePage({ params }: { params: Pa
               <ul className="divide-y divide-line">
                 {o.travelers.map((t, i) => (
                   <li key={i} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-5 py-3 text-sm">
-                    <span className="font-bold text-ink">
+                    <span className="font-semibold text-ink">
                       {i + 1}. {t.name}
                     </span>
                     <span className="text-muted">
@@ -136,8 +136,8 @@ export default async function AfiliadoPedidoDetalhePage({ params }: { params: Pa
                 <DetailRow label="Desconto do afiliado (cupom)">{Number(o.totals.affiliateDiscount) > 0 ? `− ${brl(o.totals.affiliateDiscount)}` : brl(0)}</DetailRow>
               </dl>
               <div className="mt-3 flex items-center justify-between rounded-xl bg-emerald-50 px-4 py-3">
-                <span className="text-sm font-bold text-emerald-800">Sua comissão</span>
-                <span className="text-xl font-black tabular text-emerald-700">{brl(o.totals.commission)}</span>
+                <span className="text-sm font-semibold text-emerald-800">Sua comissão</span>
+                <span className="text-xl font-semibold tabular text-emerald-700">{brl(o.totals.commission)}</span>
               </div>
             </CardBody>
           </Card>
@@ -190,12 +190,12 @@ export default async function AfiliadoPedidoDetalhePage({ params }: { params: Pa
                   {o.coupons.map((c) => (
                     <li key={c.code} className="flex items-start justify-between gap-3 text-sm">
                       <div>
-                        <p className="inline-flex items-center gap-1.5 font-extrabold text-ink">
+                        <p className="inline-flex items-center gap-1.5 font-semibold text-ink">
                           <TicketPercent className="h-4 w-4 text-brand" aria-hidden /> {c.code}
                         </p>
                         <p className="text-xs text-muted">{c.rule}</p>
                       </div>
-                      <span className="font-bold tabular text-ink">− {brl(c.applied)}</span>
+                      <span className="font-semibold tabular text-ink">− {brl(c.applied)}</span>
                     </li>
                   ))}
                 </ul>
@@ -254,9 +254,9 @@ function OrderItem({ item: it }: { item: AffiliateOrderItemView }) {
     <article className="px-5 py-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-wide text-brand">{CATEGORY_LABEL[it.category as keyof typeof CATEGORY_LABEL] ?? it.category}</p>
-          <h3 className="mt-0.5 text-base font-extrabold text-ink">{it.title}</h3>
-          {it.subtitle && <p className="text-sm font-semibold text-plum">{it.subtitle}</p>}
+          <p className="text-xs font-semibold uppercase tracking-wide text-brand">{CATEGORY_LABEL[it.category as keyof typeof CATEGORY_LABEL] ?? it.category}</p>
+          <h3 className="mt-0.5 text-base font-semibold text-ink">{it.title}</h3>
+          {it.subtitle && <p className="text-sm font-semibold text-ink">{it.subtitle}</p>}
           <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
             {it.location && (
               <span className="inline-flex items-center gap-1">
@@ -274,7 +274,7 @@ function OrderItem({ item: it }: { item: AffiliateOrderItemView }) {
         </div>
         <div className="text-right">
           <Badge tone={booking.tone}>{booking.label}</Badge>
-          {it.bookingRef && <p className="mt-1 text-xs text-muted">Localizador: <span className="font-bold text-ink">{it.bookingRef}</span></p>}
+          {it.bookingRef && <p className="mt-1 text-xs text-muted">Localizador: <span className="font-semibold text-ink">{it.bookingRef}</span></p>}
         </div>
       </div>
 
@@ -301,9 +301,9 @@ function OrderItem({ item: it }: { item: AffiliateOrderItemView }) {
 
 function Metric({ label, value, extra, highlight }: { label: string; value: ReactNode; extra?: ReactNode; highlight?: boolean }) {
   return (
-    <div className={cn("rounded-xl px-3 py-2", highlight ? "bg-emerald-50" : "bg-cream/70")}>
-      <dt className={cn("text-[11px] font-bold uppercase tracking-wide", highlight ? "text-emerald-800" : "text-muted")}>{label}</dt>
-      <dd className={cn("mt-0.5 text-sm font-extrabold tabular", highlight ? "text-emerald-700" : "text-ink")}>{value}</dd>
+    <div className={cn("rounded-xl px-3 py-2", highlight ? "bg-emerald-50" : "bg-surface/70")}>
+      <dt className={cn("text-[11px] font-semibold uppercase tracking-wide", highlight ? "text-emerald-800" : "text-muted")}>{label}</dt>
+      <dd className={cn("mt-0.5 text-sm font-semibold tabular", highlight ? "text-emerald-700" : "text-ink")}>{value}</dd>
       {extra && <dd className="mt-1">{extra}</dd>}
     </div>
   );
@@ -342,12 +342,12 @@ function TimelineItem({ icon, title, when, children, done = true }: { icon: Reac
       <span
         className={cn(
           "absolute -left-[31px] top-0 grid h-5 w-5 place-items-center rounded-full ring-4 ring-white",
-          done ? "bg-brand text-white" : "bg-cream-200 text-muted",
+          done ? "bg-brand text-white" : "bg-surface-2 text-muted",
         )}
       >
         {icon}
       </span>
-      <p className="text-sm font-extrabold text-ink">{title}</p>
+      <p className="text-sm font-semibold text-ink">{title}</p>
       {when && <p className="text-xs font-semibold text-muted">{when}</p>}
       {children && <div className="mt-0.5 text-xs text-muted">{children}</div>}
     </li>

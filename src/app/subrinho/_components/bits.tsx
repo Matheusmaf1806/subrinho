@@ -20,8 +20,8 @@ export function ActiveBadge({ active, on = "Ativo", off = "Inativo" }: { active:
 export function JsonDetails({ label, value, className }: { label: ReactNode; value: unknown; className?: string }) {
   const empty = value === null || value === undefined || (typeof value === "object" && Object.keys(value as object).length === 0);
   return (
-    <details className={cn("group rounded-xl border border-line bg-cream/40", className)}>
-      <summary className="cursor-pointer select-none px-3 py-2 text-xs font-bold text-muted hover:text-ink">{label}</summary>
+    <details className={cn("group rounded-xl border border-line bg-surface/40", className)}>
+      <summary className="cursor-pointer select-none px-3 py-2 text-xs font-semibold text-muted hover:text-ink">{label}</summary>
       <pre className="max-h-80 overflow-auto border-t border-line px-3 py-2 text-[11px] leading-relaxed text-ink">
         {empty ? "—" : JSON.stringify(value, null, 2)}
       </pre>
@@ -35,7 +35,7 @@ export function InfoList({ items, className }: { items: { label: ReactNode; valu
     <dl className={cn("grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2", className)}>
       {items.map((i, idx) => (
         <div key={idx} className="min-w-0">
-          <dt className="text-xs font-bold uppercase tracking-wide text-muted">{i.label}</dt>
+          <dt className="text-xs font-semibold uppercase tracking-wide text-muted">{i.label}</dt>
           <dd className="mt-0.5 break-words font-semibold text-ink">{i.value ?? "—"}</dd>
         </div>
       ))}
@@ -46,7 +46,7 @@ export function InfoList({ items, className }: { items: { label: ReactNode; valu
 export function SectionTitle({ children, hint }: { children: ReactNode; hint?: ReactNode }) {
   return (
     <div className="mb-3 mt-8 first:mt-0">
-      <h2 className="text-lg font-black tracking-tight text-ink">{children}</h2>
+      <h2 className="text-lg font-semibold tracking-tight text-ink">{children}</h2>
       {hint && <p className="text-sm text-muted">{hint}</p>}
     </div>
   );
@@ -55,7 +55,7 @@ export function SectionTitle({ children, hint }: { children: ReactNode; hint?: R
 /** Aviso exibido quando o usuário não tem permissão para alterar a seção. */
 export function ReadOnlyNotice({ children }: { children?: ReactNode }) {
   return (
-    <p className="rounded-xl border border-line bg-cream/60 px-3 py-2 text-xs font-semibold text-muted">
+    <p className="rounded-xl border border-line bg-surface/60 px-3 py-2 text-xs font-semibold text-muted">
       {children ?? "Somente leitura — seu perfil não permite alterar esta seção."}
     </p>
   );

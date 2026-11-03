@@ -2,6 +2,7 @@ import type { Category, Currency, PaxConfig, PriceLine } from "@/server/db/schem
 import { type OfferOption, type PaxRule, type ProductDetail, type ProductSummary, type SupplierAdapter, SupplierError } from "../types";
 import { bookingRef, defaultDate, dynamicFactor, expiresAtFor, hash, matchesDestination, money4, nightsBetween, quoteRef } from "./util";
 import { addDays } from "@/lib/tz";
+import { photo, type PhotoKey } from "@/lib/images";
 
 /** Conversão interna do mock para gerar tarifas "nativas" de cada fornecedor. */
 const FROM_USD: Record<Currency, number> = { USD: 1, EUR: 0.92, BRL: 5.1 };
@@ -9,6 +10,7 @@ const FROM_USD: Record<Currency, number> = { USD: 1, EUR: 0.92, BRL: 5.1 };
 type Room = { id: string; name: string; baseUsd: number; maxGuests: number; beds: string };
 type Hotel = {
   key: string;
+  image: PhotoKey;
   name: string;
   destination: string;
   location: string;
@@ -24,6 +26,7 @@ type Hotel = {
 export const HOTELS: Hotel[] = [
   {
     key: "orl-lakeside",
+    image: "resortWood",
     name: "Lakeside Resort Orlando",
     destination: "Orlando",
     location: "Lake Buena Vista, Orlando",
@@ -39,6 +42,7 @@ export const HOTELS: Hotel[] = [
   },
   {
     key: "orl-universal-blvd",
+    image: "hotelPoolNight",
     name: "Universal Boulevard Suites",
     destination: "Orlando",
     location: "International Drive, Orlando",
@@ -54,6 +58,7 @@ export const HOTELS: Hotel[] = [
   },
   {
     key: "rom-trevi",
+    image: "hotelRoomWarm",
     name: "Palazzo Trevi Boutique Hotel",
     destination: "Roma",
     location: "Centro Histórico, Roma",
@@ -69,6 +74,7 @@ export const HOTELS: Hotel[] = [
   },
   {
     key: "rom-vaticano",
+    image: "romeRiver",
     name: "Hotel San Pietro Vaticano",
     destination: "Roma",
     location: "Prati, Roma",
@@ -84,6 +90,7 @@ export const HOTELS: Hotel[] = [
   },
   {
     key: "par-marais",
+    image: "paris",
     name: "Hôtel Le Marais Lumière",
     destination: "Paris",
     location: "Le Marais, Paris",
@@ -99,6 +106,7 @@ export const HOTELS: Hotel[] = [
   },
   {
     key: "lis-chiado",
+    image: "lisbon",
     name: "Chiado Prime Lisboa",
     destination: "Lisboa",
     location: "Chiado, Lisboa",
@@ -114,6 +122,7 @@ export const HOTELS: Hotel[] = [
   },
   {
     key: "nyc-midtown",
+    image: "timesSquare",
     name: "Midtown Times Square Hotel",
     destination: "Nova York",
     location: "Midtown, Manhattan",
@@ -188,6 +197,7 @@ export function createHotelsMock(cfg: { code: string; name: string; currency: Cu
       subtitle: `${"★".repeat(h.stars)} · ${h.amenities.slice(0, 2).join(" · ")}`,
       location: h.location,
       destination: h.destination,
+      imageUrl: photo(h.image, 900),
       rating: h.rating,
       tags: h.amenities,
       currency: cfg.currency,
@@ -275,7 +285,7 @@ export function createHotelsMock(cfg: { code: string; name: string; currency: Cu
         title: h.name,
         subtitle: `${room.name} · ${board.name} · ${nights} noite${nights > 1 ? "s" : ""}`,
         location: h.location,
-        imageUrl: null,
+        imageUrl: photo(h.image, 900),
         serviceDate: req.checkIn,
         serviceEndDate: req.checkOut,
         expiresAt: expiresAtFor(req.checkIn),
@@ -297,6 +307,7 @@ export function createHotelsMock(cfg: { code: string; name: string; currency: Cu
 
 type House = {
   id: string;
+  image: PhotoKey;
   name: string;
   destination: string;
   location: string;
@@ -314,6 +325,7 @@ type House = {
 export const HOUSES_MVH: House[] = [
   {
     id: "windsor-hills-5",
+    image: "villaPool",
     name: "Casa 5 quartos com piscina — Windsor Hills",
     destination: "Orlando",
     location: "Windsor Hills, Kissimmee",
@@ -329,6 +341,7 @@ export const HOUSES_MVH: House[] = [
   },
   {
     id: "solterra-7",
+    image: "modernHouse",
     name: "Casa 7 quartos — Solterra Resort",
     destination: "Orlando",
     location: "Solterra Resort, Davenport",
@@ -347,6 +360,7 @@ export const HOUSES_MVH: House[] = [
 export const HOUSES_MAPRO: House[] = [
   {
     id: "storey-lake-4",
+    image: "whiteHouse",
     name: "Townhouse 4 quartos — Storey Lake",
     destination: "Orlando",
     location: "Storey Lake, Kissimmee",
@@ -362,6 +376,7 @@ export const HOUSES_MAPRO: House[] = [
   },
   {
     id: "champions-gate-6",
+    image: "housePool",
     name: "Casa 6 quartos — ChampionsGate",
     destination: "Orlando",
     location: "ChampionsGate, Davenport",
@@ -410,6 +425,7 @@ export function createHousesMock(cfg: { code: string; name: string; currency: Cu
     subtitle: `${h.bedrooms} quartos · ${h.bathrooms} banheiros · até ${h.maxGuests} hóspedes`,
     location: h.location,
     destination: h.destination,
+    imageUrl: photo(h.image, 900),
     rating: h.rating,
     tags: h.amenities,
     currency: cfg.currency,
@@ -478,7 +494,7 @@ export function createHousesMock(cfg: { code: string; name: string; currency: Cu
         title: h.name,
         subtitle: `${nights} noites · ${pax.adults + pax.children} hóspedes`,
         location: h.location,
-        imageUrl: null,
+        imageUrl: photo(h.image, 900),
         serviceDate: req.checkIn,
         serviceEndDate: req.checkOut,
         expiresAt: expiresAtFor(req.checkIn),

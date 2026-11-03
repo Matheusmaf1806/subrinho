@@ -1,30 +1,39 @@
 @import "tailwindcss";
-@import "@fontsource-variable/nunito";
+@import "@fontsource-variable/inter-tight";
 
-/* Identidade Subrinho: vermelho, creme e ameixa (manual de marca). */
+/*
+ * Subrinho — sistema visual
+ * Uma cor de marca saturada (vermelho Subrinho) + preto + branco + cinza neutro.
+ * Blocos de cor chapados, tipografia grotesca grande e apertada, sem bordas/sombras pesadas.
+ */
 :root {
   /* Cor de destaque da loja (cada afiliado pode ter a sua). */
   --store-accent: #e4113f;
 }
 
 @theme {
-  --font-sans: "Nunito Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter Tight Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 
   --color-brand: #e4113f;
-  --color-brand-50: #fdedf0;
-  --color-brand-100: #fbd5dd;
-  --color-brand-200: #f6a9b9;
-  --color-brand-600: #c40d35;
-  --color-brand-700: #9d0a2a;
-  --color-cream: #fdf3ee;
-  --color-cream-200: #f6e4da;
-  --color-plum: #360221;
-  --color-plum-700: #4d0a33;
-  --color-ink: #2a0a1f;
-  --color-muted: #7b5c6c;
-  --color-line: #ecdcd3;
+  --color-brand-50: #fff1f4;
+  --color-brand-100: #ffdde5;
+  --color-brand-200: #ffb4c4;
+  --color-brand-600: #c90e37;
+  --color-brand-700: #9e0a2b;
+
+  --color-ink: #0a0a0b;
+  --color-ink-2: #1d1d20;
+  --color-muted: #6c6c72;
+  --color-line: #e7e7ea;
+  --color-surface: #f3f3f4;
+  --color-surface-2: #e9e9ec;
   --color-success: #0f8a4f;
   --color-warning: #b86e00;
+
+  --radius-4xl: 2rem;
+  --radius-5xl: 2.5rem;
+
+  --tracking-display: -0.045em;
 }
 
 @theme inline {
@@ -33,16 +42,26 @@
 
 html {
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body {
-  background: #fffaf7;
+  background: #ffffff;
   color: var(--color-ink);
   font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: -0.025em;
 }
 
 ::selection {
-  background: var(--color-brand-100);
+  background: var(--color-brand);
+  color: #fff;
 }
 
 /* Inputs de número sem setas */
@@ -53,15 +72,30 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 
 dialog::backdrop {
-  background: rgb(42 10 31 / 0.45);
-  backdrop-filter: blur(2px);
+  background: rgb(10 10 11 / 0.55);
+  backdrop-filter: blur(6px);
 }
 
 .tabular {
   font-variant-numeric: tabular-nums;
 }
 
+/* Títulos gigantes no estilo cartaz */
+.display {
+  letter-spacing: var(--tracking-display);
+  line-height: 0.92;
+  font-weight: 600;
+}
+
 /* Filhos de grid não esticam a trilha por causa de conteúdo largo (tabelas roláveis, valores longos). */
 :where(.grid) > * {
   min-width: 0;
+}
+
+/* Rolagem horizontal sem barra (trilhos de chips/abas) */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }

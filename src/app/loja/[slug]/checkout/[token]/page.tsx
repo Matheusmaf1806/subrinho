@@ -3,7 +3,7 @@ import { Lock, ShieldCheck } from "lucide-react";
 import { db } from "@/server/db";
 import { loadCartView } from "@/server/cart/service";
 import { getSettings } from "@/server/settings";
-import { Alert, Card, CardBody, CardHeader, Input } from "@/components/ui";
+import { Alert, Input } from "@/components/ui";
 import { ActionForm, SubmitButton } from "@/components/ui-client";
 import { getStore, viewerFor } from "../../_lib/store";
 import { CartItemCard } from "../../_components/cart-item";
@@ -27,22 +27,20 @@ import {
 
 export const metadata = { title: "Checkout" };
 
-const lab = "mb-1.5 block text-sm font-bold text-ink";
+const lab = "mb-2 block text-[13px] font-medium text-muted";
 
 function Step({ n, title, subtitle, children }: { n: number; title: string; subtitle?: string; children: React.ReactNode }) {
   return (
-    <Card>
-      <CardHeader
-        title={
-          <span className="inline-flex items-center gap-2">
-            <span className="grid h-7 w-7 place-items-center rounded-full bg-accent text-sm font-black text-white">{n}</span>
-            {title}
-          </span>
-        }
-        subtitle={subtitle}
-      />
-      <CardBody>{children}</CardBody>
-    </Card>
+    <section className="rounded-[2rem] bg-white p-6 ring-1 ring-inset ring-black/[0.06] sm:p-8">
+      <div className="mb-6 flex items-start gap-4">
+        <span className="text-[2.75rem] font-semibold leading-[0.8] tracking-[-0.06em] text-accent tabular">{String(n).padStart(2, "0")}</span>
+        <div>
+          <h2 className="text-[1.5rem] font-semibold leading-tight tracking-[-0.035em] text-ink">{title}</h2>
+          {subtitle && <p className="mt-1 text-[14px] text-muted">{subtitle}</p>}
+        </div>
+      </div>
+      {children}
+    </section>
   );
 }
 
@@ -60,17 +58,17 @@ export default async function CheckoutPage({ params }: { params: Promise<{ slug:
   const travelers = Math.min(10, Math.max(1, ...view.items.map((i) => (i.pax.adults ?? 0) + (i.pax.children ?? 0) + (i.pax.seniors ?? 0))));
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+    <main className="mx-auto max-w-[1440px] px-4 py-10 sm:px-8">
       <TrackView action={trackCartViewAction.bind(null, slug, token, "checkout")} />
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-3xl font-black tracking-tight text-ink">Finalizar compra</h1>
-        <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted">
+      <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
+        <h1 className="display text-[clamp(3rem,7vw,6rem)] text-ink">Finalizar compra</h1>
+        <span className="inline-flex h-9 items-center gap-1.5 rounded-full bg-surface px-4 text-[13px] font-semibold text-ink">
           <Lock className="h-4 w-4" /> Ambiente seguro
         </span>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-        <div className="space-y-5">
+      <div className="grid gap-6 lg:grid-cols-[1fr_420px] xl:gap-10">
+        <div className="space-y-4">
           <Step n={1} title="Seus itens" subtitle="Ajuste as quantidades aqui mesmo — o preço é recalculado com o fornecedor.">
             <div className="space-y-3">
               {adminMode && <Alert tone="info">Modo ADMIN ativo: você pode alterar a margem da agência em cada item (somente neste carrinho, nunca abaixo de 0%).</Alert>}
@@ -93,16 +91,16 @@ export default async function CheckoutPage({ params }: { params: Promise<{ slug:
               <CustomerAuth login={customerLoginAction.bind(null, slug)} register={customerRegisterAction.bind(null, slug)} agency={agencyLoginAction.bind(null, slug)} next={next} initial="register" />
             </Step>
           ) : (
-            <ActionForm action={placeOrderAction.bind(null, slug, token)} className="space-y-5">
+            <ActionForm action={placeOrderAction.bind(null, slug, token)} className="space-y-4">
               <Step
                 n={2}
                 title={viewer.kind === "CUSTOMER" ? "Titular da conta" : "Dados do cliente"}
                 subtitle={viewer.kind === "AFFILIATE" ? "Você está finalizando pela agência: informe o cliente (a conta é criada/encontrada pelo e-mail)." : undefined}
               >
                 {viewer.kind === "CUSTOMER" ? (
-                  <div className="text-sm">
-                    <p className="font-extrabold text-ink">{viewer.customer.name}</p>
-                    <p className="text-muted">
+                  <div className="rounded-2xl bg-surface p-4 text-[15px]">
+                    <p className="font-semibold text-ink">{viewer.customer.name}</p>
+                    <p className="text-[14px] text-muted">
                       {viewer.customer.email} · {viewer.customer.phone ?? "sem telefone"} · CPF {viewer.customer.document ?? "—"}
                     </p>
                   </div>
@@ -142,17 +140,17 @@ export default async function CheckoutPage({ params }: { params: Promise<{ slug:
 
               <Step n={5} title="Pagamento">
                 <PaymentFields pix={Number(t.pix)} installment={Number(t.installment)} maxInstallments={settings.maxInstallments} />
-                <SubmitButton variant="accent" size="lg" className="mt-5 w-full" pendingText="Processando pagamento…">
-                  Pagar e concluir
+                <SubmitButton variant="accent" size="lg" className="mt-6 h-16 w-full text-base" pendingText="Processando pagamento…">
+                  Pagar e concluir →
                 </SubmitButton>
-                <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted">
+                <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-muted">
                   <ShieldCheck className="h-4 w-4" /> Antes de cobrar, confirmamos preço e disponibilidade com cada fornecedor.
                 </p>
               </Step>
             </ActionForm>
           )}
         </div>
-        <aside className="lg:sticky lg:top-24 lg:self-start">
+        <aside className="lg:sticky lg:top-28 lg:self-start">
           <CartSummary t={t} couponAction={applyCouponAction.bind(null, slug, token)} removeCoupon={(layer) => removeCouponAction.bind(null, slug, token, layer)} />
         </aside>
       </div>

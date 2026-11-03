@@ -55,7 +55,7 @@ export default async function SubrinhoAffiliatesPage() {
                   <Td>
                     <div className="flex items-center gap-2">
                       <span className="h-3 w-3 shrink-0 rounded-full ring-1 ring-line" style={{ background: a.brandColor }} aria-hidden />
-                      <Link href={`/subrinho/afiliados/${a.id}`} className="font-extrabold text-ink hover:text-brand">
+                      <Link href={`/subrinho/afiliados/${a.id}`} className="font-semibold text-ink hover:text-brand">
                         {a.name}
                       </Link>
                     </div>
@@ -72,7 +72,7 @@ export default async function SubrinhoAffiliatesPage() {
                   </Td>
                   <Td className="text-right tabular">{usersCount}</Td>
                   <Td className="text-right tabular">{paidOrders}</Td>
-                  <Td className="text-right font-bold tabular">{brl(gmv)}</Td>
+                  <Td className="text-right font-semibold tabular">{brl(gmv)}</Td>
                   <Td className="text-right tabular">{brl(subrinhoRevenue)}</Td>
                   <Td className="text-right tabular">{brl(commission)}</Td>
                 </Tr>

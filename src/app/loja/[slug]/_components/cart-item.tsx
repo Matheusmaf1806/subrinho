@@ -1,9 +1,9 @@
 import { CalendarDays, MapPin, Trash2 } from "lucide-react";
-import { Badge, buttonClass } from "@/components/ui";
 import { brl, date, paxSummary } from "@/lib/format";
 import type { ActionState } from "@/components/ui-client";
-import { categoryIcon, categoryLabel } from "./category";
+import { categoryLabel } from "./category";
 import type { ItemVM } from "./cart-vm";
+import { Cover } from "./cover";
 import { MarginModal, PaxModal } from "./item-modals";
 
 export function CartItemCard({
@@ -21,68 +21,59 @@ export function CartItemCard({
   marginAction?: (prev: ActionState, fd: FormData) => Promise<ActionState>;
   maxMarginPct: string;
 }) {
-  const Icon = categoryIcon(item.category);
   const hasDiscount = Number(item.discount) > 0;
   return (
-    <article className="rounded-2xl border border-line bg-white p-4 sm:p-5">
-      <div className="flex gap-4">
-        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-cream text-accent">
-          <Icon className="h-6 w-6" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <div className="min-w-0">
-              <p className="text-xs font-bold uppercase tracking-wide text-muted">{categoryLabel(item.category)}</p>
-              <h3 className="text-base font-extrabold leading-snug text-ink">{item.title}</h3>
-              {item.subtitle && <p className="text-sm text-muted">{item.subtitle}</p>}
-            </div>
-            <div className="text-right tabular">
-              {hasDiscount && <p className="text-xs text-muted line-through">{brl(item.listPix)}</p>}
-              <p className="text-lg font-black text-ink">{brl(item.pix)}</p>
-              <p className="text-xs text-muted">no Pix · {brl(item.installment)} parcelado</p>
-            </div>
+    <article className="grid gap-5 rounded-[2rem] bg-surface p-4 sm:grid-cols-[148px_1fr] sm:p-5">
+      <Cover title={item.title} category={item.category} imageUrl={item.imageUrl} className="aspect-[4/3] sm:aspect-auto sm:h-full sm:min-h-[132px]" rounded="rounded-[1.5rem]" />
+      <div className="min-w-0 py-1 sm:pr-2">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">{categoryLabel(item.category)}</p>
+            <h3 className="mt-1 text-[19px] font-semibold leading-snug tracking-[-0.025em] text-ink">{item.title}</h3>
+            {item.subtitle && <p className="text-[14px] text-muted">{item.subtitle}</p>}
           </div>
-          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
-            {item.serviceDate && (
-              <span className="inline-flex items-center gap-1">
-                <CalendarDays className="h-3.5 w-3.5" /> {date(item.serviceDate)}
-                {item.serviceEndDate ? ` a ${date(item.serviceEndDate)}` : ""}
-              </span>
-            )}
-            {item.location && (
-              <span className="inline-flex items-center gap-1">
-                <MapPin className="h-3.5 w-3.5" /> {item.location}
-              </span>
-            )}
-            {paxSummary(item.pax) && <span>{paxSummary(item.pax)}</span>}
+          <div className="text-right tabular">
+            {hasDiscount && <p className="text-xs text-muted line-through">{brl(item.listPix)}</p>}
+            <p data-price className="text-[1.375rem] font-semibold leading-none tracking-[-0.035em] text-ink">{brl(item.pix)}</p>
+            <p className="mt-1 text-xs text-muted">Pix · {brl(item.installment)} em 10x</p>
           </div>
-          <ul className="mt-2 space-y-0.5 text-sm text-ink">
-            {item.lines.map((l, i) => (
-              <li key={i}>
-                <span className="font-bold tabular">{l.quantity}×</span> {l.label}
-              </li>
-            ))}
-          </ul>
-          {hasDiscount && (
-            <Badge tone="success" className="mt-2">
-              Desconto de {brl(item.discount)}
-            </Badge>
-          )}
-          {editable && (
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              {paxAction && <PaxModal item={item} action={paxAction} />}
-              {item.admin && marginAction && <MarginModal item={item} action={marginAction} maxPct={maxMarginPct} />}
-              {item.admin?.source === "OVERRIDE" && <Badge tone="dark">Margem alterada neste carrinho</Badge>}
-              {removeAction && (
-                <form action={removeAction}>
-                  <button className={buttonClass("ghost", "sm", "text-muted hover:text-red-700")}>
-                    <Trash2 className="h-4 w-4" /> Remover
-                  </button>
-                </form>
-              )}
-            </div>
-          )}
         </div>
+        <div className="mt-3 flex flex-wrap gap-1.5 text-[12px] font-medium text-ink/80">
+          {item.serviceDate && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5">
+              <CalendarDays className="h-3.5 w-3.5 text-muted" /> {date(item.serviceDate)}
+              {item.serviceEndDate ? ` → ${date(item.serviceEndDate)}` : ""}
+            </span>
+          )}
+          {item.location && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5">
+              <MapPin className="h-3.5 w-3.5 text-muted" /> {item.location}
+            </span>
+          )}
+          {paxSummary(item.pax) && <span className="rounded-full bg-white px-3 py-1.5">{paxSummary(item.pax)}</span>}
+          {hasDiscount && <span className="rounded-full bg-emerald-100 px-3 py-1.5 font-semibold text-emerald-800">− {brl(item.discount)} de desconto</span>}
+        </div>
+        <ul className="mt-3 space-y-0.5 text-[13px] text-muted">
+          {item.lines.map((l, i) => (
+            <li key={i}>
+              <span className="font-semibold text-ink tabular">{l.quantity}×</span> {l.label}
+            </li>
+          ))}
+        </ul>
+        {editable && (
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {paxAction && <PaxModal item={item} action={paxAction} />}
+            {item.admin && marginAction && <MarginModal item={item} action={marginAction} maxPct={maxMarginPct} />}
+            {item.admin?.source === "OVERRIDE" && <span className="rounded-full bg-ink px-3 py-1.5 text-xs font-semibold text-white">Margem alterada neste carrinho</span>}
+            {removeAction && (
+              <form action={removeAction}>
+                <button className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold text-muted transition hover:bg-white hover:text-red-700">
+                  <Trash2 className="h-4 w-4" /> Remover
+                </button>
+              </form>
+            )}
+          </div>
+        )}
       </div>
     </article>
   );

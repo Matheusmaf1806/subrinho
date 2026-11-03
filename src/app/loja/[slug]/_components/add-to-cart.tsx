@@ -23,7 +23,7 @@ export function AddToCartForm({
     <ActionForm action={action} className={className}>
       {Object.entries(hidden).map(([k, v]) => (v === null || v === undefined ? null : <input key={k} type="hidden" name={k} value={String(v)} />))}
       {children}
-      <SubmitButton variant="accent" size="lg" pendingText="Consultando o fornecedor…" className={buttonClassName ?? "mt-3 w-full"}>
+      <SubmitButton variant="accent" size="lg" pendingText="Consultando o fornecedor…" className={buttonClassName ?? "mt-4 w-full"}>
         {label}
       </SubmitButton>
     </ActionForm>

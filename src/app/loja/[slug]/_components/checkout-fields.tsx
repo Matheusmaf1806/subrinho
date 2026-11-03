@@ -5,14 +5,14 @@ import { useState } from "react";
 import { cn, Input, Select } from "@/components/ui";
 
 const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-const lab = "mb-1.5 block text-sm font-bold text-ink";
+const lab = "mb-2 block text-[13px] font-medium text-muted";
 
 export function PayerFields({ defaultSame = true, sameLabel }: { defaultSame?: boolean; sameLabel: string }) {
   const [same, setSame] = useState(defaultSame);
   return (
     <div className="space-y-3">
-      <label className="flex items-center gap-2 text-sm font-bold text-ink">
-        <input type="checkbox" name="payerSame" checked={same} onChange={(e) => setSame(e.target.checked)} className="h-4 w-4 accent-[var(--store-accent)]" />
+      <label className="flex cursor-pointer items-center gap-3 rounded-2xl bg-surface px-4 py-3.5 text-[15px] font-semibold text-ink">
+        <input type="checkbox" name="payerSame" checked={same} onChange={(e) => setSame(e.target.checked)} className="h-5 w-5 accent-[var(--store-accent)]" />
         {sameLabel}
       </label>
       {!same && (
@@ -35,8 +35,10 @@ export function PayerFields({ defaultSame = true, sameLabel }: { defaultSame?: b
           </label>
         </div>
       )}
-      <details className="rounded-xl border border-line px-3 py-2">
-        <summary className="cursor-pointer text-sm font-bold text-ink">Endereço de cobrança (opcional)</summary>
+      <details className="group rounded-2xl bg-surface px-4 py-3.5 [&_input]:bg-white">
+        <summary className="cursor-pointer list-none text-[15px] font-semibold text-ink">
+          <span className="mr-2 inline-block transition group-open:rotate-90">›</span>Endereço de cobrança (opcional)
+        </summary>
         <div className="mt-3 grid gap-3 sm:grid-cols-6">
           <label className="block sm:col-span-2">
             <span className={lab}>CEP</span>
@@ -82,20 +84,20 @@ export function PaymentFields({ pix, installment, maxInstallments }: { pix: numb
           { key: "PIX" as const, icon: QrCode, title: "Pix", price: fmt(pix), sub: save > 0 ? `Economize ${fmt(save)}` : "Aprovação imediata" },
           { key: "CARD" as const, icon: CreditCard, title: "Cartão de crédito", price: `${maxInstallments}x de ${fmt(Math.floor((installment / maxInstallments) * 100) / 100)}`, sub: `sem juros · total ${fmt(installment)}` },
         ].map((m) => (
-          <label key={m.key} className={cn("flex cursor-pointer gap-3 rounded-2xl border p-4 transition", method === m.key ? "border-accent bg-cream/60 ring-2 ring-accent/20" : "border-line hover:border-accent/50")}>
+          <label key={m.key} className={cn("flex cursor-pointer gap-3 rounded-[1.5rem] p-5 transition", method === m.key ? "bg-ink text-white" : "bg-surface text-ink hover:bg-surface-2")}>
             <input type="radio" name="paymentMethod" value={m.key} checked={method === m.key} onChange={() => setMethod(m.key)} className="mt-1 accent-[var(--store-accent)]" />
             <span>
-              <span className="flex items-center gap-1.5 font-extrabold text-ink">
+              <span className="flex items-center gap-1.5 text-[15px] font-semibold">
                 <m.icon className="h-4 w-4 text-accent" /> {m.title}
               </span>
-              <span className="block text-lg font-black text-ink tabular">{m.price}</span>
-              <span className="block text-xs text-muted">{m.sub}</span>
+              <span className="mt-2 block text-[1.6rem] font-semibold leading-none tracking-[-0.04em] tabular">{m.price}</span>
+              <span className={cn("mt-1.5 block text-xs", method === m.key ? "text-white/60" : "text-muted")}>{m.sub}</span>
             </span>
           </label>
         ))}
       </div>
       {method === "CARD" && (
-        <div className="grid gap-3 rounded-2xl border border-line p-4 sm:grid-cols-4">
+        <div className="grid gap-3 rounded-[1.5rem] bg-surface p-4 sm:grid-cols-4 sm:p-5 [&_input]:bg-white [&_select]:bg-white">
           <label className="block sm:col-span-4">
             <span className={lab}>Nome impresso no cartão</span>
             <Input name="cardHolder" required autoComplete="cc-name" />
@@ -133,7 +135,7 @@ export function TravelerFields({ count, firstName }: { count: number; firstName?
   return (
     <div className="space-y-3">
       {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="grid gap-3 rounded-xl border border-line p-3 sm:grid-cols-[2fr_1fr_1fr]">
+        <div key={i} className="grid gap-3 rounded-[1.5rem] bg-surface p-4 sm:grid-cols-[2fr_1fr_1fr] [&_input]:bg-white">
           <label className="block">
             <span className={lab}>{i === 0 ? "Viajante principal" : `Viajante ${i + 1}`}</span>
             <Input name="travelerName" required={i === 0} defaultValue={i === 0 ? firstName : undefined} placeholder="Nome completo" />

@@ -55,7 +55,7 @@ export default async function AfiliadoUsuariosPage() {
                 {users.map((u) => (
                   <Tr key={u.id}>
                     <Td>
-                      <p className="font-bold text-ink">
+                      <p className="font-semibold text-ink">
                         {u.name} {u.id === user.id && <span className="text-xs font-semibold text-muted">(você)</span>}
                       </p>
                       <p className="break-all text-xs text-muted">{u.email}</p>

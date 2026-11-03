@@ -78,7 +78,7 @@ export function PriceCalculator({ defaults }: { defaults: CalculatorDefaults }) 
 
   const field = (id: string, label: string, value: string, set: (v: string) => void, opts: { suffix?: string; disabled?: boolean; mode?: "decimal" | "numeric" } = {}) => (
     <div>
-      <label htmlFor={id} className="mb-1 block text-xs font-bold text-ink">
+      <label htmlFor={id} className="mb-1 block text-xs font-semibold text-ink">
         {label}
       </label>
       <div className="relative">
@@ -139,7 +139,7 @@ export function PriceCalculator({ defaults }: { defaults: CalculatorDefaults }) 
         {field("calc-unit", "Preço unitário", unit, setUnit)}
         {field("calc-qty", "Quantidade", qty, setQty, { mode: "numeric" })}
         <div>
-          <label htmlFor="calc-cur" className="mb-1 block text-xs font-bold text-ink">
+          <label htmlFor="calc-cur" className="mb-1 block text-xs font-semibold text-ink">
             Moeda
           </label>
           <select id="calc-cur" value={currency} onChange={(e) => setCurrency(e.target.value as Currency)} className={cn(inputClass, "py-2 pr-8")}>
@@ -170,18 +170,18 @@ export function PriceCalculator({ defaults }: { defaults: CalculatorDefaults }) 
         ) : (
           <ol className="space-y-2">
             {steps.map((s) => (
-              <li key={s.n} className={cn("flex items-center gap-3 rounded-xl px-3 py-2.5", s.n >= 4 ? "bg-brand-50" : "bg-cream/70")}>
-                <span className={cn("grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-black", s.n >= 4 ? "bg-brand text-white" : "bg-white text-brand")}>
+              <li key={s.n} className={cn("flex items-center gap-3 rounded-xl px-3 py-2.5", s.n >= 4 ? "bg-brand-50" : "bg-surface/70")}>
+                <span className={cn("grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-semibold", s.n >= 4 ? "bg-brand text-white" : "bg-white text-brand")}>
                   {s.n}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-extrabold text-ink">{s.title}</p>
+                  <p className="text-sm font-semibold text-ink">{s.title}</p>
                   <p className="text-xs text-muted tabular">
                     {s.formula}
                     {s.hint && <span className="block sm:inline sm:before:content-['_·_']">{s.hint}</span>}
                   </p>
                 </div>
-                <p className="whitespace-nowrap text-right text-base font-black tabular text-ink">{s.value}</p>
+                <p className="whitespace-nowrap text-right text-base font-semibold tabular text-ink">{s.value}</p>
               </li>
             ))}
           </ol>

@@ -66,7 +66,7 @@ export default async function SubrinhoCouponsPage() {
                 return (
                   <Tr key={c.id}>
                     <Td>
-                      <Link href={`/subrinho/cupons/${c.id}`} className="font-mono font-extrabold text-brand hover:underline">
+                      <Link href={`/subrinho/cupons/${c.id}`} className="font-mono font-semibold text-brand hover:underline">
                         {c.code}
                       </Link>
                       {c.description && <div className="max-w-[16rem] text-xs text-muted">{c.description}</div>}
@@ -86,7 +86,7 @@ export default async function SubrinhoCouponsPage() {
                       <div>{c.endsAt ? `até ${dateTime(c.endsAt)}` : "sem fim"}</div>
                     </Td>
                     <Td className="whitespace-nowrap text-right tabular">
-                      <span className="font-bold">{c.redemptions}</span>
+                      <span className="font-semibold">{c.redemptions}</span>
                       <span className="text-muted"> / {c.maxRedemptions ?? "∞"}</span>
                     </Td>
                     <Td className="space-y-1">

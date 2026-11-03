@@ -114,23 +114,23 @@ export function StoreForm({ action, initial, readOnly, storeUrl }: { action: Act
           <Card className="overflow-hidden">
             <CardHeader title="Pré-visualização" />
             <div className="p-5">
-              <div className="overflow-hidden rounded-2xl border border-line bg-cream">
+              <div className="overflow-hidden rounded-2xl border border-line bg-surface">
                 <div className="flex items-center gap-3 bg-white px-4 py-3">
                   {v.logoUrl && logoOk ? (
                     <img src={v.logoUrl} alt="" className="h-9 max-w-[8rem] object-contain" onError={() => setLogoOk(false)} />
                   ) : (
-                    <span className="grid h-9 w-9 place-items-center rounded-xl text-base font-black text-white" style={{ background: color }} aria-hidden>
+                    <span className="grid h-9 w-9 place-items-center rounded-xl text-base font-semibold text-white" style={{ background: color }} aria-hidden>
                       {(v.name.trim()[0] ?? "L").toUpperCase()}
                     </span>
                   )}
-                  <span className="truncate font-black text-ink">{v.name || "Nome da loja"}</span>
+                  <span className="truncate font-semibold text-ink">{v.name || "Nome da loja"}</span>
                 </div>
                 <div className="space-y-3 px-4 py-5">
-                  <p className="text-lg font-black leading-tight text-ink">Ingressos, hotéis e muito mais</p>
-                  <span className="inline-flex rounded-xl px-4 py-2 text-sm font-bold text-white shadow-sm" style={{ background: color }}>
+                  <p className="text-lg font-semibold leading-tight text-ink">Ingressos, hotéis e muito mais</p>
+                  <span className="inline-flex rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm" style={{ background: color }}>
                     Ver ofertas
                   </span>
-                  <p className="text-xs font-bold" style={{ color }}>
+                  <p className="text-xs font-semibold" style={{ color }}>
                     10x sem juros no cartão
                   </p>
                 </div>

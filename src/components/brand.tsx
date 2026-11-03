@@ -10,11 +10,11 @@ export function SubrinhoSymbol({ className, title = "Subrinho" }: { className?: 
 
 /** Logo horizontal: símbolo + "Subrinho". `tone="light"` para fundo vermelho. */
 export function SubrinhoLogo({ className = "", tone = "brand", size = "md" }: { className?: string; tone?: "brand" | "light" | "dark"; size?: "sm" | "md" | "lg" }) {
-  const color = tone === "light" ? "text-cream" : tone === "dark" ? "text-plum" : "text-brand";
-  const s = size === "sm" ? "h-6 text-xl" : size === "lg" ? "h-12 text-5xl" : "h-8 text-[1.7rem]";
+  const color = tone === "light" ? "text-white" : tone === "dark" ? "text-ink" : "text-brand";
+  const s = size === "sm" ? "h-[22px] text-[1.35rem]" : size === "lg" ? "h-12 text-[3.25rem]" : "h-7 text-[1.75rem]";
   const [iconH, text] = s.split(" ");
   return (
-    <span className={`inline-flex items-center gap-2 font-black tracking-tight ${color} ${className}`}>
+    <span className={`inline-flex items-center gap-2 font-semibold tracking-[-0.05em] ${color} ${className}`}>
       <SubrinhoSymbol className={`${iconH} w-auto`} />
       <span className={`${text} leading-none`}>Subrinho</span>
     </span>
@@ -24,8 +24,8 @@ export function SubrinhoLogo({ className = "", tone = "brand", size = "md" }: { 
 /** Ícone do app: quadrado arredondado vermelho com o símbolo. */
 export function SubrinhoAppIcon({ className = "h-10 w-10" }: { className?: string }) {
   return (
-    <span className={`inline-grid place-items-center rounded-[22%] bg-brand ${className}`}>
-      <SubrinhoSymbol className="h-[62%] w-auto text-cream" />
+    <span className={`inline-grid place-items-center rounded-[28%] bg-brand ${className}`}>
+      <SubrinhoSymbol className="h-[58%] w-auto text-white" />
     </span>
   );
 }

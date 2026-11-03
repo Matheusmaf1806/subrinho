@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ActionForm, SubmitButton, type ActionState } from "@/components/ui-client";
 import { cn, Input } from "@/components/ui";
 
-const lab = "mb-1.5 block text-sm font-bold text-ink";
+const lab = "mb-2 block text-[13px] font-medium text-muted";
 type A = (prev: ActionState, fd: FormData) => Promise<ActionState>;
 
 export function CustomerAuth({ login, register, agency, next, initial = "login" }: { login: A; register: A; agency?: A; next: string; initial?: "login" | "register" | "agency" }) {
@@ -16,9 +16,9 @@ export function CustomerAuth({ login, register, agency, next, initial = "login" 
   ];
   return (
     <div>
-      <div className="mb-4 flex gap-1 rounded-xl bg-cream p-1">
+      <div className="no-scrollbar mb-6 flex gap-1 overflow-x-auto rounded-full bg-surface p-1">
         {tabs.map((t) => (
-          <button key={t.k} type="button" onClick={() => setTab(t.k)} className={cn("flex-1 rounded-lg px-3 py-2 text-sm font-bold", tab === t.k ? "bg-white text-accent shadow-sm" : "text-muted")}>
+          <button key={t.k} type="button" onClick={() => setTab(t.k)} className={cn("h-10 flex-1 whitespace-nowrap rounded-full px-4 text-[14px] font-semibold transition", tab === t.k ? "bg-ink text-white" : "text-muted hover:text-ink")}>
             {t.l}
           </button>
         ))}
@@ -34,7 +34,7 @@ export function CustomerAuth({ login, register, agency, next, initial = "login" 
             <span className={lab}>Senha</span>
             <Input name="password" type="password" required autoComplete="current-password" />
           </label>
-          <SubmitButton variant="accent" className="w-full" pendingText="Entrando…">
+          <SubmitButton variant="accent" size="lg" className="w-full" pendingText="Entrando…">
             Entrar
           </SubmitButton>
         </ActionForm>
@@ -66,7 +66,7 @@ export function CustomerAuth({ login, register, agency, next, initial = "login" 
             <span className={lab}>Senha (mín. 8 caracteres)</span>
             <Input name="password" type="password" required minLength={8} autoComplete="new-password" />
           </label>
-          <SubmitButton variant="accent" className="w-full sm:col-span-2" pendingText="Criando conta…">
+          <SubmitButton variant="accent" size="lg" className="w-full sm:col-span-2" pendingText="Criando conta…">
             Criar conta e continuar
           </SubmitButton>
         </ActionForm>
@@ -83,10 +83,10 @@ export function CustomerAuth({ login, register, agency, next, initial = "login" 
             <span className={lab}>Senha</span>
             <Input name="password" type="password" required />
           </label>
-          <label className="flex items-center gap-2 text-sm font-bold text-ink">
+          <label className="flex items-center gap-3 rounded-2xl bg-surface px-4 py-3.5 text-[15px] font-semibold text-ink">
             <input type="checkbox" name="adminMode" defaultChecked className="h-4 w-4 accent-[var(--store-accent)]" /> Entrar em modo ADMIN
           </label>
-          <SubmitButton variant="dark" className="w-full" pendingText="Entrando…">
+          <SubmitButton variant="dark" size="lg" className="w-full" pendingText="Entrando…">
             Entrar como agência
           </SubmitButton>
         </ActionForm>

@@ -17,6 +17,7 @@ export function toItemVMs(view: View, opts: { adminMode: boolean }) {
       title: i.title,
       subtitle: i.subtitle,
       location: i.location,
+      imageUrl: i.imageUrl,
       serviceDate: i.serviceDate,
       serviceEndDate: i.serviceEndDate,
       pax: i.pax as PaxConfig,

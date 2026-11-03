@@ -41,24 +41,24 @@ export function TicketBooking({
       <input type="hidden" name="supplier" value={supplier} />
       <input type="hidden" name="productId" value={productId} />
       <fieldset>
-        <legend className="mb-2 text-sm font-extrabold text-ink">Tipo de ingresso</legend>
+        <legend className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Tipo de ingresso</legend>
         <div className="space-y-2">
           {options.map((o) => (
             <label
               key={o.optionId}
               className={cn(
-                "flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition",
-                opt === o.optionId ? "border-accent bg-cream/60 ring-2 ring-accent/20" : "border-line hover:border-accent/50",
+                "flex cursor-pointer items-start gap-3 rounded-2xl p-4 transition",
+                opt === o.optionId ? "bg-white ring-2 ring-inset ring-ink" : "bg-surface ring-1 ring-inset ring-transparent hover:ring-line",
                 !o.available && "cursor-not-allowed opacity-50",
               )}
             >
               <input type="radio" name="optionId" value={o.optionId} checked={opt === o.optionId} disabled={!o.available} onChange={() => setOpt(o.optionId)} className="mt-1 accent-[var(--store-accent)]" />
               <span className="flex-1">
-                <span className="block font-bold text-ink">{o.title}</span>
+                <span className="block text-[15px] font-semibold text-ink">{o.title}</span>
                 {o.description && <span className="block text-xs text-muted">{o.description}</span>}
               </span>
               <span className="text-right text-xs leading-tight text-muted tabular">
-                <span className="block text-sm font-extrabold text-ink">{fmt(o.adultPix)}</span>
+                <span className="block text-[15px] font-semibold text-ink">{fmt(o.adultPix)}</span>
                 adulto{o.childPix !== null && <span className="block">{fmt(o.childPix)} criança</span>}
               </span>
             </label>
@@ -66,19 +66,19 @@ export function TicketBooking({
         </div>
       </fieldset>
       <label className="block">
-        <span className="mb-1.5 block text-sm font-extrabold text-ink">Data da visita</span>
+        <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Data da visita</span>
         <Input type="date" name="date" defaultValue={defaultDate} min={minDate} required />
       </label>
-      <div className="rounded-xl border border-line px-3 py-1">
+      <div className="rounded-2xl bg-surface px-4 py-1 [&_button]:bg-white">
         <PaxStepper name="adults" label="Adultos" min={0} max={20} defaultValue={adults} onChange={setAdults} />
         {current?.childPix !== null && <PaxStepper name="children" label="Crianças" hint={childLabel} min={0} max={20} defaultValue={children} onChange={setChildren} />}
       </div>
-      <div className="rounded-xl bg-cream px-4 py-3">
-        <div className="flex items-baseline justify-between">
-          <span className="text-sm font-bold text-muted">Total estimado</span>
-          <span className="text-xl font-black text-ink tabular">{fmt(total)} <span className="text-xs font-bold text-accent">no Pix</span></span>
+      <div className="rounded-2xl bg-ink px-5 py-4 text-white">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-[13px] font-medium text-white/60">Total estimado</span>
+          <span className="text-[1.75rem] font-semibold tracking-[-0.04em] tabular">{fmt(total)} <span className="text-xs font-semibold tracking-normal text-white/60">Pix</span></span>
         </div>
-        <p className="mt-0.5 text-xs text-muted">O preço final é confirmado com o fornecedor ao adicionar ao carrinho. Também em 10x sem juros.</p>
+        <p className="mt-1 text-xs text-white/50">Confirmado com o fornecedor ao adicionar. Também em 10x sem juros.</p>
       </div>
       <SubmitButton variant="accent" size="lg" className="w-full" pendingText="Consultando o fornecedor…" disabled={adults + children === 0}>
         Adicionar ao carrinho

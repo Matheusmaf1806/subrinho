@@ -15,7 +15,7 @@ export function ProofInput({ required, id }: { required?: boolean; id: string })
   const [info, setInfo] = useState<{ text: string; error: boolean } | null>(null);
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-sm font-bold text-ink">
+      <label htmlFor={id} className="mb-1.5 block text-sm font-semibold text-ink">
         Comprovante(s) {required ? "*" : <span className="font-semibold text-muted">(opcional)</span>}
       </label>
       <input
@@ -25,7 +25,7 @@ export function ProofInput({ required, id }: { required?: boolean; id: string })
         multiple
         accept={ACCEPT}
         required={required}
-        className={cn(inputClass, "file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-sm file:font-bold file:text-brand-700")}
+        className={cn(inputClass, "file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-brand-700")}
         onChange={(e) => {
           const el = e.currentTarget;
           const files = [...(el.files ?? [])];

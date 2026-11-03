@@ -60,8 +60,8 @@ export default async function SubrinhoFxPage() {
           const r = current[c];
           return (
             <Card key={c} className="p-5">
-              <p className="text-sm font-bold text-muted">{CURRENCY_LABEL[c]} → BRL</p>
-              <p className="mt-2 text-4xl font-black tabular text-ink">{r ? `R$ ${fxRate(r.rate)}` : "—"}</p>
+              <p className="text-sm font-semibold text-muted">{CURRENCY_LABEL[c]} → BRL</p>
+              <p className="mt-2 text-4xl font-semibold tabular text-ink">{r ? `R$ ${fxRate(r.rate)}` : "—"}</p>
               <p className="mt-1 text-xs text-muted">
                 {r ? (
                   <>
@@ -75,11 +75,11 @@ export default async function SubrinhoFxPage() {
           );
         })}
         <Card className="p-5 sm:col-span-2 lg:col-span-1">
-          <p className="text-sm font-bold text-muted">Provedor automático</p>
-          <p className="mt-2 text-lg font-black text-ink">{PROVIDER_LABEL[provider] ?? provider}</p>
+          <p className="text-sm font-semibold text-muted">Provedor automático</p>
+          <p className="mt-2 text-lg font-semibold text-ink">{PROVIDER_LABEL[provider] ?? provider}</p>
           <p className="mt-1 text-xs text-muted">
-            Definido por <code className="rounded bg-cream px-1">FX_PROVIDER</code> no servidor. O agendador chama{" "}
-            <code className="rounded bg-cream px-1">/api/cron/fx-refresh</code>.
+            Definido por <code className="rounded bg-surface px-1">FX_PROVIDER</code> no servidor. O agendador chama{" "}
+            <code className="rounded bg-surface px-1">/api/cron/fx-refresh</code>.
           </p>
         </Card>
       </div>
@@ -133,9 +133,9 @@ export default async function SubrinhoFxPage() {
                   return (
                     <Tr key={h.id}>
                       <Td className="whitespace-nowrap">{dateTime(h.fetchedAt)}</Td>
-                      <Td className="font-bold">{h.currency}</Td>
-                      <Td className="text-right font-extrabold tabular">{fxRate(h.rate)}</Td>
-                      <Td className={`text-right text-xs font-bold tabular ${delta === null ? "text-muted" : delta > 0 ? "text-red-700" : delta < 0 ? "text-emerald-700" : "text-muted"}`}>
+                      <Td className="font-semibold">{h.currency}</Td>
+                      <Td className="text-right font-semibold tabular">{fxRate(h.rate)}</Td>
+                      <Td className={`text-right text-xs font-semibold tabular ${delta === null ? "text-muted" : delta > 0 ? "text-red-700" : delta < 0 ? "text-emerald-700" : "text-muted"}`}>
                         {delta === null ? "—" : `${delta > 0 ? "+" : ""}${delta.toFixed(2).replace(".", ",")}%`}
                       </Td>
                       <Td>

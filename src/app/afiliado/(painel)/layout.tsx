@@ -39,15 +39,15 @@ export default async function PainelAfiliadoLayout({ children }: { children: Rea
     <PanelShell
       brand={
         <Link href="/afiliado" aria-label="Painel do Afiliado — início">
-          <SubrinhoLogo tone="light" size="sm" />
+          <SubrinhoLogo tone="brand" size="sm" />
         </Link>
       }
       badge={
         <div className="mt-2">
-          <span className="inline-flex rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-widest text-white">
+          <span className="inline-flex rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-widest text-white">
             Painel do Afiliado
           </span>
-          <p className="mt-1.5 truncate text-sm font-bold text-white/90" title={affiliate.name}>
+          <p className="mt-1.5 truncate text-sm font-semibold text-white/90" title={affiliate.name}>
             {affiliate.name}
           </p>
         </div>
@@ -57,14 +57,14 @@ export default async function PainelAfiliadoLayout({ children }: { children: Rea
         <div>
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="truncate font-extrabold text-white" title={user.name}>
+              <p className="truncate font-semibold text-white" title={user.name}>
                 {user.name}
               </p>
               <p className="truncate text-xs text-white/75" title={user.email}>
                 {user.email}
               </p>
             </div>
-            <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[11px] font-extrabold text-brand">{user.role}</span>
+            <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-brand">{user.role}</span>
           </div>
           <p className="mt-1 text-xs text-white/75">
             {ROLE_LABEL[user.role]} · {affiliate.name}
@@ -74,14 +74,14 @@ export default async function PainelAfiliadoLayout({ children }: { children: Rea
               href={storePath(affiliate.slug)}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-white/25"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-white/25"
             >
               <ExternalLink className="h-3.5 w-3.5" aria-hidden /> Minha loja
             </a>
             <form action={logoutAction}>
               <button
                 type="submit"
-                className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-white/25"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-white/25"
               >
                 <LogOut className="h-3.5 w-3.5" aria-hidden /> Sair
               </button>

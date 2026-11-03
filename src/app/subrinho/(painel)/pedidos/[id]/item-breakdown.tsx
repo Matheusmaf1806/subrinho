@@ -20,7 +20,7 @@ function ruleInfo(id: string | null, rules: Map<string, Rule>) {
   const r = rules.get(id);
   return (
     <span>
-      {r ? ruleSummary(r) : "regra removida"} <code className="ml-1 rounded bg-cream px-1 text-[10px] text-muted">{id.slice(0, 8)}</code>
+      {r ? ruleSummary(r) : "regra removida"} <code className="ml-1 rounded bg-surface px-1 text-[10px] text-muted">{id.slice(0, 8)}</code>
     </span>
   );
 }
@@ -122,12 +122,12 @@ export function ItemBreakdown({ item: i, index, rules, paymentMethod }: { item: 
 
   return (
     <Card className="overflow-hidden">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line bg-cream/50 px-5 py-4">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line bg-surface/50 px-5 py-4">
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-wide text-muted">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted">
             Item {index + 1} · {CATEGORY_LABEL[i.category]} · {supplierName(i.supplierCode)}
           </p>
-          <h3 className="mt-0.5 text-base font-extrabold text-ink">{i.title}</h3>
+          <h3 className="mt-0.5 text-base font-semibold text-ink">{i.title}</h3>
           {i.subtitle && <p className="text-sm text-muted">{i.subtitle}</p>}
           <p className="mt-1 text-xs text-muted">
             {[
@@ -140,8 +140,8 @@ export function ItemBreakdown({ item: i, index, rules, paymentMethod }: { item: 
           </p>
         </div>
         <div className="text-right">
-          <p className="text-xs font-bold text-muted">Valor cobrado</p>
-          <p className="text-xl font-black tabular text-brand">{brl(i.chargedAmount)}</p>
+          <p className="text-xs font-semibold text-muted">Valor cobrado</p>
+          <p className="text-xl font-semibold tabular text-brand">{brl(i.chargedAmount)}</p>
           {check.ok ? (
             <Badge tone="success" className="mt-1">
               Conta conferida
@@ -158,7 +158,7 @@ export function ItemBreakdown({ item: i, index, rules, paymentMethod }: { item: 
       <div className="relative overflow-x-auto">
         <table className="w-full min-w-[640px] text-sm">
           <caption className="sr-only">Cálculo do preço do item {i.title}</caption>
-          <thead className="border-b border-line text-left text-xs font-bold uppercase tracking-wide text-muted">
+          <thead className="border-b border-line text-left text-xs font-semibold uppercase tracking-wide text-muted">
             <tr>
               <th scope="col" className="px-5 py-2.5">
                 Etapa
@@ -177,7 +177,7 @@ export function ItemBreakdown({ item: i, index, rules, paymentMethod }: { item: 
                 key={idx}
                 className={cn(
                   "border-b border-line/60 last:border-0",
-                  r.kind === "result" && "bg-cream/50",
+                  r.kind === "result" && "bg-surface/50",
                   r.kind === "brand" && "bg-brand-50/70",
                 )}
               >
@@ -188,9 +188,9 @@ export function ItemBreakdown({ item: i, index, rules, paymentMethod }: { item: 
                 <td
                   className={cn(
                     "whitespace-nowrap px-5 py-2 text-right tabular",
-                    r.kind === "strong" && "font-extrabold text-ink",
-                    r.kind === "result" && "font-black text-ink",
-                    r.kind === "brand" && "font-black text-brand-700",
+                    r.kind === "strong" && "font-semibold text-ink",
+                    r.kind === "result" && "font-semibold text-ink",
+                    r.kind === "brand" && "font-semibold text-brand-700",
                     r.kind === "minus" && "font-semibold text-red-700",
                     r.kind === "muted" && "text-muted",
                     !r.kind && "font-semibold text-ink",
@@ -207,24 +207,24 @@ export function ItemBreakdown({ item: i, index, rules, paymentMethod }: { item: 
       <CardBody className="space-y-3 border-t border-line">
         <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <dt className="text-xs font-bold uppercase tracking-wide text-muted">Fornecedor</dt>
+            <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Fornecedor</dt>
             <dd className="font-semibold">
               {supplierName(i.supplierCode)} <span className="text-xs text-muted">({i.supplierCode})</span>
             </dd>
           </div>
           <div>
-            <dt className="text-xs font-bold uppercase tracking-wide text-muted">Produto / opção</dt>
+            <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Produto / opção</dt>
             <dd className="break-all font-mono text-xs">
               {i.productId}
               {i.optionId ? ` / ${i.optionId}` : ""}
             </dd>
           </div>
           <div>
-            <dt className="text-xs font-bold uppercase tracking-wide text-muted">Cotação (quoteRef)</dt>
+            <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Cotação (quoteRef)</dt>
             <dd className="break-all font-mono text-xs">{i.supplierQuoteRef ?? "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs font-bold uppercase tracking-wide text-muted">Reserva (bookingRef)</dt>
+            <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Reserva (bookingRef)</dt>
             <dd className="break-all font-mono text-xs">
               {i.supplierBookingRef ?? "—"}{" "}
               {i.supplierStatus && (

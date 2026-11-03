@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { LogOut, ShieldCheck, ShoppingCart, User } from "lucide-react";
+import { LogOut, ShieldCheck, ShoppingBag, User } from "lucide-react";
 import type { StoreViewer } from "@/server/auth/session";
 import { SubrinhoSymbol } from "@/components/brand";
-import { cn } from "@/components/ui";
 import type { Store } from "../_lib/store";
 import { logoutAction, toggleAdminModeAction } from "../actions";
 import { STORE_CATEGORIES } from "./category";
@@ -10,72 +9,82 @@ import { STORE_CATEGORIES } from "./category";
 export function StoreHeader({ store, viewer, cartCount, cartHref }: { store: Store; viewer: StoreViewer | null; cartCount: number; cartHref: string }) {
   const base = `/loja/${store.slug}`;
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-white/95 backdrop-blur">
+    <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl">
       {viewer?.kind === "AFFILIATE" && (
-        <div className={cn("text-white", viewer.adminMode ? "bg-plum" : "bg-muted")}>
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-1.5 text-xs font-bold sm:px-6">
-            <span className="inline-flex items-center gap-1.5">
-              <ShieldCheck className="h-4 w-4" />
-              {viewer.adminMode ? "MODO ADMIN — você pode alterar a margem dos itens no checkout (somente neste carrinho)" : `Logado como agência (${viewer.user.name})`}
+        <div className="bg-ink text-white">
+          <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-2 px-4 py-2 text-[13px] sm:px-8">
+            <span className="inline-flex items-center gap-2">
+              <span className={`h-2 w-2 rounded-full ${viewer.adminMode ? "bg-brand" : "bg-white/40"}`} aria-hidden />
+              <ShieldCheck className="h-4 w-4 text-white/70" />
+              {viewer.adminMode ? (
+                <span>
+                  <strong className="font-semibold">Modo ADMIN</strong> <span className="text-white/60">— altere a margem dos itens no checkout, só neste carrinho</span>
+                </span>
+              ) : (
+                <span>Logado como agência · {viewer.user.name}</span>
+              )}
             </span>
             {viewer.canAdmin && (
               <form action={toggleAdminModeAction.bind(null, store.slug)}>
-                <button className="rounded-full bg-white/15 px-3 py-0.5 hover:bg-white/25">{viewer.adminMode ? "Desligar modo ADMIN" : "Ligar modo ADMIN"}</button>
+                <button className="h-7 rounded-full bg-white px-3 text-xs font-semibold text-ink hover:bg-white/90">{viewer.adminMode ? "Desligar modo ADMIN" : "Ligar modo ADMIN"}</button>
               </form>
             )}
           </div>
         </div>
       )}
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-        <Link href={base} className="flex min-w-0 items-center gap-2.5">
+      <div className="mx-auto flex h-[72px] max-w-[1440px] items-center justify-between gap-6 px-4 sm:px-8">
+        <Link href={base} className="flex min-w-0 items-center gap-3">
           {store.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={store.logoUrl} alt={store.name} className="h-9 w-auto max-w-[160px] object-contain" />
           ) : (
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-accent text-white">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[30%] bg-accent text-white">
               <SubrinhoSymbol className="h-5 w-auto" />
             </span>
           )}
-          <span className="min-w-0">
-            <span className="block truncate text-lg font-black leading-tight text-ink">{store.name}</span>
-            <span className="block text-[11px] font-semibold leading-tight text-muted">tecnologia Subrinho</span>
+          <span className="min-w-0 leading-none">
+            <span className="block truncate text-[19px] font-semibold tracking-[-0.04em] text-ink">{store.name}</span>
+            <span className="mt-1 block text-[11px] font-medium text-muted">tecnologia Subrinho</span>
           </span>
         </Link>
-        <nav className="hidden items-center gap-1 lg:flex">
+        <nav className="hidden items-center gap-1 rounded-full bg-surface p-1 lg:flex">
           {STORE_CATEGORIES.map((c) => (
-            <Link key={c.slug} href={`${base}/${c.slug}`} className="rounded-xl px-3 py-2 text-sm font-bold text-ink/80 hover:bg-cream hover:text-accent">
+            <Link key={c.slug} href={`${base}/${c.slug}`} className="rounded-full px-4 py-2 text-[14px] font-medium text-ink/70 transition hover:bg-white hover:text-ink">
               {c.short}
             </Link>
           ))}
         </nav>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           {viewer ? (
             <div className="flex items-center gap-1">
-              <Link href={viewer.kind === "CUSTOMER" ? `${base}/minha-conta` : "/afiliado"} className="hidden items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-bold text-ink hover:bg-cream sm:inline-flex">
+              <Link
+                href={viewer.kind === "CUSTOMER" ? `${base}/minha-conta` : "/afiliado"}
+                className="hidden h-11 items-center gap-2 rounded-full bg-surface px-4 text-sm font-semibold text-ink hover:bg-surface-2 sm:inline-flex"
+              >
                 <User className="h-4 w-4" />
                 {(viewer.kind === "CUSTOMER" ? viewer.customer.name : viewer.user.name).split(" ")[0]}
               </Link>
               <form action={logoutAction.bind(null, store.slug)}>
-                <button className="rounded-xl p-2 text-muted hover:bg-cream hover:text-ink" aria-label="Sair" title="Sair">
+                <button className="grid h-11 w-11 place-items-center rounded-full text-muted hover:bg-surface hover:text-ink" aria-label="Sair" title="Sair">
                   <LogOut className="h-4 w-4" />
                 </button>
               </form>
             </div>
           ) : (
-            <Link href={`${base}/entrar`} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-bold text-ink hover:bg-cream">
+            <Link href={`${base}/entrar`} className="inline-flex h-11 items-center gap-2 rounded-full bg-surface px-4 text-sm font-semibold text-ink hover:bg-surface-2">
               <User className="h-4 w-4" /> <span className="hidden sm:inline">Entrar</span>
             </Link>
           )}
-          <Link href={cartHref} className="relative inline-flex items-center gap-2 rounded-xl bg-accent px-3.5 py-2 text-sm font-bold text-white hover:brightness-95">
-            <ShoppingCart className="h-4 w-4" />
+          <Link href={cartHref} className="relative inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-white hover:bg-ink-2">
+            <ShoppingBag className="h-4 w-4" />
             <span className="hidden sm:inline">Carrinho</span>
-            {cartCount > 0 && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-white px-1 text-xs font-black text-accent">{cartCount}</span>}
+            {cartCount > 0 && <span className="grid h-6 min-w-6 place-items-center rounded-full bg-accent px-1.5 text-xs font-semibold text-white">{cartCount}</span>}
           </Link>
         </div>
       </div>
-      <nav className="flex gap-1 overflow-x-auto border-t border-line px-3 py-2 lg:hidden">
+      <nav className="no-scrollbar flex gap-1.5 overflow-x-auto px-4 pb-3 lg:hidden">
         {STORE_CATEGORIES.map((c) => (
-          <Link key={c.slug} href={`${base}/${c.slug}`} className="shrink-0 rounded-full bg-cream px-3 py-1.5 text-xs font-bold text-ink">
+          <Link key={c.slug} href={`${base}/${c.slug}`} className="shrink-0 rounded-full bg-surface px-4 py-2 text-[13px] font-semibold text-ink">
             {c.short}
           </Link>
         ))}

@@ -3,10 +3,9 @@ import { db } from "@/server/db";
 import { getProductDetail } from "@/server/catalog";
 import { quoteDisplayPrice } from "@/server/pricing/cart-pricing";
 import { getAdapter } from "@/server/suppliers/registry";
-import { Card } from "@/components/ui";
 import { getStore, getStorePricing } from "../../../_lib/store";
 import { parseSearch, supplierParams, toQuery } from "../../../_components/search-params";
-import { ProductHero } from "../../../_components/product-hero";
+import { BookingPanel, ProductHero } from "../../../_components/product-hero";
 import { TicketBooking } from "../../../_components/ticket-booking";
 import { addToCartAction } from "../../../actions";
 
@@ -47,11 +46,9 @@ export default async function TicketDetail({
   );
 
   return (
-    <main className="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[1fr_420px]">
+    <main className="mx-auto grid max-w-[1440px] gap-10 px-4 py-8 sm:px-8 lg:grid-cols-[1fr_440px] xl:gap-16">
       <ProductHero p={p} back={{ href: `/loja/${slug}/ingressos?${toQuery({ data: d.data, adultos: d.adultos, criancas: d.criancas })}`, label: "Voltar para ingressos" }} />
-      <aside className="lg:sticky lg:top-24 lg:self-start">
-        <Card className="p-5">
-          <h2 className="mb-4 text-lg font-black text-ink">Escolha seus ingressos</h2>
+      <BookingPanel title="Escolha seus ingressos">
           <TicketBooking
             action={addToCartAction.bind(null, slug)}
             supplier={supplier}
@@ -63,8 +60,7 @@ export default async function TicketDetail({
             defaultAdults={d.adultos}
             defaultChildren={d.criancas}
           />
-        </Card>
-      </aside>
+      </BookingPanel>
     </main>
   );
 }

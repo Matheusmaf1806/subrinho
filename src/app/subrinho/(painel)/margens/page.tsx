@@ -24,7 +24,7 @@ const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) 
 const pctInput = (v: string | null | undefined) => (v ? String(Number(v)).replace(".", ",") : "");
 
 function RuleControls({ canEdit, rule, fields, label, placeholder }: { canEdit: boolean; rule?: Rule; fields: Record<string, string | null | undefined>; label: string; placeholder?: string }) {
-  if (!canEdit) return <span className="font-extrabold tabular">{rule ? pct(rule.marginPct) : "—"}</span>;
+  if (!canEdit) return <span className="font-semibold tabular">{rule ? pct(rule.marginPct) : "—"}</span>;
   return (
     <div className="flex flex-wrap items-center gap-2">
       <InlinePercentForm action={upsertSubrinhoMarginAction} fields={fields} defaultValue={pctInput(rule?.marginPct)} placeholder={placeholder} label={label} />
@@ -75,7 +75,7 @@ export default async function SubrinhoMarginsPage({ searchParams }: { searchPara
           <CardBody className="space-y-4">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
-                <p className="text-4xl font-black tabular text-brand">{pct(defaultPct)}</p>
+                <p className="text-4xl font-semibold tabular text-brand">{pct(defaultPct)}</p>
                 <p className="text-xs text-muted">
                   {def ? `Atualizada em ${dateTime(def.updatedAt)}` : `Sem regra padrão — usando a margem do sistema (${pct(settings.fallbackSubrinhoMarginPct)}, em Configurações)`}
                 </p>
@@ -84,8 +84,8 @@ export default async function SubrinhoMarginsPage({ searchParams }: { searchPara
                 <InlinePercentForm action={upsertSubrinhoMarginAction} fields={{ scope: "DEFAULT", label: "Padrão Subrinho" }} defaultValue={pctInput(defaultPct)} label="Margem padrão Subrinho" />
               )}
             </div>
-            <div className="rounded-xl bg-cream/70 p-4 text-sm text-muted">
-              <p className="font-bold text-ink">Como o preço é formado</p>
+            <div className="rounded-xl bg-surface/70 p-4 text-sm text-muted">
+              <p className="font-semibold text-ink">Como o preço é formado</p>
               <p className="mt-1">
                 Custo R$ ÷ (1 − margem Subrinho) = <strong className="text-ink">NET Subrinho</strong> ÷ (1 − margem afiliado) ={" "}
                 <strong className="text-ink">NET Afiliado (PIX)</strong> ÷ (1 − taxa {pct(settings.installmentFeePct)}) = <strong className="text-ink">PARCELADO</strong>.
@@ -128,11 +128,11 @@ export default async function SubrinhoMarginsPage({ searchParams }: { searchPara
                 const future = FUTURE_CATEGORIES.includes(c);
                 return (
                   <Tr key={c}>
-                    <Td className="font-bold">
+                    <Td className="font-semibold">
                       {CATEGORY_LABEL[c]} {future && <Badge tone="info">em breve</Badge>}
                     </Td>
                     <Td className="whitespace-nowrap tabular">
-                      <span className={rule ? "font-extrabold text-ink" : "text-muted"}>{pct(rule?.marginPct ?? defaultPct)}</span>
+                      <span className={rule ? "font-semibold text-ink" : "text-muted"}>{pct(rule?.marginPct ?? defaultPct)}</span>
                       {!rule && <span className="block text-[11px] text-muted">herdada</span>}
                     </Td>
                     <Td>
@@ -167,13 +167,13 @@ export default async function SubrinhoMarginsPage({ searchParams }: { searchPara
                 return (
                   <Tr key={s.code}>
                     <Td>
-                      <div className="font-bold">{s.name}</div>
+                      <div className="font-semibold">{s.name}</div>
                       <div className="text-xs text-muted">
                         {CATEGORY_LABEL[s.category]} · {s.defaultCurrency}
                       </div>
                     </Td>
                     <Td className="whitespace-nowrap tabular">
-                      <span className={rule ? "font-extrabold text-ink" : "text-muted"}>{pct(rule?.marginPct ?? inherited(s.category))}</span>
+                      <span className={rule ? "font-semibold text-ink" : "text-muted"}>{pct(rule?.marginPct ?? inherited(s.category))}</span>
                       {!rule && <span className="block text-[11px] text-muted">herdada</span>}
                     </Td>
                     <Td>
@@ -216,7 +216,7 @@ export default async function SubrinhoMarginsPage({ searchParams }: { searchPara
                     <Badge tone={r.scope === "PRODUCT_OPTION" ? "brand" : "info"}>{SCOPE_LABEL[r.scope]}</Badge>
                   </Td>
                   <Td>
-                    <div className="font-bold">{r.label ?? r.productId}</div>
+                    <div className="font-semibold">{r.label ?? r.productId}</div>
                     <div className="font-mono text-[11px] text-muted">
                       {r.productId}
                       {r.optionId ? ` / ${r.optionId}` : ""}
@@ -238,8 +238,8 @@ export default async function SubrinhoMarginsPage({ searchParams }: { searchPara
         )}
 
         {canEdit && (
-          <CardBody className="border-t border-line bg-cream/30" id="seletor">
-            <h4 className="mb-3 text-sm font-black uppercase tracking-wide text-muted">Nova regra por produto</h4>
+          <CardBody className="border-t border-line bg-surface/30" id="seletor">
+            <h4 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">Nova regra por produto</h4>
             <div className="grid gap-3 md:grid-cols-2">
               <Form action="/subrinho/margens" className="flex items-end gap-2">
                 <Field label="1. Fornecedor" className="flex-1">
@@ -283,10 +283,10 @@ export default async function SubrinhoMarginsPage({ searchParams }: { searchPara
             {supplierMeta && pickedProduct && (
               <div className="mt-5 overflow-hidden rounded-2xl border border-line bg-white">
                 <div className="border-b border-line px-4 py-3">
-                  <p className="text-xs font-bold uppercase tracking-wide text-muted">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted">
                     {supplierMeta.name} · {CATEGORY_LABEL[supplierMeta.category]}
                   </p>
-                  <p className="font-extrabold text-ink">{pickedProduct.title}</p>
+                  <p className="font-semibold text-ink">{pickedProduct.title}</p>
                   <p className="text-xs text-muted">
                     {pickedProduct.location} · <span className="font-mono">{pickedProduct.productId}</span>
                   </p>
@@ -308,11 +308,11 @@ export default async function SubrinhoMarginsPage({ searchParams }: { searchPara
                         <>
                           <Tr>
                             <Td>
-                              <span className="font-bold">Produto inteiro</span>
+                              <span className="font-semibold">Produto inteiro</span>
                               <span className="block text-xs text-muted">todas as opções</span>
                             </Td>
                             <Td className="tabular">
-                              <span className={pr ? "font-extrabold" : "text-muted"}>{pct(productPct)}</span>
+                              <span className={pr ? "font-semibold" : "text-muted"}>{pct(productPct)}</span>
                             </Td>
                             <Td>
                               <RuleControls
@@ -329,11 +329,11 @@ export default async function SubrinhoMarginsPage({ searchParams }: { searchPara
                             return (
                               <Tr key={o.optionId}>
                                 <Td>
-                                  <span className="font-bold">{o.title}</span>
+                                  <span className="font-semibold">{o.title}</span>
                                   <span className="block font-mono text-[11px] text-muted">{o.optionId}</span>
                                 </Td>
                                 <Td className="tabular">
-                                  <span className={or ? "font-extrabold" : "text-muted"}>{pct(or?.marginPct ?? productPct)}</span>
+                                  <span className={or ? "font-semibold" : "text-muted"}>{pct(or?.marginPct ?? productPct)}</span>
                                 </Td>
                                 <Td>
                                   <RuleControls

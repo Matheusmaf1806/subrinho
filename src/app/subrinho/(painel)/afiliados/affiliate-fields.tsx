@@ -8,12 +8,12 @@ export function AffiliateFields({ a }: { a?: Affiliate }) {
   return (
     <div className="space-y-6">
       <fieldset className="grid gap-4 sm:grid-cols-2">
-        <legend className="mb-3 text-sm font-black uppercase tracking-wide text-muted">Agência e loja</legend>
+        <legend className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">Agência e loja</legend>
         <Field label="Nome fantasia *" hint="Exibido na loja">
           <Input name="name" required maxLength={120} defaultValue={a?.name} />
         </Field>
         <Field label="Endereço da loja (slug)" hint="Letras minúsculas, números e hífen. Vazio = gerado pelo nome.">
-          <div className="flex items-center rounded-xl border border-line bg-cream/60 pl-3 focus-within:border-brand focus-within:ring-4 focus-within:ring-brand/10">
+          <div className="flex items-center rounded-xl border border-line bg-surface/60 pl-3 focus-within:border-brand focus-within:ring-4 focus-within:ring-brand/10">
             <span className="text-sm font-semibold text-muted">/loja/</span>
             <input
               name="slug"
@@ -52,7 +52,7 @@ export function AffiliateFields({ a }: { a?: Affiliate }) {
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-2">
-        <legend className="mb-3 text-sm font-black uppercase tracking-wide text-muted">Dados para repasse</legend>
+        <legend className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">Dados para repasse</legend>
         <Field label="Chave Pix" className="sm:col-span-2">
           <Input name="pixKey" maxLength={140} defaultValue={a?.pixKey ?? ""} />
         </Field>
@@ -70,10 +70,10 @@ export function AffiliateFields({ a }: { a?: Affiliate }) {
       </fieldset>
 
       {a && (
-        <label className="flex items-start gap-3 rounded-xl border border-line bg-cream/40 px-4 py-3">
+        <label className="flex items-start gap-3 rounded-xl border border-line bg-surface/40 px-4 py-3">
           <input type="checkbox" name="active" defaultChecked={a.active} className="mt-0.5 h-4 w-4 accent-[var(--color-brand)]" />
           <span>
-            <span className="block text-sm font-bold text-ink">Afiliado ativo</span>
+            <span className="block text-sm font-semibold text-ink">Afiliado ativo</span>
             <span className="block text-xs text-muted">Inativo: a loja e o painel do afiliado deixam de funcionar.</span>
           </span>
         </label>

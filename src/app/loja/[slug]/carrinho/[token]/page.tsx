@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
-import { CircleAlert, Share2, ShoppingCart } from "lucide-react";
+import { Share2, ShoppingCart } from "lucide-react";
 import { db } from "@/server/db";
 import { loadCartView } from "@/server/cart/service";
 import { getSettings } from "@/server/settings";
-import { Alert, Button, ButtonLink, Card, EmptyState } from "@/components/ui";
+import { Alert, Button, ButtonLink, buttonClass, EmptyState } from "@/components/ui";
 import { CopyButton } from "@/components/ui-client";
 import { date, dateTime, orderNumber } from "@/lib/format";
 import { appUrl, getStore, viewerFor } from "../../_lib/store";
@@ -45,59 +45,63 @@ export default async function CartPage({ params, searchParams }: { params: Promi
   }
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+    <main className="mx-auto max-w-[1440px] px-4 py-10 sm:px-8">
       <TrackView action={trackCartViewAction.bind(null, slug, token, "cart")} />
-      <h1 className="text-3xl font-black tracking-tight text-ink">Carrinho</h1>
-      <p className="mt-1 text-sm text-muted">Criado em {dateTime(view.cart.createdAt)} · este carrinho não expira</p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-[13px] text-muted">Criado em {dateTime(view.cart.createdAt)} · este carrinho não expira</p>
+          <h1 className="display mt-3 text-[clamp(3rem,7vw,6rem)] text-ink">Seu carrinho</h1>
+        </div>
+        {items.length > 0 && <p className="text-[15px] text-muted">{items.length} {items.length === 1 ? "item" : "itens"}</p>}
+      </div>
 
-      {sp.adicionado && open && (
-        <Alert tone="success" className="mt-4">
-          Item adicionado ao carrinho com o preço confirmado pelo fornecedor.
-        </Alert>
-      )}
-
-      {view.removedNotices.length > 0 && (
-        <Alert tone="warning" className="mt-4" title="Removemos itens cuja data já passou">
-          <ul className="mt-1 list-disc pl-5">
-            {view.removedNotices.map((i) => (
-              <li key={i.id}>
-                {i.title}
-                {i.subtitle ? ` — ${i.subtitle}` : ""} {i.serviceDate ? `(${date(i.serviceDate)})` : ""}: {i.statusReason}
-              </li>
-            ))}
-          </ul>
-          <p className="mt-1">Os demais itens continuam no seu carrinho.</p>
-          <form action={acknowledgeNoticesAction.bind(null, slug, token)} className="mt-2">
-            <Button size="sm" variant="outline">
-              Entendi
-            </Button>
-          </form>
-        </Alert>
-      )}
-
-      {!open && (
-        <Alert tone="success" className="mt-4" title="Este carrinho já foi pago">
-          {paidOrder && (viewer ? <a className="font-bold underline" href={`/loja/${slug}/pedido/${paidOrder.id}`}>Ver pedido {orderNumber(paidOrder.number)}</a> : `Pedido ${orderNumber(paidOrder.number)}`)}
-        </Alert>
-      )}
+      <div className="mt-8 space-y-3">
+        {sp.adicionado && open && <Alert tone="success">Item adicionado com o preço confirmado pelo fornecedor.</Alert>}
+        {view.removedNotices.length > 0 && (
+          <Alert tone="warning" title="Removemos itens cuja data já passou">
+            <ul className="mt-1 list-disc pl-5">
+              {view.removedNotices.map((i) => (
+                <li key={i.id}>
+                  {i.title}
+                  {i.subtitle ? ` — ${i.subtitle}` : ""} {i.serviceDate ? `(${date(i.serviceDate)})` : ""}: {i.statusReason}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-1">Os demais itens continuam no seu carrinho.</p>
+            <form action={acknowledgeNoticesAction.bind(null, slug, token)} className="mt-3">
+              <Button size="sm" variant="dark">
+                Entendi
+              </Button>
+            </form>
+          </Alert>
+        )}
+        {!open && (
+          <Alert tone="success" title="Este carrinho já foi pago">
+            {paidOrder &&
+              (viewer ? (
+                <a className="font-semibold underline" href={`/loja/${slug}/pedido/${paidOrder.id}`}>
+                  Ver pedido {orderNumber(paidOrder.number)}
+                </a>
+              ) : (
+                `Pedido ${orderNumber(paidOrder.number)}`
+              ))}
+          </Alert>
+        )}
+        {adminMode && open && items.length > 0 && <Alert tone="info">Modo ADMIN: use “Margem” em cada item para alterar a margem da agência somente neste carrinho.</Alert>}
+      </div>
 
       {items.length === 0 ? (
-        <Card className="mt-6">
+        <div className="mt-8 rounded-[2rem] bg-surface">
           <EmptyState
-            icon={<ShoppingCart className="h-12 w-12" />}
+            icon={<ShoppingCart className="h-10 w-10" />}
             title="Nenhum item no carrinho"
             description="Adicione ingressos, hospedagem, casas, seguro viagem ou chip."
-            action={<ButtonLink href={`/loja/${slug}`} variant="accent">Explorar a loja</ButtonLink>}
+            action={<ButtonLink href={`/loja/${slug}`} variant="dark" size="lg">Explorar a loja →</ButtonLink>}
           />
-        </Card>
+        </div>
       ) : (
-        <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_380px]">
+        <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_420px] xl:gap-10">
           <div className="space-y-3">
-            {adminMode && open && (
-              <Alert tone="info">
-                <CircleAlert className="mr-1 inline h-4 w-4" /> Modo ADMIN: use “Margem” em cada item para alterar a margem da agência somente neste carrinho.
-              </Alert>
-            )}
             {items.map((item) => (
               <CartItemCard
                 key={item.id}
@@ -110,38 +114,36 @@ export default async function CartPage({ params, searchParams }: { params: Promi
               />
             ))}
           </div>
-          <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+          <aside className="space-y-3 lg:sticky lg:top-28 lg:self-start">
             {!open ? (
-              <Card className="p-5 text-sm text-muted">
+              <div className="rounded-[2rem] bg-surface p-6 text-[15px] text-muted">
                 Os valores pagos estão no pedido{paidOrder ? ` ${orderNumber(paidOrder.number)}` : ""}. Para uma nova viagem,{" "}
-                <a className="font-bold text-accent" href={`/loja/${slug}`}>
+                <a className="font-semibold text-ink underline" href={`/loja/${slug}`}>
                   monte um novo carrinho
                 </a>
                 .
-              </Card>
+              </div>
             ) : (
-            <CartSummary t={t} couponAction={open ? applyCouponAction.bind(null, slug, token) : undefined} removeCoupon={open ? (layer) => removeCouponAction.bind(null, slug, token, layer) : undefined}>
-              {open && (
+              <CartSummary t={t} couponAction={applyCouponAction.bind(null, slug, token)} removeCoupon={(layer) => removeCouponAction.bind(null, slug, token, layer)}>
                 <ButtonLink href={`/loja/${slug}/checkout/${token}`} variant="accent" size="lg" className="w-full">
-                  Finalizar compra
+                  Finalizar compra →
                 </ButtonLink>
-              )}
-            </CartSummary>
+              </CartSummary>
             )}
             {open && (
-            <Card className="p-5">
-              <p className="inline-flex items-center gap-2 font-extrabold text-ink">
-                <Share2 className="h-4 w-4 text-accent" /> Compartilhar carrinho
-              </p>
-              <p className="mt-1 text-sm text-muted">Envie o link para quem vai pagar. Os preços são atualizados quando o link é aberto.</p>
-              <div className="mt-3 flex gap-2">
-                <input readOnly value={shareUrl} className="min-w-0 flex-1 truncate rounded-xl border border-line bg-cream px-3 py-2 text-xs" aria-label="Link do carrinho" />
-                <CopyButton text={shareUrl} label="Copiar link" />
+              <div className="rounded-[2rem] bg-surface p-6">
+                <p className="inline-flex items-center gap-2 text-[17px] font-semibold tracking-[-0.02em] text-ink">
+                  <Share2 className="h-4 w-4 text-accent" /> Compartilhar carrinho
+                </p>
+                <p className="mt-1 text-[14px] text-muted">Envie o link para quem vai pagar. Os preços são atualizados quando o link é aberto.</p>
+                <div className="mt-4 flex gap-2 rounded-full bg-white p-1">
+                  <input readOnly value={shareUrl} className="min-w-0 flex-1 truncate bg-transparent px-4 text-xs text-muted outline-none" aria-label="Link do carrinho" />
+                  <CopyButton text={shareUrl} label="Copiar link" className={buttonClass("dark", "sm")} />
+                </div>
+                <a href={`https://wa.me/?text=${waText}`} target="_blank" rel="noreferrer" className="mt-3 inline-flex h-9 items-center rounded-full px-1 text-[13px] font-semibold text-ink hover:text-accent">
+                  Enviar pelo WhatsApp →
+                </a>
               </div>
-              <a href={`https://wa.me/?text=${waText}`} target="_blank" rel="noreferrer" className="mt-2 inline-block text-sm font-bold text-accent hover:underline">
-                Enviar pelo WhatsApp →
-              </a>
-            </Card>
             )}
           </aside>
         </div>

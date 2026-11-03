@@ -1,4 +1,9 @@
-/** Kit de UI (componentes de servidor — sem hooks). Componentes interativos em ui-client.tsx. */
+/**
+ * Kit de UI (componentes de servidor — sem hooks). Componentes interativos em ui-client.tsx.
+ *
+ * Linguagem visual: superfícies chapadas (branco / cinza neutro / preto / vermelho da marca),
+ * cantos bem arredondados, botões em pílula, tipografia grotesca apertada, sem bordas pesadas.
+ */
 import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 
@@ -6,27 +11,28 @@ export function cn(...c: (string | false | null | undefined)[]) {
   return c.filter(Boolean).join(" ");
 }
 
-type Variant = "primary" | "accent" | "secondary" | "outline" | "ghost" | "danger" | "dark";
+type Variant = "primary" | "accent" | "secondary" | "outline" | "ghost" | "danger" | "dark" | "light";
 type Size = "sm" | "md" | "lg";
 
 const VARIANT: Record<Variant, string> = {
-  primary: "bg-brand text-white hover:bg-brand-600 shadow-sm shadow-brand/20",
-  accent: "bg-accent text-white hover:brightness-95 shadow-sm",
-  secondary: "bg-brand-50 text-brand-700 hover:bg-brand-100",
-  outline: "border border-line bg-white text-ink hover:border-brand-200 hover:bg-brand-50/50",
-  ghost: "text-ink hover:bg-brand-50",
-  danger: "bg-white border border-red-200 text-red-700 hover:bg-red-50",
-  dark: "bg-plum text-white hover:bg-plum-700",
+  primary: "bg-brand text-white hover:bg-brand-600",
+  accent: "bg-accent text-white hover:brightness-110",
+  secondary: "bg-surface text-ink hover:bg-surface-2",
+  outline: "bg-white text-ink ring-1 ring-inset ring-line hover:ring-ink/30",
+  ghost: "text-ink hover:bg-surface",
+  danger: "bg-white text-red-700 ring-1 ring-inset ring-red-200 hover:bg-red-50",
+  dark: "bg-ink text-white hover:bg-ink-2",
+  light: "bg-white text-ink hover:bg-white/90",
 };
 const SIZE: Record<Size, string> = {
-  sm: "h-8 px-3 text-sm rounded-lg gap-1.5",
-  md: "h-10 px-4 text-sm rounded-xl gap-2",
-  lg: "h-12 px-6 text-base rounded-2xl gap-2",
+  sm: "h-9 px-3.5 text-[13px] gap-1.5",
+  md: "h-11 px-5 text-sm gap-2",
+  lg: "h-14 px-7 text-[15px] gap-2.5",
 };
 
 export function buttonClass(variant: Variant = "primary", size: Size = "md", extra?: string) {
   return cn(
-    "inline-flex items-center justify-center font-bold whitespace-nowrap transition disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand",
+    "inline-flex items-center justify-center rounded-full font-semibold tracking-[-0.01em] whitespace-nowrap transition-[background-color,color,box-shadow,filter,transform] active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink",
     VARIANT[variant],
     SIZE[size],
     extra,
@@ -41,9 +47,21 @@ export function ButtonLink({ variant, size, className, ...p }: ComponentProps<ty
   return <Link {...p} className={buttonClass(variant, size, className)} />;
 }
 
+/** Seta dentro de um círculo — o “chip” de ação da marca. */
+export function ArrowChip({ className, tone = "dark" }: { className?: string; tone?: "dark" | "light" | "brand" }) {
+  const t = tone === "light" ? "bg-white text-ink" : tone === "brand" ? "bg-brand text-white" : "bg-ink text-white";
+  return (
+    <span className={cn("inline-grid h-9 w-9 shrink-0 place-items-center rounded-full", t, className)} aria-hidden>
+      <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none">
+        <path d="M3 8h9.5M8.5 3.5 13 8l-4.5 4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </span>
+  );
+}
+
 export function Card({ className, children, ...p }: ComponentProps<"div">) {
   return (
-    <div {...p} className={cn("rounded-2xl border border-line bg-white shadow-[0_1px_0_rgba(54,2,33,0.03)]", className)}>
+    <div {...p} className={cn("rounded-3xl bg-white ring-1 ring-inset ring-black/[0.06]", className)}>
       {children}
     </div>
   );
@@ -51,31 +69,31 @@ export function Card({ className, children, ...p }: ComponentProps<"div">) {
 
 export function CardHeader({ title, subtitle, actions, className }: { title: ReactNode; subtitle?: ReactNode; actions?: ReactNode; className?: string }) {
   return (
-    <div className={cn("flex flex-wrap items-start justify-between gap-3 border-b border-line px-5 py-4", className)}>
-      <div>
-        <h3 className="text-base font-extrabold text-ink">{title}</h3>
+    <div className={cn("flex flex-wrap items-start justify-between gap-3 px-6 pt-6 pb-4", className)}>
+      <div className="min-w-0">
+        <h3 className="text-lg font-semibold tracking-[-0.02em] text-ink">{title}</h3>
         {subtitle && <p className="mt-0.5 text-sm text-muted">{subtitle}</p>}
       </div>
-      {actions && <div className="flex items-center gap-2">{actions}</div>}
+      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
   );
 }
 
 export function CardBody({ className, ...p }: ComponentProps<"div">) {
-  return <div {...p} className={cn("px-5 py-4", className)} />;
+  return <div {...p} className={cn("px-6 pb-6", className)} />;
 }
 
 export function PageHeader({ title, subtitle, actions, back }: { title: ReactNode; subtitle?: ReactNode; actions?: ReactNode; back?: { href: string; label: string } }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-      <div>
+    <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+      <div className="min-w-0">
         {back && (
-          <Link href={back.href} className="mb-2 inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-brand">
-            ← {back.label}
+          <Link href={back.href} className="mb-4 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-[13px] font-semibold text-muted ring-1 ring-inset ring-black/[0.06] hover:text-ink">
+            <span aria-hidden>←</span> {back.label}
           </Link>
         )}
-        <h1 className="text-2xl font-black tracking-tight text-ink sm:text-3xl">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-muted sm:text-base">{subtitle}</p>}
+        <h1 className="text-[2.1rem] font-semibold leading-[1.02] tracking-[-0.04em] text-ink sm:text-5xl">{title}</h1>
+        {subtitle && <p className="mt-2 max-w-2xl text-[15px] text-muted">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
@@ -84,22 +102,23 @@ export function PageHeader({ title, subtitle, actions, back }: { title: ReactNod
 
 type Tone = "neutral" | "brand" | "success" | "warning" | "danger" | "info" | "dark";
 const TONE: Record<Tone, string> = {
-  neutral: "bg-cream text-muted ring-line",
-  brand: "bg-brand-50 text-brand-700 ring-brand-100",
-  success: "bg-emerald-50 text-emerald-700 ring-emerald-100",
-  warning: "bg-amber-50 text-amber-800 ring-amber-100",
-  danger: "bg-red-50 text-red-700 ring-red-100",
-  info: "bg-sky-50 text-sky-700 ring-sky-100",
-  dark: "bg-plum text-white ring-plum",
+  neutral: "bg-surface text-ink/70",
+  brand: "bg-brand-50 text-brand-700",
+  success: "bg-emerald-50 text-emerald-700",
+  warning: "bg-amber-50 text-amber-800",
+  danger: "bg-red-50 text-red-700",
+  info: "bg-sky-50 text-sky-700",
+  dark: "bg-ink text-white",
 };
 
 export function Badge({ tone = "neutral", children, className }: { tone?: Tone; children: ReactNode; className?: string }) {
-  return <span className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ring-inset", TONE[tone], className)}>{children}</span>;
+  return <span className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold leading-none whitespace-nowrap", TONE[tone], className)}>{children}</span>;
 }
 
 export function statusTone(status: string): Tone {
   switch (status) {
     case "PAID":
+    case "CONVERTED":
       return "success";
     case "PENDING_PAYMENT":
     case "SCHEDULED":
@@ -110,36 +129,35 @@ export function statusTone(status: string): Tone {
     case "EXPIRED":
     case "UNAVAILABLE":
       return "danger";
-    case "CONVERTED":
-      return "success";
     default:
       return "neutral";
   }
 }
 
-export function Stat({ label, value, hint, tone = "default", icon }: { label: string; value: ReactNode; hint?: ReactNode; tone?: "default" | "brand" | "dark"; icon?: ReactNode }) {
-  const styles =
-    tone === "brand" ? "bg-brand text-white border-brand" : tone === "dark" ? "bg-plum text-white border-plum" : "bg-white text-ink border-line";
-  const sub = tone === "default" ? "text-muted" : "text-white/75";
+export function Stat({ label, value, hint, tone = "default", icon, className }: { label: string; value: ReactNode; hint?: ReactNode; tone?: "default" | "brand" | "dark"; icon?: ReactNode; className?: string }) {
+  const styles = tone === "brand" ? "bg-brand text-white" : tone === "dark" ? "bg-ink text-white" : "bg-white text-ink ring-1 ring-inset ring-black/[0.06]";
+  const sub = tone === "default" ? "text-muted" : "text-white/70";
   return (
-    <div className={cn("rounded-2xl border p-5", styles)}>
-      <div className={cn("flex items-center justify-between text-sm font-semibold", sub)}>
+    <div className={cn("flex min-h-[9.5rem] flex-col justify-between rounded-3xl p-6", styles, className)}>
+      <div className={cn("flex items-center justify-between gap-2 text-[13px] font-medium", sub)}>
         <span>{label}</span>
-        {icon}
+        {icon && <span className="opacity-80 [&>svg]:h-4 [&>svg]:w-4">{icon}</span>}
       </div>
-      <div className="mt-2 min-w-0 text-2xl font-black tracking-tight tabular [overflow-wrap:anywhere]">{value}</div>
-      {hint && <div className={cn("mt-1 text-xs", sub)}>{hint}</div>}
+      <div>
+        <div className="mt-4 min-w-0 text-[1.75rem] font-semibold leading-none tracking-[-0.04em] tabular [overflow-wrap:anywhere] sm:text-[2rem]">{value}</div>
+        {hint && <div className={cn("mt-2 text-xs", sub)}>{hint}</div>}
+      </div>
     </div>
   );
 }
 
 export function EmptyState({ title, description, action, icon }: { title: string; description?: ReactNode; action?: ReactNode; icon?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 px-6 py-14 text-center">
-      {icon && <div className="mb-1 text-brand-200">{icon}</div>}
-      <p className="text-base font-extrabold text-ink">{title}</p>
+    <div className="flex flex-col items-center justify-center gap-2 px-6 py-16 text-center">
+      {icon && <div className="mb-2 grid h-16 w-16 place-items-center rounded-full bg-surface text-ink/40 [&>svg]:h-7 [&>svg]:w-7">{icon}</div>}
+      <p className="text-lg font-semibold tracking-[-0.02em] text-ink">{title}</p>
       {description && <p className="max-w-md text-sm text-muted">{description}</p>}
-      {action && <div className="mt-3">{action}</div>}
+      {action && <div className="mt-4">{action}</div>}
     </div>
   );
 }
@@ -154,25 +172,25 @@ export function Table({ children, className }: { children: ReactNode; className?
   );
 }
 export function THead({ children }: { children: ReactNode }) {
-  return <thead className="border-b border-line bg-cream/60 text-xs font-bold uppercase tracking-wide text-muted">{children}</thead>;
+  return <thead className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted [&_th]:border-b [&_th]:border-line">{children}</thead>;
 }
 export function Th({ children, className, ...p }: ComponentProps<"th">) {
   return (
-    <th {...p} className={cn("px-4 py-3 whitespace-nowrap", className)}>
+    <th {...p} className={cn("px-6 py-3 font-semibold whitespace-nowrap", className)}>
       {children}
     </th>
   );
 }
 export function Td({ children, className, ...p }: ComponentProps<"td">) {
   return (
-    <td {...p} className={cn("px-4 py-3 align-top", className)}>
+    <td {...p} className={cn("px-6 py-4 align-top", className)}>
       {children}
     </td>
   );
 }
 export function Tr({ children, className, ...p }: ComponentProps<"tr">) {
   return (
-    <tr {...p} className={cn("border-b border-line/70 last:border-0 hover:bg-cream/40", className)}>
+    <tr {...p} className={cn("border-b border-line/70 transition-colors last:border-0 hover:bg-surface/60", className)}>
       {children}
     </tr>
   );
@@ -181,11 +199,11 @@ export function Tr({ children, className, ...p }: ComponentProps<"tr">) {
 // ───────── Formulários ─────────
 
 export const inputClass =
-  "block w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm text-ink placeholder:text-muted/60 shadow-sm outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/10 disabled:bg-cream";
+  "block w-full h-12 rounded-2xl border-0 bg-surface px-4 text-[15px] text-ink placeholder:text-muted/70 outline-none ring-1 ring-inset ring-transparent transition focus:bg-white focus:ring-2 focus:ring-ink disabled:opacity-60";
 
 export function Label({ children, htmlFor, className }: { children: ReactNode; htmlFor?: string; className?: string }) {
   return (
-    <label htmlFor={htmlFor} className={cn("mb-1.5 block text-sm font-bold text-ink", className)}>
+    <label htmlFor={htmlFor} className={cn("mb-2 block text-[13px] font-medium text-muted", className)}>
       {children}
     </label>
   );
@@ -195,11 +213,11 @@ export function Field({ label, hint, error, children, className }: { label: Reac
   return (
     <div className={className}>
       <label className="block">
-        <span className="mb-1.5 block text-sm font-bold text-ink">{label}</span>
+        <span className="mb-2 block text-[13px] font-medium text-muted">{label}</span>
         {children}
       </label>
-      {hint && !error && <p className="mt-1 text-xs text-muted">{hint}</p>}
-      {error && <p className="mt-1 text-xs font-semibold text-red-600">{error}</p>}
+      {hint && !error && <p className="mt-1.5 text-xs text-muted">{hint}</p>}
+      {error && <p className="mt-1.5 text-xs font-semibold text-red-600">{error}</p>}
     </div>
   );
 }
@@ -208,29 +226,36 @@ export function Input({ className, ...p }: ComponentProps<"input">) {
   return <input {...p} className={cn(inputClass, className)} />;
 }
 
+const CHEVRON =
+  "bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><path d=%22M4 6l4 4 4-4%22 stroke=%22%230a0a0b%22 stroke-width=%221.6%22 fill=%22none%22 stroke-linecap=%22round%22/></svg>')] bg-[length:16px] bg-[right_14px_center] bg-no-repeat";
+
 export function Select({ className, children, ...p }: ComponentProps<"select">) {
   return (
-    <select {...p} className={cn(inputClass, "pr-8", className)}>
+    <select {...p} className={cn(inputClass, "appearance-none pr-10", CHEVRON, className)}>
       {children}
     </select>
   );
 }
 
 export function Textarea({ className, ...p }: ComponentProps<"textarea">) {
-  return <textarea {...p} className={cn(inputClass, "min-h-24", className)} />;
+  return <textarea {...p} className={cn(inputClass, "h-auto min-h-28 py-3", className)} />;
 }
 
 export function Alert({ tone = "info", title, children, className }: { tone?: "info" | "warning" | "danger" | "success"; title?: ReactNode; children?: ReactNode; className?: string }) {
   const t = {
-    info: "border-sky-200 bg-sky-50 text-sky-900",
-    warning: "border-amber-200 bg-amber-50 text-amber-900",
-    danger: "border-red-200 bg-red-50 text-red-900",
-    success: "border-emerald-200 bg-emerald-50 text-emerald-900",
+    info: "bg-white text-ink ring-1 ring-inset ring-black/[0.06]",
+    warning: "bg-amber-50 text-amber-950",
+    danger: "bg-red-50 text-red-900",
+    success: "bg-emerald-50 text-emerald-950",
   }[tone];
+  const dot = { info: "bg-ink", warning: "bg-amber-500", danger: "bg-red-600", success: "bg-emerald-600" }[tone];
   return (
-    <div className={cn("rounded-xl border px-4 py-3 text-sm", t, className)} role={tone === "danger" ? "alert" : "status"}>
-      {title && <p className="font-extrabold">{title}</p>}
-      {children && <div className={title ? "mt-0.5" : ""}>{children}</div>}
+    <div className={cn("flex gap-3 rounded-2xl px-4 py-3.5 text-sm", t, className)} role={tone === "danger" ? "alert" : "status"}>
+      <span className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", dot)} aria-hidden />
+      <div className="min-w-0 flex-1">
+        {title && <p className="font-semibold">{title}</p>}
+        {children && <div className={title ? "mt-0.5 opacity-90" : ""}>{children}</div>}
+      </div>
     </div>
   );
 }
@@ -238,29 +263,31 @@ export function Alert({ tone = "info", title, children, className }: { tone?: "i
 /** Linha "rótulo: valor" para fichas de detalhe. */
 export function DetailRow({ label, children, strong }: { label: ReactNode; children: ReactNode; strong?: boolean }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 py-1.5 text-sm">
+    <div className="flex items-baseline justify-between gap-4 py-2 text-sm">
       <dt className="text-muted">{label}</dt>
-      <dd className={cn("text-right tabular", strong ? "font-extrabold text-ink" : "font-semibold text-ink")}>{children}</dd>
+      <dd className={cn("text-right tabular", strong ? "font-semibold text-ink" : "font-medium text-ink")}>{children}</dd>
     </div>
   );
 }
 
-/** Abas por link (estado na URL). */
+/** Abas por link (estado na URL) — controle segmentado em pílula. */
 export function LinkTabs({ tabs, active }: { tabs: { href: string; label: ReactNode; key: string }[]; active: string }) {
   return (
-    <div className="mb-5 flex gap-1 overflow-x-auto rounded-xl border border-line bg-white p-1">
+    <div className="no-scrollbar mb-6 inline-flex max-w-full gap-1 overflow-x-auto rounded-full bg-surface p-1">
       {tabs.map((t) => (
         <Link
           key={t.key}
           href={t.href}
-          className={cn(
-            "rounded-lg px-3.5 py-2 text-sm font-bold whitespace-nowrap transition",
-            t.key === active ? "bg-brand text-white" : "text-muted hover:bg-brand-50 hover:text-brand-700",
-          )}
+          className={cn("rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap transition", t.key === active ? "bg-ink text-white" : "text-muted hover:text-ink")}
         >
           {t.label}
         </Link>
       ))}
     </div>
   );
+}
+
+/** Rótulo de seção pequeno em caixa alta (estilo sinalização). */
+export function Eyebrow({ children, className }: { children: ReactNode; className?: string }) {
+  return <p className={cn("text-[11px] font-semibold uppercase tracking-[0.14em] text-muted", className)}>{children}</p>;
 }

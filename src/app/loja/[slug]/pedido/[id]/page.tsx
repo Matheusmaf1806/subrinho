@@ -33,12 +33,12 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
   const qrSvg = pending && pix && !pixExpired ? await QRCode.toString(pix.brCode, { type: "svg", margin: 1, width: 240, color: { dark: "#2A0A1F", light: "#FFFFFF" } }) : null;
 
   return (
-    <main className="mx-auto max-w-4xl space-y-5 px-4 py-8 sm:px-6">
+    <main className="mx-auto max-w-[1100px] space-y-4 px-4 py-10 sm:px-8">
       {pending && pix && !pixExpired && <AutoRefresh seconds={5} />}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-end justify-between gap-4 pb-4">
         <div>
-          <p className="text-sm font-bold text-muted">Pedido {orderNumber(order.number)}</p>
-          <h1 className="text-3xl font-black tracking-tight text-ink">
+          <p className="text-[13px] font-semibold text-muted">Pedido {orderNumber(order.number)}</p>
+          <h1 className="display mt-3 max-w-3xl text-[clamp(2.75rem,6vw,5.25rem)] text-ink">
             {order.status === "PAID" ? "Pagamento confirmado!" : pending ? "Falta pouco: conclua o pagamento" : ORDER_STATUS_LABEL[order.status]}
           </h1>
         </div>
@@ -58,7 +58,7 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
             {pixExpired ? (
               <Alert tone="warning" title="Este Pix expirou">
                 Volte ao checkout para gerar um novo código.{" "}
-                <a className="font-bold underline" href={`/loja/${slug}/carrinho`}>
+                <a className="font-semibold underline" href={`/loja/${slug}/carrinho`}>
                   Ir para o carrinho
                 </a>
               </Alert>
@@ -67,7 +67,7 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
                 <div className="mx-auto overflow-hidden rounded-2xl border border-line" dangerouslySetInnerHTML={{ __html: qrSvg ?? "" }} />
                 <div className="space-y-3">
                   <p className="text-sm text-muted">Abra o app do seu banco, escolha Pix → Ler QR Code, ou use o código copia e cola:</p>
-                  <textarea readOnly value={pix.brCode} className="h-24 w-full rounded-xl border border-line bg-cream p-3 font-mono text-xs" aria-label="Pix copia e cola" />
+                  <textarea readOnly value={pix.brCode} className="h-24 w-full rounded-xl border border-line bg-surface p-3 font-mono text-xs" aria-label="Pix copia e cola" />
                   <div className="flex flex-wrap items-center gap-2">
                     <CopyButton text={pix.brCode} label="Copiar código Pix" />
                     <span className="inline-flex items-center gap-1 text-xs text-muted">
@@ -94,16 +94,16 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
           {items.map((i) => (
             <li key={i.id} className="flex flex-wrap items-start justify-between gap-3 px-5 py-4">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-muted">{categoryLabel(i.category)}</p>
-                <p className="font-extrabold text-ink">{i.title}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted">{categoryLabel(i.category)}</p>
+                <p className="font-semibold text-ink">{i.title}</p>
                 {i.subtitle && <p className="text-sm text-muted">{i.subtitle}</p>}
                 <p className="text-xs text-muted">
                   {i.serviceDate ? `${date(i.serviceDate)}${i.serviceEndDate ? ` a ${date(i.serviceEndDate)}` : ""} · ` : ""}
                   {paxSummary(i.pax)}
                 </p>
-                {i.supplierBookingRef && <p className="mt-1 text-xs font-bold text-success">Reserva confirmada · código {i.supplierBookingRef}</p>}
+                {i.supplierBookingRef && <p className="mt-1 text-xs font-semibold text-success">Reserva confirmada · código {i.supplierBookingRef}</p>}
               </div>
-              <p className="font-black text-ink tabular">{brl(i.chargedAmount)}</p>
+              <p className="font-semibold text-ink tabular">{brl(i.chargedAmount)}</p>
             </li>
           ))}
         </ul>
@@ -111,12 +111,12 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
           {Number(order.totalSubrinhoDiscount) + Number(order.totalAffiliateDiscount) > 0 && (
             <div className="flex justify-between text-success">
               <span>Descontos</span>
-              <span className="font-bold tabular">− {brl(Number(order.totalSubrinhoDiscount) + Number(order.totalAffiliateDiscount))}</span>
+              <span className="font-semibold tabular">− {brl(Number(order.totalSubrinhoDiscount) + Number(order.totalAffiliateDiscount))}</span>
             </div>
           )}
           <div className="flex justify-between text-base">
-            <span className="font-bold">Total {order.paymentMethod === "PIX" ? "no Pix" : `no cartão (${order.installments}x sem juros)`}</span>
-            <span className="font-black tabular">{brl(order.amountCharged)}</span>
+            <span className="font-semibold">Total {order.paymentMethod === "PIX" ? "no Pix" : `no cartão (${order.installments}x sem juros)`}</span>
+            <span className="font-semibold tabular">{brl(order.amountCharged)}</span>
           </div>
           {card && <p className="mt-1 text-xs text-muted">{card.brand} final {card.last4}</p>}
         </div>
@@ -126,14 +126,14 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
         <Card>
           <CardHeader title="Titular da conta" />
           <CardBody className="text-sm">
-            <p className="font-bold">{order.customerData.name}</p>
+            <p className="font-semibold">{order.customerData.name}</p>
             <p className="text-muted">{order.customerData.email}</p>
           </CardBody>
         </Card>
         <Card>
           <CardHeader title="Pagador" />
           <CardBody className="text-sm">
-            <p className="font-bold">{order.payerData.name}</p>
+            <p className="font-semibold">{order.payerData.name}</p>
             <p className="text-muted">
               {formatDocument(order.payerData.document)} · {order.payerData.email}
             </p>
@@ -147,7 +147,7 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
             <ul className="space-y-1">
               {order.travelers.map((t, i) => (
                 <li key={i}>
-                  <span className="font-bold">{t.name}</span> {t.document ? <span className="text-muted">· {t.document}</span> : null}
+                  <span className="font-semibold">{t.name}</span> {t.document ? <span className="text-muted">· {t.document}</span> : null}
                 </li>
               ))}
             </ul>

@@ -16,37 +16,47 @@ export default async function StoreLayout({ children, params }: { children: Reac
   const [viewer, count, token] = await Promise.all([viewerFor(store), cartBadgeCount(store), currentCartToken(store)]);
   const base = `/loja/${store.slug}`;
   return (
-    <div style={{ ["--store-accent" as string]: store.brandColor }} className="flex min-h-screen flex-col bg-[#fffaf7]">
+    <div style={{ ["--store-accent" as string]: store.brandColor }} className="flex min-h-screen flex-col bg-white">
       <StoreHeader store={store} viewer={viewer} cartCount={count} cartHref={token ? `${base}/carrinho/${token}` : `${base}/carrinho`} />
       <div className="flex-1">{children}</div>
-      <footer className="mt-16 border-t border-line bg-white">
-        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:grid-cols-3 sm:px-6">
-          <div>
-            <p className="text-lg font-black text-ink">{store.name}</p>
-            {store.email && <p className="mt-1 text-sm text-muted">{store.email}</p>}
-            {store.phone && <p className="text-sm text-muted">{store.phone}</p>}
-            {store.whatsapp && (
-              <a href={`https://wa.me/${store.whatsapp.replace(/\D/g, "")}`} className="mt-2 inline-block text-sm font-bold text-accent" target="_blank" rel="noreferrer">
-                Fale no WhatsApp →
-              </a>
-            )}
+      <footer className="mt-24 px-3 pb-3 sm:px-4 sm:pb-4">
+        <div className="overflow-hidden rounded-[2rem] bg-ink text-white sm:rounded-[2.5rem]">
+          <div className="mx-auto grid max-w-[1440px] gap-10 px-6 pt-14 sm:grid-cols-[1.4fr_1fr_1fr] sm:px-12">
+            <div>
+              <p className="max-w-sm text-3xl font-semibold leading-[1.05] tracking-[-0.04em]">Viajar é com a gente. A tecnologia também.</p>
+              {store.whatsapp && (
+                <a href={`https://wa.me/${store.whatsapp.replace(/\D/g, "")}`} className="mt-6 inline-flex h-11 items-center rounded-full bg-accent px-5 text-sm font-semibold" target="_blank" rel="noreferrer">
+                  Fale no WhatsApp →
+                </a>
+              )}
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">Produtos</p>
+              <ul className="mt-4 space-y-2 text-[15px]">
+                {STORE_CATEGORIES.map((c) => (
+                  <li key={c.slug}>
+                    <Link className="text-white/75 hover:text-white" href={`${base}/${c.slug}`}>
+                      {c.short}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">Contato</p>
+              <ul className="mt-4 space-y-2 text-[15px] text-white/75">
+                {store.email && <li>{store.email}</li>}
+                {store.phone && <li>{store.phone}</li>}
+                <li>Pagamento em até 10x sem juros ou no Pix</li>
+              </ul>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-extrabold text-ink">Produtos</p>
-            <ul className="mt-2 space-y-1 text-sm">
-              {STORE_CATEGORIES.map((c) => (
-                <li key={c.slug}>
-                  <Link className="text-muted hover:text-accent" href={`${base}/${c.slug}`}>
-                    {c.short}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="sm:text-right">
-            <p className="text-xs font-semibold text-muted">Loja com a tecnologia</p>
-            <SubrinhoLogo size="sm" className="mt-1" />
-            <p className="mt-2 text-xs text-muted">Pagamento em até 10x sem juros ou no Pix.</p>
+          <div className="mx-auto mt-12 flex max-w-[1440px] flex-wrap items-end justify-between gap-6 px-6 pb-8 sm:px-12">
+            <p className="text-[clamp(3rem,11vw,10rem)] font-semibold leading-[0.85] tracking-[-0.06em] text-white">{store.name}</p>
+            <div className="pb-2 text-right">
+              <p className="text-[11px] font-medium text-white/40">Loja com a tecnologia</p>
+              <SubrinhoLogo tone="brand" size="sm" className="mt-1" />
+            </div>
           </div>
         </div>
       </footer>

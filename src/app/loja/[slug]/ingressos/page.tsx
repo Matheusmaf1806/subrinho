@@ -20,17 +20,17 @@ export default async function TicketsPage({ params, searchParams }: { params: Pr
   const destinations = [...new Set(adaptersFor("TICKETS").flatMap((a) => a.destinations().map((x) => x.name)))];
   return (
     <main>
-      <ListingHeader title="Ingressos e Experiências" subtitle="Parques, museus e passeios com data marcada.">
+      <ListingHeader eyebrow="Ingressos e experiências" image="colosseumArches" title="Ingressos sem fila." subtitle="Parques, museus e passeios com data marcada — no Pix ou em 10x sem juros.">
         <TicketsSearch action={base} d={d} destinations={destinations} minDate={minDate} />
       </ListingHeader>
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-        <p className="mb-4 text-sm text-muted">
+      <div className="mx-auto max-w-[1440px] px-4 pb-8 pt-12 sm:px-8">
+        <p className="mb-8 text-[15px] text-muted">
           {results.length} resultado(s){d.destino ? ` para “${d.destino}”` : ""} · visita em {date(d.data)} · preços por adulto
         </p>
         {results.length === 0 ? (
           <NoResults what="ingresso" />
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid gap-x-5 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {results.map((p) => (
               <ProductCard key={`${p.supplierCode}-${p.productId}`} p={p} href={`${base}/${p.supplierCode}/${p.productId}?${q}`} note="por adulto" />
             ))}

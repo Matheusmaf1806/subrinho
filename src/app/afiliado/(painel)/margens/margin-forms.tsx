@@ -69,7 +69,7 @@ export function MarginInlineForm({
             onChange={(e) => setV(e.target.value)}
             className={cn(inputClass, "py-1.5 pr-7 text-right tabular")}
           />
-          <span className="pointer-events-none absolute inset-y-0 right-2.5 grid place-items-center text-sm font-bold text-muted">%</span>
+          <span className="pointer-events-none absolute inset-y-0 right-2.5 grid place-items-center text-sm font-semibold text-muted">%</span>
         </div>
         <SaveButton dirty={dirty} />
       </div>
@@ -161,10 +161,10 @@ export function MarginSimulator({
 
   return (
     <div className="rounded-2xl border border-brand-100 bg-brand-50/60 p-4">
-      <p className="text-sm font-extrabold text-ink">Simulador</p>
+      <p className="text-sm font-semibold text-ink">Simulador</p>
       <div className="mt-3 grid grid-cols-2 gap-3">
         <div>
-          <label htmlFor={baseId} className="mb-1 block text-xs font-bold text-muted">
+          <label htmlFor={baseId} className="mb-1 block text-xs font-semibold text-muted">
             Preço base (antes da sua margem)
           </label>
           <input
@@ -179,7 +179,7 @@ export function MarginSimulator({
           />
         </div>
         <div>
-          <label htmlFor={marginId} className="mb-1 block text-xs font-bold text-muted">
+          <label htmlFor={marginId} className="mb-1 block text-xs font-semibold text-muted">
             Sua margem (%)
           </label>
           <input
@@ -198,16 +198,16 @@ export function MarginSimulator({
       {r ? (
         <dl className="mt-4 grid grid-cols-1 gap-2 text-sm sm:grid-cols-3">
           <div className="rounded-xl bg-white px-3 py-2">
-            <dt className="text-xs font-bold text-muted">Preço no PIX</dt>
-            <dd className="font-black tabular text-ink">{brlFmt.format(r.pix)}</dd>
+            <dt className="text-xs font-semibold text-muted">Preço no PIX</dt>
+            <dd className="font-semibold tabular text-ink">{brlFmt.format(r.pix)}</dd>
           </div>
           <div className="rounded-xl bg-white px-3 py-2">
-            <dt className="text-xs font-bold text-muted">Sua comissão</dt>
-            <dd className="font-black tabular text-success">{brlFmt.format(r.commission)}</dd>
+            <dt className="text-xs font-semibold text-muted">Sua comissão</dt>
+            <dd className="font-semibold tabular text-success">{brlFmt.format(r.commission)}</dd>
           </div>
           <div className="rounded-xl bg-white px-3 py-2">
-            <dt className="text-xs font-bold text-muted">Parcelado</dt>
-            <dd className="font-black tabular text-ink">
+            <dt className="text-xs font-semibold text-muted">Parcelado</dt>
+            <dd className="font-semibold tabular text-ink">
               {maxInstallments}x {brlFmt.format(r.parcela)}
             </dd>
           </div>

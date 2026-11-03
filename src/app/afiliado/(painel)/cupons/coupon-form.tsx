@@ -77,7 +77,7 @@ function preview(v: CouponFormValues, labels: Record<string, string>) {
 function MoneyInput(props: { name: string; value: string; onChange: (v: string) => void; required?: boolean; placeholder?: string }) {
   return (
     <div className="relative">
-      <span className="pointer-events-none absolute inset-y-0 left-3 grid place-items-center text-sm font-bold text-muted">R$</span>
+      <span className="pointer-events-none absolute inset-y-0 left-3 grid place-items-center text-sm font-semibold text-muted">R$</span>
       <Input
         type="text"
         inputMode="decimal"
@@ -116,7 +116,7 @@ function CouponFields({ initial, categories }: { initial: CouponFormValues; cate
             placeholder="EX.: VERAO10"
             value={v.code}
             onChange={(e) => set("code", e.target.value.toUpperCase().replace(/\s/g, ""))}
-            className="font-bold uppercase tracking-wide"
+            className="font-semibold uppercase tracking-wide"
           />
         </Field>
         <Field label="Limite de usos (opcional)" hint="Em branco = ilimitado">
@@ -144,7 +144,7 @@ function CouponFields({ initial, categories }: { initial: CouponFormValues; cate
       </Field>
 
       <fieldset>
-        <legend className="mb-1.5 block text-sm font-bold text-ink">Tipo de desconto</legend>
+        <legend className="mb-1.5 block text-sm font-semibold text-ink">Tipo de desconto</legend>
         <div className="grid gap-2 sm:grid-cols-3">
           {TYPE_OPTIONS.map((t) => (
             <label
@@ -163,7 +163,7 @@ function CouponFields({ initial, categories }: { initial: CouponFormValues; cate
                 className="sr-only"
                 aria-describedby={`${typeGroup}-${t.value}`}
               />
-              <span className="block text-sm font-extrabold text-ink">{t.title}</span>
+              <span className="block text-sm font-semibold text-ink">{t.title}</span>
               <span id={`${typeGroup}-${t.value}`} className="block text-xs text-muted">
                 {t.hint}
               </span>
@@ -188,7 +188,7 @@ function CouponFields({ initial, categories }: { initial: CouponFormValues; cate
                 onChange={(e) => set("percentOff", e.target.value)}
                 className="pr-8 tabular"
               />
-              <span className="pointer-events-none absolute inset-y-0 right-3 grid place-items-center text-sm font-bold text-muted">%</span>
+              <span className="pointer-events-none absolute inset-y-0 right-3 grid place-items-center text-sm font-semibold text-muted">%</span>
             </div>
           </Field>
         )}
@@ -213,7 +213,7 @@ function CouponFields({ initial, categories }: { initial: CouponFormValues; cate
       </div>
 
       <fieldset>
-        <legend className="mb-1.5 block text-sm font-bold text-ink">Categorias</legend>
+        <legend className="mb-1.5 block text-sm font-semibold text-ink">Categorias</legend>
         <p className="mb-2 text-xs text-muted">Nenhuma marcada = vale para todas as categorias.</p>
         <div className="flex flex-wrap gap-2">
           {categories.map((c) => {
@@ -222,7 +222,7 @@ function CouponFields({ initial, categories }: { initial: CouponFormValues; cate
               <label
                 key={c.value}
                 className={cn(
-                  "inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-bold transition",
+                  "inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-semibold transition",
                   on ? "border-brand bg-brand text-white" : "border-line bg-white text-ink hover:border-brand-200",
                 )}
               >
@@ -250,7 +250,7 @@ function CouponFields({ initial, categories }: { initial: CouponFormValues; cate
         </Field>
       </div>
 
-      <label className="flex items-center gap-2 text-sm font-bold text-ink">
+      <label className="flex items-center gap-2 text-sm font-semibold text-ink">
         <SyncedCheckable
           type="checkbox"
           name="active"
@@ -262,7 +262,7 @@ function CouponFields({ initial, categories }: { initial: CouponFormValues; cate
       </label>
 
       <div className="rounded-xl border border-dashed border-brand-200 bg-brand-50/50 px-4 py-3 text-sm">
-        <p className="text-xs font-bold uppercase tracking-wide text-brand-700">Resumo</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">Resumo</p>
         <p className="mt-0.5 font-semibold text-ink">
           {v.code || "CÓDIGO"}: {preview(v, labels)}
         </p>

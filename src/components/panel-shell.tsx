@@ -7,7 +7,7 @@ import { cn } from "./ui";
 
 export type NavItem = { href: string; label: string; icon?: ReactNode; exact?: boolean };
 
-/** Estrutura dos painéis (Subrinho e Afiliado): menu lateral + conteúdo. */
+/** Estrutura dos painéis (Subrinho e Afiliado): menu lateral preto + conteúdo em superfície clara. */
 export function PanelShell({
   brand,
   badge,
@@ -35,11 +35,11 @@ export function PanelShell({
           href={i.href}
           onClick={() => setOpen(false)}
           className={cn(
-            "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition",
-            isActive(i) ? "bg-white text-brand shadow-sm" : "text-white/85 hover:bg-white/10 hover:text-white",
+            "group flex h-11 items-center gap-3 rounded-full px-4 text-[14px] font-medium transition",
+            isActive(i) ? "bg-white text-ink" : "text-white/60 hover:bg-white/[0.07] hover:text-white",
           )}
         >
-          <span className="grid h-5 w-5 place-items-center [&>svg]:h-[18px] [&>svg]:w-[18px]">{i.icon}</span>
+          <span className={cn("grid h-5 w-5 place-items-center [&>svg]:h-[18px] [&>svg]:w-[18px]", isActive(i) ? "text-brand" : "")}>{i.icon}</span>
           {i.label}
         </Link>
       ))}
@@ -47,33 +47,33 @@ export function PanelShell({
   );
 
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[260px_1fr]">
+    <div className="min-h-screen bg-surface lg:grid lg:grid-cols-[272px_1fr]">
       {/* Menu lateral (desktop) */}
-      <aside className="sticky top-0 hidden h-screen flex-col bg-brand px-4 py-5 text-white lg:flex">
-        <div className="mb-1 px-2">{brand}</div>
-        {badge && <div className="mb-6 px-2">{badge}</div>}
-        <div className="flex-1 overflow-y-auto">{navList}</div>
-        <div className="mt-4 rounded-2xl bg-white/10 p-3 text-sm">{user}</div>
+      <aside className="sticky top-0 hidden h-screen flex-col bg-ink px-4 py-6 text-white lg:flex">
+        <div className="mb-2 px-3">{brand}</div>
+        {badge && <div className="mb-8 px-3">{badge}</div>}
+        <div className="no-scrollbar -mx-1 flex-1 overflow-y-auto px-1">{navList}</div>
+        <div className="mt-4 rounded-3xl bg-white/[0.06] p-4 text-sm">{user}</div>
         {footer}
       </aside>
 
       {/* Topo (mobile) */}
-      <header className="sticky top-0 z-30 flex items-center justify-between bg-brand px-4 py-3 text-white lg:hidden">
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between bg-ink px-4 text-white lg:hidden">
         <div>{brand}</div>
-        <button type="button" onClick={() => setOpen((v) => !v)} className="rounded-lg bg-white/15 px-3 py-1.5 text-sm font-bold" aria-expanded={open}>
+        <button type="button" onClick={() => setOpen((v) => !v)} className="h-9 rounded-full bg-white px-4 text-[13px] font-semibold text-ink" aria-expanded={open}>
           {open ? "Fechar" : "Menu"}
         </button>
       </header>
       {open && (
-        <div className="fixed inset-x-0 top-[56px] z-30 max-h-[calc(100vh-56px)] overflow-y-auto bg-brand px-4 pb-5 text-white lg:hidden">
-          {badge && <div className="mb-3">{badge}</div>}
+        <div className="fixed inset-x-0 top-16 z-30 max-h-[calc(100vh-4rem)] overflow-y-auto bg-ink px-4 pb-6 text-white lg:hidden">
+          {badge && <div className="mb-4 px-3">{badge}</div>}
           {navList}
-          <div className="mt-4 rounded-2xl bg-white/10 p-3 text-sm">{user}</div>
+          <div className="mt-4 rounded-3xl bg-white/[0.06] p-4 text-sm">{user}</div>
         </div>
       )}
 
-      <main className="min-w-0 px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
-        <div className="mx-auto max-w-7xl">{children}</div>
+      <main className="min-w-0 px-4 py-6 sm:px-8 lg:px-12 lg:py-10">
+        <div className="mx-auto max-w-[1240px]">{children}</div>
       </main>
     </div>
   );

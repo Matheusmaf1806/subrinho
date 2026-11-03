@@ -133,17 +133,17 @@ export function Modal({
         ref={ref}
         onClose={() => setOpen(false)}
         className={cn(
-          "m-auto w-[calc(100%-2rem)] rounded-2xl border border-line bg-white p-0 text-ink shadow-2xl",
+          "m-auto w-[calc(100%-1.5rem)] rounded-[2rem] bg-white p-0 text-ink shadow-[0_40px_120px_-20px_rgba(0,0,0,0.45)]",
           size === "sm" ? "max-w-sm" : size === "lg" ? "max-w-3xl" : "max-w-lg",
         )}
       >
-        <div className="flex items-center justify-between border-b border-line px-5 py-4">
-          <h2 className="text-lg font-extrabold">{title}</h2>
-          <button type="button" onClick={close} className="rounded-lg px-2 py-1 text-xl leading-none text-muted hover:bg-cream" aria-label="Fechar">
+        <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-2">
+          <h2 className="text-xl font-semibold tracking-[-0.03em]">{title}</h2>
+          <button type="button" onClick={close} className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-surface text-lg leading-none text-ink hover:bg-surface-2" aria-label="Fechar">
             ×
           </button>
         </div>
-        <div className="max-h-[75vh] overflow-y-auto px-5 py-4">{open ? (typeof children === "function" ? children(close) : children) : null}</div>
+        <div className="max-h-[75vh] overflow-y-auto px-6 pt-2 pb-6">{open ? (typeof children === "function" ? children(close) : children) : null}</div>
       </dialog>
     </>
   );

@@ -25,8 +25,8 @@ export function LoginForm() {
       <Field label="Senha">
         <Input type="password" name="password" autoComplete="current-password" required placeholder="Sua senha" />
       </Field>
-      <SubmitButton size="lg" className="w-full" pendingText="Entrando…">
-        Entrar no painel
+      <SubmitButton size="lg" className="mt-2 w-full" pendingText="Entrando…">
+        Entrar no painel →
       </SubmitButton>
     </ActionForm>
   );

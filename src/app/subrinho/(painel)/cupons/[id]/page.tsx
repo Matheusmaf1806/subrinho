@@ -125,7 +125,7 @@ export default async function SubrinhoCouponPage({
                 {orders.map((o) => (
                   <Tr key={o.id}>
                     <Td>
-                      <Link href={`/subrinho/pedidos/${o.id}`} className="font-extrabold text-brand hover:underline">
+                      <Link href={`/subrinho/pedidos/${o.id}`} className="font-semibold text-brand hover:underline">
                         {orderNumber(o.number)}
                       </Link>
                       <div className="mt-1">
@@ -138,7 +138,7 @@ export default async function SubrinhoCouponPage({
                       <div className="text-xs text-muted">{o.customerData.name}</div>
                     </Td>
                     <Td className="text-right tabular">
-                      <span className="font-bold">{brl(o.applied)}</span>
+                      <span className="font-semibold">{brl(o.applied)}</span>
                       {o.limitedByMargin && <div className="text-[11px] font-semibold text-amber-700">limitado pela margem</div>}
                       <div className="text-[11px] text-muted">pedido {brl(o.amountCharged)}</div>
                     </Td>

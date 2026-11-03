@@ -89,13 +89,13 @@ export default async function SubrinhoReportDetailPage({ params }: { params: Pro
                 return (
                   <Tr key={a.affiliateId}>
                     <Td>
-                      <Link href={`/subrinho/afiliados/${a.affiliateId}`} className="font-extrabold text-ink hover:text-brand">
+                      <Link href={`/subrinho/afiliados/${a.affiliateId}`} className="font-semibold text-ink hover:text-brand">
                         {a.name}
                       </Link>
                     </Td>
                     <Td className="text-right tabular">{a.orders}</Td>
                     <Td className="text-right tabular">{brl(a.amountCharged)}</Td>
-                    <Td className="text-right font-extrabold tabular">{brl(a.commission)}</Td>
+                    <Td className="text-right font-semibold tabular">{brl(a.commission)}</Td>
                     <Td className="whitespace-nowrap">
                       {p ? (
                         <Link href={`/subrinho/repasses?afiliado=${a.affiliateId}&quinzena=${r.periodStart}`} className="inline-flex items-center gap-2">
@@ -134,7 +134,7 @@ export default async function SubrinhoReportDetailPage({ params }: { params: Pro
                 <tbody>
                   {byCategory.map((c) => (
                     <Tr key={c.category}>
-                      <Td className="font-bold">{c.label}</Td>
+                      <Td className="font-semibold">{c.label}</Td>
                       <Td className="text-right tabular">{c.items}</Td>
                       <Td className="text-right tabular">{brl(c.finalPix)}</Td>
                       <Td className="text-right tabular">{brl(c.subrinhoRevenue)}</Td>
@@ -164,10 +164,10 @@ export default async function SubrinhoReportDetailPage({ params }: { params: Pro
                   {bySupplier.map((sp) => (
                     <Tr key={sp.supplierCode}>
                       <Td>
-                        <span className="font-bold">{supplierName(sp.supplierCode)}</span> <span className="text-xs text-muted">{sp.supplierCode}</span>
+                        <span className="font-semibold">{supplierName(sp.supplierCode)}</span> <span className="text-xs text-muted">{sp.supplierCode}</span>
                       </Td>
                       <Td className="text-right tabular">{sp.items}</Td>
-                      <Td className="text-right font-bold tabular">{brl(sp.costBrl)}</Td>
+                      <Td className="text-right font-semibold tabular">{brl(sp.costBrl)}</Td>
                     </Tr>
                   ))}
                 </tbody>
@@ -203,7 +203,7 @@ export default async function SubrinhoReportDetailPage({ params }: { params: Pro
               {orders.map((o) => (
                 <Tr key={o.id}>
                   <Td>
-                    <Link href={`/subrinho/pedidos/${o.id}`} className="font-extrabold text-brand hover:underline">
+                    <Link href={`/subrinho/pedidos/${o.id}`} className="font-semibold text-brand hover:underline">
                       {orderNumber(o.number)}
                     </Link>
                   </Td>
@@ -211,7 +211,7 @@ export default async function SubrinhoReportDetailPage({ params }: { params: Pro
                   <Td className="whitespace-nowrap">{o.affiliateName}</Td>
                   <Td>{o.customerData.name}</Td>
                   <Td className="whitespace-nowrap">{o.paymentMethod === "PIX" ? "Pix" : `Cartão ${o.installments}x`}</Td>
-                  <Td className="text-right font-bold tabular">{brl(o.amountCharged)}</Td>
+                  <Td className="text-right font-semibold tabular">{brl(o.amountCharged)}</Td>
                   <Td className="text-right tabular text-muted">{brl(o.totalCostBrl)}</Td>
                   <Td className="text-right tabular">{brl(o.subrinhoRevenue)}</Td>
                   <Td className="text-right tabular">{brl(o.affiliateCommission)}</Td>

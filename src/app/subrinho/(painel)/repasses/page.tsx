@@ -35,7 +35,7 @@ function BankData({ a }: { a: PayoutListRow["affiliate"] }) {
           <span>
             Pix: <strong className="break-all text-ink">{a.pixKey}</strong>
           </span>
-          <CopyButton text={a.pixKey} label="Copiar" className="rounded-md bg-brand-50 px-1.5 py-0.5 text-[11px] font-bold text-brand-700 hover:bg-brand-100" />
+          <CopyButton text={a.pixKey} label="Copiar" className="rounded-md bg-brand-50 px-1.5 py-0.5 text-[11px] font-semibold text-brand-700 hover:bg-brand-100" />
         </div>
       ) : (
         <div className="font-semibold text-amber-700">Sem chave Pix cadastrada</div>
@@ -161,7 +161,7 @@ export default async function SubrinhoPayoutsPage({ searchParams }: { searchPara
                 return (
                   <Tr key={p.id}>
                     <Td className="min-w-[16rem]">
-                      <Link href={`/subrinho/afiliados/${a.id}`} className="font-extrabold text-ink hover:text-brand">
+                      <Link href={`/subrinho/afiliados/${a.id}`} className="font-semibold text-ink hover:text-brand">
                         {a.name}
                       </Link>
                       <BankData a={a} />
@@ -172,12 +172,12 @@ export default async function SubrinhoPayoutsPage({ searchParams }: { searchPara
                       </Link>
                     </Td>
                     <Td className="whitespace-nowrap">
-                      <span className={overdue ? "font-bold text-red-700" : ""}>{date(p.scheduledDate)}</span>
-                      {overdue && <div className="text-[11px] font-bold text-red-700">em atraso</div>}
+                      <span className={overdue ? "font-semibold text-red-700" : ""}>{date(p.scheduledDate)}</span>
+                      {overdue && <div className="text-[11px] font-semibold text-red-700">em atraso</div>}
                     </Td>
                     <Td className="text-right tabular">{p.ordersCount}</Td>
                     <Td className="text-right tabular">{brl(p.grossSales)}</Td>
-                    <Td className="text-right text-base font-black tabular">{brl(p.amount)}</Td>
+                    <Td className="text-right text-base font-semibold tabular">{brl(p.amount)}</Td>
                     <Td className="whitespace-nowrap">
                       <PayoutStatusBadge status={p.status} />
                       {p.paidAt && (
@@ -228,7 +228,7 @@ export default async function SubrinhoPayoutsPage({ searchParams }: { searchPara
                             >
                               <ActionForm action={markPayoutPaidAction} className="space-y-4">
                                 <input type="hidden" name="payoutId" value={p.id} />
-                                <div className="rounded-xl bg-cream/70 p-3 text-sm">
+                                <div className="rounded-xl bg-surface/70 p-3 text-sm">
                                   <p>
                                     Valor: <strong className="text-lg">{brl(p.amount)}</strong> · quinzena {periodLabel(p.periodStart, p.periodEnd)}
                                   </p>
@@ -295,11 +295,11 @@ export default async function SubrinhoPayoutsPage({ searchParams }: { searchPara
             <tbody>
               {forecastShown.map((f) => (
                 <Tr key={`${f.affiliateId}-${f.payoutDate}`}>
-                  <Td className="font-bold">{f.affiliateName}</Td>
+                  <Td className="font-semibold">{f.affiliateName}</Td>
                   <Td>{date(f.payoutDate)}</Td>
                   <Td className="text-right tabular">{f.orders}</Td>
                   <Td className="text-right tabular">{brl(f.gross)}</Td>
-                  <Td className="text-right font-extrabold tabular">{brl(f.amount)}</Td>
+                  <Td className="text-right font-semibold tabular">{brl(f.amount)}</Td>
                 </Tr>
               ))}
             </tbody>

@@ -59,7 +59,7 @@ function Person({ p, extra }: { p: PersonData | null | undefined; extra?: ReactN
   const address = a ? [a.street && `${a.street}${a.number ? `, ${a.number}` : ""}`, a.complement, a.district, a.city && `${a.city}${a.state ? `/${a.state}` : ""}`, a.zip, a.country].filter(Boolean).join(" · ") : null;
   return (
     <div className="space-y-0.5 text-sm">
-      <p className="font-extrabold text-ink">{p.name}</p>
+      <p className="font-semibold text-ink">{p.name}</p>
       {p.email && <p className="break-all">{p.email}</p>}
       {p.phone && <p>{p.phone}</p>}
       {p.document && <p>CPF/CNPJ: {p.document}</p>}
@@ -96,11 +96,11 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
           <Link href="/subrinho/pedidos" className="mb-2 inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-brand">
             ← Pedidos
           </Link>
-          <h1 className="flex flex-wrap items-center gap-3 text-2xl font-black tracking-tight text-ink sm:text-3xl">
+          <h1 className="flex flex-wrap items-center gap-3 text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
             Pedido {orderNumber(o.number)} <OrderStatusBadge status={o.status} />
           </h1>
           <p className="mt-1 text-sm text-muted">
-            <Link href={`/subrinho/afiliados/${affiliate.id}`} className="font-bold text-ink hover:text-brand">
+            <Link href={`/subrinho/afiliados/${affiliate.id}`} className="font-semibold text-ink hover:text-brand">
               {affiliate.name}
             </Link>{" "}
             · criado em {dateTime(o.createdAt)}
@@ -264,7 +264,7 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
               <tbody>
                 {coupons.map((c) => (
                   <Tr key={`${c.layer}-${c.id}`}>
-                    <Td className="font-extrabold">
+                    <Td className="font-semibold">
                       {c.layer === "SUBRINHO" ? (
                         <Link href={`/subrinho/cupons/${c.id}`} className="text-brand hover:underline">
                           {c.code}
@@ -284,7 +284,7 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
                     </Td>
                     <Td className="text-right tabular">{c.eligibleSubtotal ? brl(c.eligibleSubtotal) : "—"}</Td>
                     <Td className="text-right tabular">{c.requested ? brl(c.requested) : "—"}</Td>
-                    <Td className="text-right font-bold tabular">
+                    <Td className="text-right font-semibold tabular">
                       {brl(c.applied)}
                       {c.limitedByMargin && <div className="text-[11px] font-semibold text-amber-700">limitado pela margem</div>}
                     </Td>
@@ -314,8 +314,8 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
               <tbody>
                 {fxSnap.map(([cur, r]) => (
                   <Tr key={cur}>
-                    <Td className="font-bold">{cur} → BRL</Td>
-                    <Td className="text-right font-bold tabular">{fxRate(r.rate)}</Td>
+                    <Td className="font-semibold">{cur} → BRL</Td>
+                    <Td className="text-right font-semibold tabular">{fxRate(r.rate)}</Td>
                     <Td>{r.source}</Td>
                     <Td className="whitespace-nowrap">{dateTime(r.fetchedAt)}</Td>
                   </Tr>
@@ -492,13 +492,13 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
                         }`}
                         aria-hidden
                       />
-                      <p className="text-sm font-extrabold text-ink">{EVENT_LABEL[e.type] ?? e.type}</p>
+                      <p className="text-sm font-semibold text-ink">{EVENT_LABEL[e.type] ?? e.type}</p>
                       <p className="text-xs text-muted">
                         {dateTime(e.createdAt)}
                         {by && <> · por {by}</>}
                       </p>
                       {Object.keys(rest).length > 0 && (
-                        <pre className="mt-1 overflow-x-auto rounded-lg bg-cream/60 px-2 py-1 text-[11px] text-ink">{JSON.stringify(sanitize(rest), null, 1)}</pre>
+                        <pre className="mt-1 overflow-x-auto rounded-lg bg-surface/60 px-2 py-1 text-[11px] text-ink">{JSON.stringify(sanitize(rest), null, 1)}</pre>
                       )}
                     </li>
                   );

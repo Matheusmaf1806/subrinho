@@ -23,7 +23,7 @@ export default async function NewAffiliatePage() {
             <ActionForm action={createAffiliateAction} className="space-y-6">
               <AffiliateFields />
               <fieldset className="grid gap-4 sm:grid-cols-3">
-                <legend className="mb-3 text-sm font-black uppercase tracking-wide text-muted">Primeiro usuário (ADMIN da agência)</legend>
+                <legend className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">Primeiro usuário (ADMIN da agência)</legend>
                 <Field label="Nome *">
                   <Input name="adminName" required maxLength={120} autoComplete="off" />
                 </Field>

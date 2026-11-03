@@ -150,7 +150,7 @@ export default async function AfiliadoCuponsPage() {
                 return (
                   <Tr key={c.id}>
                     <Td>
-                      <p className="font-black tracking-wide text-ink">{c.code}</p>
+                      <p className="font-semibold tracking-wide text-ink">{c.code}</p>
                       {c.description && <p className="max-w-xs text-xs text-muted">{c.description}</p>}
                     </Td>
                     <Td className="whitespace-nowrap font-semibold">{ruleText(c)}</Td>
@@ -211,7 +211,7 @@ export default async function AfiliadoCuponsPage() {
                 return (
                   <Tr key={c.id}>
                     <Td>
-                      <p className="font-black tracking-wide text-ink">{c.code}</p>
+                      <p className="font-semibold tracking-wide text-ink">{c.code}</p>
                       {c.description && <p className="max-w-xs text-xs text-muted">{c.description}</p>}
                     </Td>
                     <Td className="whitespace-nowrap font-semibold">{ruleText(c)}</Td>

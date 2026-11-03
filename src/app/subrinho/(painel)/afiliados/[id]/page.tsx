@@ -67,7 +67,7 @@ export default async function AffiliateDetailPage({
           <Link href="/subrinho/afiliados" className="mb-2 inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-brand">
             ← Afiliados
           </Link>
-          <h1 className="flex flex-wrap items-center gap-3 text-2xl font-black tracking-tight text-ink sm:text-3xl">
+          <h1 className="flex flex-wrap items-center gap-3 text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
             <span className="h-4 w-4 rounded-full ring-2 ring-white" style={{ background: a.brandColor }} aria-hidden />
             {a.name} <ActiveBadge active={a.active} />
           </h1>
@@ -179,7 +179,7 @@ export default async function AffiliateDetailPage({
                   {users.map((u) => (
                     <Tr key={u.id}>
                       <Td>
-                        <div className="font-bold">{u.name}</div>
+                        <div className="font-semibold">{u.name}</div>
                         <div className="break-all text-xs text-muted">{u.email}</div>
                       </Td>
                       <Td>
@@ -218,7 +218,7 @@ export default async function AffiliateDetailPage({
                         {ruleTarget(r)}
                         <div className="text-[11px] text-muted">atualizada {dateTime(r.updatedAt)}</div>
                       </Td>
-                      <Td className="text-right font-extrabold tabular">{pct(r.marginPct)}</Td>
+                      <Td className="text-right font-semibold tabular">{pct(r.marginPct)}</Td>
                     </Tr>
                   ))}
                 </tbody>
@@ -252,7 +252,7 @@ export default async function AffiliateDetailPage({
                   <Td className="whitespace-nowrap">{date(p.scheduledDate)}</Td>
                   <Td className="text-right tabular">{p.ordersCount}</Td>
                   <Td className="text-right tabular">{brl(p.grossSales)}</Td>
-                  <Td className="text-right font-extrabold tabular">{brl(p.amount)}</Td>
+                  <Td className="text-right font-semibold tabular">{brl(p.amount)}</Td>
                   <Td>
                     <PayoutStatusBadge status={p.status} />
                     {p.paidAt && <div className="text-[11px] text-muted">{dateTime(p.paidAt)}</div>}
@@ -279,7 +279,7 @@ export default async function AffiliateDetailPage({
         )}
       </Card>
       <div className="mt-2 text-right">
-        <Link href={`/subrinho/repasses?afiliado=${a.id}`} className="text-sm font-bold text-brand hover:underline">
+        <Link href={`/subrinho/repasses?afiliado=${a.id}`} className="text-sm font-semibold text-brand hover:underline">
           Gerenciar repasses deste afiliado →
         </Link>
       </div>
@@ -304,7 +304,7 @@ export default async function AffiliateDetailPage({
               {orders.map(({ order: o }) => (
                 <Tr key={o.id}>
                   <Td>
-                    <Link href={`/subrinho/pedidos/${o.id}`} className="font-extrabold text-brand hover:underline">
+                    <Link href={`/subrinho/pedidos/${o.id}`} className="font-semibold text-brand hover:underline">
                       {orderNumber(o.number)}
                     </Link>
                   </Td>
@@ -313,7 +313,7 @@ export default async function AffiliateDetailPage({
                     <OrderStatusBadge status={o.status} />
                   </Td>
                   <Td className="whitespace-nowrap">{dateTime(o.createdAt)}</Td>
-                  <Td className="text-right font-bold tabular">{brl(o.amountCharged)}</Td>
+                  <Td className="text-right font-semibold tabular">{brl(o.amountCharged)}</Td>
                   <Td className="text-right tabular">{brl(o.affiliateCommission)}</Td>
                 </Tr>
               ))}
@@ -322,7 +322,7 @@ export default async function AffiliateDetailPage({
         )}
       </Card>
       <div className="mt-2 text-right">
-        <Link href={`/subrinho/pedidos?afiliado=${a.id}`} className="text-sm font-bold text-brand hover:underline">
+        <Link href={`/subrinho/pedidos?afiliado=${a.id}`} className="text-sm font-semibold text-brand hover:underline">
           Ver todos os pedidos →
         </Link>
       </div>

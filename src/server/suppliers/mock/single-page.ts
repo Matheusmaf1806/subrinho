@@ -3,6 +3,7 @@ import type { Currency, PaxConfig, PriceLine } from "@/server/db/schema";
 import { type OfferOption, type PaxRule, type ProductSummary, type SupplierAdapter, SupplierError } from "../types";
 import { bookingRef, defaultDate, expiresAtFor, matchesDestination, money4, nightsBetween, quoteRef } from "./util";
 import { addDays } from "@/lib/tz";
+import { photo } from "@/lib/images";
 
 // ───────────────────────── Seguro Viagem ─────────────────────────
 
@@ -57,6 +58,7 @@ export function createInsuranceMock(cfg: { code: string; name: string; currency:
     subtitle: `Despesas médicas ${p.medical} · Bagagem ${p.luggage}`,
     location: region,
     destination: region,
+    imageUrl: photo("airportLounge", 900),
     tags: [p.covid ? "Cobertura COVID-19" : "", `Médico ${p.medical}`].filter(Boolean),
     currency: cfg.currency,
     lines: lines(p, days, pax),
@@ -117,7 +119,7 @@ export function createInsuranceMock(cfg: { code: string; name: string; currency:
         title: `Seguro Viagem ${p.name}`,
         subtitle: `${region} · ${days} dias · ${pax.adults + (pax.seniors ?? 0)} viajante(s)`,
         location: region,
-        imageUrl: null,
+        imageUrl: photo("planeWing", 900),
         serviceDate: req.startDate,
         serviceEndDate: req.endDate,
         expiresAt: expiresAtFor(req.startDate),
@@ -163,6 +165,7 @@ export function createEsimMock(cfg: { code: string; name: string; currency: Curr
     subtitle: `${p.days} dias · ${p.countries.join(", ")}`,
     location: p.region,
     destination: p.region,
+    imageUrl: photo("phone", 900),
     tags: ["Ativação imediata", "Entrega por e-mail"],
     currency: cfg.currency,
     lines: lines(p, 1),
@@ -200,7 +203,7 @@ export function createEsimMock(cfg: { code: string; name: string; currency: Curr
         title: `eSIM ${p.region} — ${p.data}`,
         subtitle: `${p.days} dias · ${units} chip(s)`,
         location: p.region,
-        imageUrl: null,
+        imageUrl: photo("phone", 900),
         serviceDate: req.startDate ?? null,
         serviceEndDate: null,
         // eSIM pode ser ativado depois: só expira se houver data de início informada.

@@ -17,7 +17,7 @@ export function PaxModal({ item, action }: { item: ItemVM; action: (prev: Action
   return (
     <Modal
       title="Alterar quantidades"
-      triggerClassName={buttonClass("outline", "sm")}
+      triggerClassName={buttonClass("light", "sm")}
       trigger={
         <>
           <Users className="h-4 w-4" /> Quantidades
@@ -34,7 +34,7 @@ export function PaxModal({ item, action }: { item: ItemVM; action: (prev: Action
             .map((k) => (
               <input key={k} type="hidden" name={k} value={String(item.pax[k] ?? 0)} />
             ))}
-          <div className="rounded-xl border border-line px-3 py-1">
+          <div className="rounded-2xl bg-surface px-4 py-1 [&_button]:bg-white">
             {item.paxRules.map((r: PaxRule) => (
               <PaxStepper key={r.type} name={KEY[r.type]} label={r.label} hint={r.hint} min={r.min} max={r.max} defaultValue={Number(item.pax[KEY[r.type] as keyof typeof item.pax] ?? 0)} />
             ))}
@@ -76,11 +76,11 @@ export function MarginModal({ item, action, maxPct }: { item: ItemVM; action: (p
           <ActionForm action={action} onSuccess={close} className="space-y-3">
             <input type="hidden" name="itemId" value={item.id} />
             <label className="block">
-              <span className="mb-1.5 block text-sm font-bold">Nova margem da agência (%)</span>
+              <span className="mb-2 block text-[13px] font-medium text-muted">Nova margem da agência (%)</span>
               <Input name="marginPct" type="number" step="0.01" min={0} max={Number(maxPct)} defaultValue={admin.marginPct} onChange={(e) => setVal(Number(e.target.value))} required />
               <span className="mt-1 block text-xs text-muted">Mínimo 0% · máximo {Number(maxPct).toLocaleString("pt-BR")}%</span>
             </label>
-            <div className="rounded-xl bg-cream px-4 py-3 text-sm">
+            <div className="space-y-1.5 rounded-2xl bg-ink px-5 py-4 text-sm text-white [&_.text-muted]:text-white/60">
               <div className="flex justify-between">
                 <span className="text-muted">Preço no Pix (antes de cupons)</span>
                 <strong className="tabular">{valid ? fmt(pix) : "—"}</strong>
@@ -91,7 +91,7 @@ export function MarginModal({ item, action, maxPct }: { item: ItemVM; action: (p
               </div>
               <div className="flex justify-between">
                 <span className="text-muted">Sua comissão</span>
-                <strong className="tabular text-success">{valid ? fmt(pix - base) : "—"}</strong>
+                <strong className="tabular text-emerald-300">{valid ? fmt(pix - base) : "—"}</strong>
               </div>
             </div>
             <SubmitButton variant="accent" className="w-full" disabled={!valid}>

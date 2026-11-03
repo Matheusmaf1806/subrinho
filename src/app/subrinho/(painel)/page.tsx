@@ -102,21 +102,21 @@ export default async function SubrinhoDashboardPage() {
       )}
       {pending > 0 && (
         <Alert tone="info" className="mb-6">
-          <Link href="/subrinho/pedidos?status=PENDING_PAYMENT" className="font-bold underline-offset-2 hover:underline">
+          <Link href="/subrinho/pedidos?status=PENDING_PAYMENT" className="font-semibold underline-offset-2 hover:underline">
             {pending} pedido(s) aguardando pagamento
           </Link>
         </Alert>
       )}
 
       <section aria-labelledby="kpi-fortnight" className="mb-8">
-        <h2 id="kpi-fortnight" className="mb-3 flex flex-wrap items-baseline gap-2 text-lg font-black text-ink">
+        <h2 id="kpi-fortnight" className="mb-3 flex flex-wrap items-baseline gap-2 text-lg font-semibold text-ink">
           Quinzena atual <span className="text-sm font-semibold text-muted">{periodLabel(p.fortnight.start, p.fortnight.end)}</span>
         </h2>
         <KpiGrid k={fortnightK} />
       </section>
 
       <section aria-labelledby="kpi-month" className="mb-8">
-        <h2 id="kpi-month" className="mb-3 flex flex-wrap items-baseline gap-2 text-lg font-black text-ink">
+        <h2 id="kpi-month" className="mb-3 flex flex-wrap items-baseline gap-2 text-lg font-semibold text-ink">
           Mês atual <span className="text-sm font-semibold capitalize text-muted">{monthName}</span>
         </h2>
         <KpiGrid k={monthK} />
@@ -137,12 +137,12 @@ export default async function SubrinhoDashboardPage() {
             {FOREIGN_CURRENCIES.map((c) => {
               const r = fx[c];
               return (
-                <div key={c} className="flex items-center justify-between rounded-xl bg-cream/60 px-4 py-3">
+                <div key={c} className="flex items-center justify-between rounded-xl bg-surface/60 px-4 py-3">
                   <div>
-                    <p className="text-sm font-bold text-ink">{CURRENCY_LABEL[c]}</p>
+                    <p className="text-sm font-semibold text-ink">{CURRENCY_LABEL[c]}</p>
                     <p className="text-xs text-muted">{r ? `${r.source} · ${dateTime(r.fetchedAt)}` : "Sem cotação cadastrada"}</p>
                   </div>
-                  <p className="text-xl font-black tabular text-ink">{r ? `R$ ${fxRate(r.rate)}` : "—"}</p>
+                  <p className="text-xl font-semibold tabular text-ink">{r ? `R$ ${fxRate(r.rate)}` : "—"}</p>
                 </div>
               );
             })}
@@ -175,24 +175,24 @@ export default async function SubrinhoDashboardPage() {
               <tbody>
                 {upcoming.map((u) => (
                   <Tr key={u.id}>
-                    <Td className="font-bold">{u.affiliateName}</Td>
+                    <Td className="font-semibold">{u.affiliateName}</Td>
                     <Td className="whitespace-nowrap">{periodLabel(u.periodStart, u.periodEnd)}</Td>
                     <Td className="whitespace-nowrap">
-                      {date(u.scheduledDate)} <span className="ml-1 text-xs font-bold text-amber-700">Agendado</span>
+                      {date(u.scheduledDate)} <span className="ml-1 text-xs font-semibold text-amber-700">Agendado</span>
                     </Td>
                     <Td className="text-right tabular">{u.ordersCount}</Td>
-                    <Td className="text-right font-extrabold tabular">{brl(u.amount)}</Td>
+                    <Td className="text-right font-semibold tabular">{brl(u.amount)}</Td>
                   </Tr>
                 ))}
                 {forecast.map((f) => (
                   <Tr key={`${f.affiliateId}-${f.payoutDate}`}>
-                    <Td className="font-bold">{f.affiliateName}</Td>
+                    <Td className="font-semibold">{f.affiliateName}</Td>
                     <Td className="text-muted">Em aberto</Td>
                     <Td className="whitespace-nowrap">
-                      {date(f.payoutDate)} <span className="ml-1 text-xs font-bold text-muted">Previsão</span>
+                      {date(f.payoutDate)} <span className="ml-1 text-xs font-semibold text-muted">Previsão</span>
                     </Td>
                     <Td className="text-right tabular">{f.orders}</Td>
-                    <Td className="text-right font-extrabold tabular text-muted">{brl(f.amount)}</Td>
+                    <Td className="text-right font-semibold tabular text-muted">{brl(f.amount)}</Td>
                   </Tr>
                 ))}
               </tbody>
@@ -229,7 +229,7 @@ export default async function SubrinhoDashboardPage() {
               {recent.map(({ order: o, affiliateName }) => (
                 <Tr key={o.id}>
                   <Td>
-                    <Link href={`/subrinho/pedidos/${o.id}`} className="font-extrabold text-brand hover:underline">
+                    <Link href={`/subrinho/pedidos/${o.id}`} className="font-semibold text-brand hover:underline">
                       {orderNumber(o.number)}
                     </Link>
                   </Td>
@@ -239,7 +239,7 @@ export default async function SubrinhoDashboardPage() {
                     <OrderStatusBadge status={o.status} />
                   </Td>
                   <Td className="whitespace-nowrap">{dateTime(o.createdAt)}</Td>
-                  <Td className="text-right font-bold tabular">{brl(o.amountCharged)}</Td>
+                  <Td className="text-right font-semibold tabular">{brl(o.amountCharged)}</Td>
                   <Td className="text-right tabular">{brl(o.subrinhoRevenue)}</Td>
                 </Tr>
               ))}

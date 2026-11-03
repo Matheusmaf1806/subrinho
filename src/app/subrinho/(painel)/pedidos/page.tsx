@@ -135,7 +135,7 @@ export default async function SubrinhoOrdersPage({ searchParams }: { searchParam
                 return (
                   <Tr key={o.id}>
                     <Td>
-                      <Link href={`/subrinho/pedidos/${o.id}`} className="font-extrabold text-brand hover:underline">
+                      <Link href={`/subrinho/pedidos/${o.id}`} className="font-semibold text-brand hover:underline">
                         {orderNumber(o.number)}
                       </Link>
                       <div className="mt-1">
@@ -153,10 +153,10 @@ export default async function SubrinhoOrdersPage({ searchParams }: { searchParam
                     </Td>
                     <Td className="whitespace-nowrap text-xs">
                       <div>{dateTime(o.createdAt)}</div>
-                      <div className={o.paidAt ? "font-bold text-emerald-700" : "text-muted"}>{o.paidAt ? dateTime(o.paidAt) : "não pago"}</div>
+                      <div className={o.paidAt ? "font-semibold text-emerald-700" : "text-muted"}>{o.paidAt ? dateTime(o.paidAt) : "não pago"}</div>
                     </Td>
                     <Td className="whitespace-nowrap">{o.paymentMethod === "PIX" ? "Pix" : `Cartão ${o.installments}x`}</Td>
-                    <Td className="text-right font-extrabold tabular">{brl(o.amountCharged)}</Td>
+                    <Td className="text-right font-semibold tabular">{brl(o.amountCharged)}</Td>
                     <Td className="text-right tabular text-muted">{brl(o.totalCostBrl)}</Td>
                     <Td className="text-right tabular">{brl(o.subrinhoRevenue)}</Td>
                     <Td className="text-right tabular">{brl(o.affiliateCommission)}</Td>

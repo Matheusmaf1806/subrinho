@@ -21,10 +21,10 @@ export default async function AccountPage({ params }: { params: Promise<{ slug: 
     .where(and(eq(orders.customerId, viewer.customer.id), eq(orders.affiliateId, store.id)))
     .orderBy(desc(orders.createdAt));
   return (
-    <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-      <h1 className="text-3xl font-black tracking-tight text-ink">Olá, {viewer.customer.name.split(" ")[0]}!</h1>
-      <p className="mt-1 text-muted">{viewer.customer.email}</p>
-      <Card className="mt-6">
+    <main className="mx-auto max-w-[1100px] px-4 py-10 sm:px-8">
+      <h1 className="display text-[clamp(3rem,7vw,6rem)] text-ink">Olá, {viewer.customer.name.split(" ")[0]}.</h1>
+      <p className="mt-3 text-[15px] text-muted">{viewer.customer.email}</p>
+      <Card className="mt-10">
         <CardHeader title="Meus pedidos" />
         {list.length === 0 ? (
           <EmptyState title="Você ainda não tem pedidos" />
@@ -42,7 +42,7 @@ export default async function AccountPage({ params }: { params: Promise<{ slug: 
               {list.map((o) => (
                 <Tr key={o.id}>
                   <Td>
-                    <Link href={`/loja/${slug}/pedido/${o.id}`} className="font-bold text-accent hover:underline">
+                    <Link href={`/loja/${slug}/pedido/${o.id}`} className="font-semibold text-accent hover:underline">
                       {orderNumber(o.number)}
                     </Link>
                   </Td>
@@ -50,7 +50,7 @@ export default async function AccountPage({ params }: { params: Promise<{ slug: 
                   <Td>
                     <Badge tone={statusTone(o.status)}>{ORDER_STATUS_LABEL[o.status]}</Badge>
                   </Td>
-                  <Td className="text-right font-bold tabular">{brl(o.amountCharged)}</Td>
+                  <Td className="text-right font-semibold tabular">{brl(o.amountCharged)}</Td>
                 </Tr>
               ))}
             </tbody>

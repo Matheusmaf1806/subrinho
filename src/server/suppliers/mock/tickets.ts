@@ -1,6 +1,7 @@
 import type { Currency, PaxConfig, PriceLine } from "@/server/db/schema";
 import { type OfferOption, type PaxRule, type ProductDetail, type ProductSummary, type SupplierAdapter, SupplierError } from "../types";
 import { bookingRef, defaultDate, dynamicFactor, expiresAtFor, matchesDestination, money4, quoteRef } from "./util";
+import { photo, type PhotoKey } from "@/lib/images";
 
 type TicketOption = {
   id: string;
@@ -12,6 +13,7 @@ type TicketOption = {
 
 type TicketProduct = {
   id: string;
+  image: PhotoKey;
   title: string;
   subtitle: string;
   destination: string;
@@ -28,6 +30,7 @@ type TicketProduct = {
 export const TU_EXPERIENZA_CATALOG: TicketProduct[] = [
   {
     id: "colosseo",
+    image: "colosseumAerial",
     title: "Coliseu, Fórum Romano e Palatino",
     subtitle: "Entrada com horário marcado",
     destination: "Roma",
@@ -53,6 +56,7 @@ export const TU_EXPERIENZA_CATALOG: TicketProduct[] = [
   },
   {
     id: "vaticano",
+    image: "vatican",
     title: "Museus Vaticanos e Capela Sistina",
     subtitle: "Ingresso sem fila",
     destination: "Roma",
@@ -70,6 +74,7 @@ export const TU_EXPERIENZA_CATALOG: TicketProduct[] = [
   },
   {
     id: "uffizi",
+    image: "florence",
     title: "Galeria Uffizi",
     subtitle: "Ingresso com horário marcado",
     destination: "Florença",
@@ -84,6 +89,7 @@ export const TU_EXPERIENZA_CATALOG: TicketProduct[] = [
   },
   {
     id: "pompeia",
+    image: "vernazza",
     title: "Pompeia com transporte saindo de Roma",
     subtitle: "Dia inteiro",
     destination: "Roma",
@@ -98,6 +104,7 @@ export const TU_EXPERIENZA_CATALOG: TicketProduct[] = [
   },
   {
     id: "duomo-milano",
+    image: "milanDuomo",
     title: "Duomo de Milão + Terraços",
     subtitle: "Catedral e terraços",
     destination: "Milão",
@@ -118,6 +125,7 @@ export const TU_EXPERIENZA_CATALOG: TicketProduct[] = [
 export const NADIO_CATALOG: TicketProduct[] = [
   {
     id: "disney-mk",
+    image: "castle",
     title: "Walt Disney World — Ingresso de 1 parque",
     subtitle: "Magic Kingdom, EPCOT, Hollywood Studios ou Animal Kingdom",
     destination: "Orlando",
@@ -136,6 +144,7 @@ export const NADIO_CATALOG: TicketProduct[] = [
   },
   {
     id: "universal",
+    image: "carousel",
     title: "Universal Orlando Resort",
     subtitle: "Universal Studios, Islands of Adventure e Epic Universe",
     destination: "Orlando",
@@ -153,6 +162,7 @@ export const NADIO_CATALOG: TicketProduct[] = [
   },
   {
     id: "empire-state",
+    image: "nycSkyline",
     title: "Empire State Building — Observatório",
     subtitle: "86º andar",
     destination: "Nova York",
@@ -170,6 +180,7 @@ export const NADIO_CATALOG: TicketProduct[] = [
   },
   {
     id: "louvre",
+    image: "museum",
     title: "Museu do Louvre",
     subtitle: "Entrada com horário marcado",
     destination: "Paris",
@@ -214,6 +225,7 @@ export function createTicketsMock(cfg: { code: string; name: string; currency: C
       subtitle: p.subtitle,
       location: p.location,
       destination: p.destination,
+      imageUrl: photo(p.image, 900),
       rating: p.rating,
       tags: p.tags,
       currency: cfg.currency,
@@ -279,7 +291,7 @@ export function createTicketsMock(cfg: { code: string; name: string; currency: C
         title: p.title,
         subtitle: opt.title,
         location: p.location,
-        imageUrl: null,
+        imageUrl: photo(p.image, 900),
         serviceDate: req.date,
         serviceEndDate: null,
         expiresAt: expiresAtFor(req.date),

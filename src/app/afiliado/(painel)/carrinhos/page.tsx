@@ -91,7 +91,7 @@ export default async function AfiliadoCarrinhosPage({ searchParams }: { searchPa
                     </Td>
                     <Td>
                       <div className="flex items-center gap-2">
-                        <code className="hidden max-w-[16rem] truncate rounded-lg bg-cream px-2 py-1 text-xs text-muted xl:block" title={link}>
+                        <code className="hidden max-w-[16rem] truncate rounded-lg bg-surface px-2 py-1 text-xs text-muted xl:block" title={link}>
                           {link}
                         </code>
                         <CopyButton text={link} label="Copiar link" copiedLabel="Link copiado!" />

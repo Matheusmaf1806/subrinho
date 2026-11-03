@@ -64,7 +64,7 @@ export default async function SubrinhoSuppliersPage() {
             {rows.map((s) => (
               <Tr key={s.code}>
                 <Td>
-                  <div className="font-extrabold">{s.name}</div>
+                  <div className="font-semibold">{s.name}</div>
                   <div className="font-mono text-[11px] text-muted">{s.code}</div>
                   {s.notes && <div className="mt-0.5 max-w-xs text-xs text-muted">{s.notes}</div>}
                 </Td>
@@ -79,7 +79,7 @@ export default async function SubrinhoSuppliersPage() {
                     <ul className="space-y-1">
                       {s.env.map((e) => (
                         <li key={e.name} className="flex flex-wrap items-center gap-1.5 text-xs">
-                          <code className="rounded bg-cream px-1.5 py-0.5 font-mono text-[11px] text-ink">{e.name}</code>
+                          <code className="rounded bg-surface px-1.5 py-0.5 font-mono text-[11px] text-ink">{e.name}</code>
                           <Badge tone={e.configured ? "success" : "neutral"}>{e.configured ? "configurada" : "pendente"}</Badge>
                         </li>
                       ))}
@@ -87,7 +87,7 @@ export default async function SubrinhoSuppliersPage() {
                   )}
                 </Td>
                 <Td className="whitespace-nowrap text-right text-sm tabular">
-                  <div className="font-bold">{s.itemsSold} item(ns)</div>
+                  <div className="font-semibold">{s.itemsSold} item(ns)</div>
                   <div className="text-xs text-muted">custo {brl(s.costBrl)}</div>
                 </Td>
                 <Td>
@@ -119,9 +119,9 @@ export default async function SubrinhoSuppliersPage() {
               <li key={c} className="rounded-2xl border border-dashed border-brand-200 bg-brand-50/40 p-4">
                 <div className="flex items-center gap-2 text-brand">
                   <Sparkles className="h-4 w-4" aria-hidden />
-                  <span className="text-[11px] font-black uppercase tracking-wider">Em breve</span>
+                  <span className="text-[11px] font-semibold uppercase tracking-wider">Em breve</span>
                 </div>
-                <p className="mt-2 font-extrabold text-ink">{CATEGORY_LABEL[c]}</p>
+                <p className="mt-2 font-semibold text-ink">{CATEGORY_LABEL[c]}</p>
                 <p className="mt-1 text-xs text-muted">{FUTURE_HINT[c]}</p>
               </li>
             ))}

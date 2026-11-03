@@ -25,17 +25,17 @@ export default async function HousesPage({ params, searchParams }: { params: Pro
   const destinations = [...new Set(adaptersFor("HOUSES").flatMap((a) => a.destinations().map((x) => x.name)))];
   return (
     <main>
-      <ListingHeader title="Casas de temporada" subtitle="Casas com piscina perto dos parques, ideais para famílias e grupos.">
+      <ListingHeader eyebrow="Casas" image="villaPool" title="Casa com piscina perto dos parques." subtitle="Ideal para famílias e grupos: espaço, cozinha e piscina privativa.">
         <LodgingSearch action={base} d={d} destinations={destinations} minDate={parsed.minDate} houses />
       </ListingHeader>
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-        <p className="mb-4 text-sm text-muted">
+      <div className="mx-auto max-w-[1440px] px-4 pb-8 pt-12 sm:px-8">
+        <p className="mb-8 text-[15px] text-muted">
           {results.length} casa(s) · {date(d.checkin)} a {date(d.checkout)} · {nights} noites · {d.adultos + d.criancas} hóspedes
         </p>
         {results.length === 0 ? (
           <NoResults what="casa" />
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-x-5 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
             {results.map((p) => (
               <ProductCard key={`${p.supplierCode}-${p.productId}`} p={p} href={`${base}/${p.supplierCode}/${p.productId}?${q}`} note={`total de ${nights} noites com taxa de limpeza`} />
             ))}
