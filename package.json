@@ -1,0 +1,52 @@
+{
+  "name": "subrinho",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plataforma Subrinho — Painel Subrinho, Painel do Afiliado e Loja de viagens white-label.",
+  "type": "module",
+  "engines": {
+    "node": ">=20.9"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:seed": "tsx scripts/seed.ts",
+    "db:reset": "tsx scripts/reset.ts && npm run db:migrate && npm run db:seed",
+    "fx:refresh": "tsx scripts/fx-refresh.ts",
+    "fortnight:close": "tsx scripts/fortnight-close.ts",
+    "test:integration": "TEST_DATABASE_URL=${TEST_DATABASE_URL:-postgres://subrinho:subrinho@localhost:5432/subrinho_test} vitest run tests/integration.test.ts"
+  },
+  "dependencies": {
+    "@fontsource-variable/nunito": "5.3.0",
+    "bcryptjs": "3.0.3",
+    "decimal.js": "10.6.0",
+    "drizzle-orm": "0.45.4",
+    "lucide-react": "1.67.0",
+    "next": "16.4.2",
+    "pg": "8.23.1",
+    "qrcode": "1.5.4",
+    "react": "19.2.9",
+    "react-dom": "19.2.9",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "22.20.5",
+    "@types/pg": "8.23.1",
+    "@types/qrcode": "1.5.6",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
+    "drizzle-kit": "0.31.11",
+    "postcss": "8.5.30",
+    "tailwindcss": "4.3.3",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vitest": "4.1.12"
+  }
+}

@@ -1,0 +1,159 @@
+import { and, eq } from "drizzle-orm";
+import { notFound, redirect } from "next/navigation";
+import QRCode from "qrcode";
+import { CircleCheck, Clock, QrCode } from "lucide-react";
+import { db } from "@/server/db";
+import { orderItems, orders } from "@/server/db/schema";
+import { isMockPayments } from "@/server/payments/provider";
+import { Alert, Badge, Button, Card, CardBody, CardHeader, statusTone } from "@/components/ui";
+import { CopyButton } from "@/components/ui-client";
+import { brl, date, dateTime, ORDER_STATUS_LABEL, orderNumber, paxSummary } from "@/lib/format";
+import { formatDocument } from "@/lib/br";
+import { getStore, viewerFor } from "../../_lib/store";
+import { AutoRefresh } from "../../_components/auto-refresh";
+import { categoryLabel } from "../../_components/category";
+import { simulatePixPaymentAction } from "../../actions";
+
+export const metadata = { title: "Pedido" };
+
+export default async function OrderPage({ params }: { params: Promise<{ slug: string; id: string }> }) {
+  const { slug, id } = await params;
+  const store = await getStore(slug);
+  if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
+  const viewer = await viewerFor(store);
+  if (!viewer) redirect(`/loja/${slug}/entrar?next=${encodeURIComponent(`/loja/${slug}/pedido/${id}`)}`);
+  const [order] = await db.select().from(orders).where(and(eq(orders.id, id), eq(orders.affiliateId, store.id)));
+  if (!order || (viewer.kind === "CUSTOMER" && order.customerId !== viewer.customer.id)) notFound();
+  const items = await db.select().from(orderItems).where(eq(orderItems.orderId, id));
+
+  const pix = (order.paymentData as { pix?: { brCode: string; expiresAt: string; txid: string } }).pix;
+  const card = (order.paymentData as { card?: { brand: string; last4: string; installments: number } }).card;
+  const pending = order.status === "PENDING_PAYMENT";
+  const pixExpired = pix ? new Date(pix.expiresAt) < new Date() : false;
+  const qrSvg = pending && pix && !pixExpired ? await QRCode.toString(pix.brCode, { type: "svg", margin: 1, width: 240, color: { dark: "#2A0A1F", light: "#FFFFFF" } }) : null;
+
+  return (
+    <main className="mx-auto max-w-4xl space-y-5 px-4 py-8 sm:px-6">
+      {pending && pix && !pixExpired && <AutoRefresh seconds={5} />}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-bold text-muted">Pedido {orderNumber(order.number)}</p>
+          <h1 className="text-3xl font-black tracking-tight text-ink">
+            {order.status === "PAID" ? "Pagamento confirmado!" : pending ? "Falta pouco: conclua o pagamento" : ORDER_STATUS_LABEL[order.status]}
+          </h1>
+        </div>
+        <Badge tone={statusTone(order.status)}>{ORDER_STATUS_LABEL[order.status]}</Badge>
+      </div>
+
+      {order.status === "PAID" && (
+        <Alert tone="success" title="Tudo certo com a sua compra">
+          <CircleCheck className="mr-1 inline h-4 w-4" /> Pago em {dateTime(order.paidAt)}. Você receberá os vouchers por e-mail ({order.customerData.email}).
+        </Alert>
+      )}
+
+      {pending && order.paymentMethod === "PIX" && pix && (
+        <Card>
+          <CardHeader title={<span className="inline-flex items-center gap-2"><QrCode className="h-5 w-5 text-accent" /> Pague com Pix</span>} subtitle={`Valor: ${brl(order.amountCharged)}`} />
+          <CardBody>
+            {pixExpired ? (
+              <Alert tone="warning" title="Este Pix expirou">
+                Volte ao checkout para gerar um novo código.{" "}
+                <a className="font-bold underline" href={`/loja/${slug}/carrinho`}>
+                  Ir para o carrinho
+                </a>
+              </Alert>
+            ) : (
+              <div className="grid gap-5 sm:grid-cols-[240px_1fr] sm:items-center">
+                <div className="mx-auto overflow-hidden rounded-2xl border border-line" dangerouslySetInnerHTML={{ __html: qrSvg ?? "" }} />
+                <div className="space-y-3">
+                  <p className="text-sm text-muted">Abra o app do seu banco, escolha Pix → Ler QR Code, ou use o código copia e cola:</p>
+                  <textarea readOnly value={pix.brCode} className="h-24 w-full rounded-xl border border-line bg-cream p-3 font-mono text-xs" aria-label="Pix copia e cola" />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <CopyButton text={pix.brCode} label="Copiar código Pix" />
+                    <span className="inline-flex items-center gap-1 text-xs text-muted">
+                      <Clock className="h-3.5 w-3.5" /> Válido até {dateTime(pix.expiresAt)}
+                    </span>
+                  </div>
+                  {isMockPayments() && (
+                    <form action={simulatePixPaymentAction.bind(null, slug, order.id)}>
+                      <Button variant="dark" size="sm">
+                        Simular pagamento (ambiente de testes)
+                      </Button>
+                    </form>
+                  )}
+                </div>
+              </div>
+            )}
+          </CardBody>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader title="Itens" />
+        <ul className="divide-y divide-line">
+          {items.map((i) => (
+            <li key={i.id} className="flex flex-wrap items-start justify-between gap-3 px-5 py-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide text-muted">{categoryLabel(i.category)}</p>
+                <p className="font-extrabold text-ink">{i.title}</p>
+                {i.subtitle && <p className="text-sm text-muted">{i.subtitle}</p>}
+                <p className="text-xs text-muted">
+                  {i.serviceDate ? `${date(i.serviceDate)}${i.serviceEndDate ? ` a ${date(i.serviceEndDate)}` : ""} · ` : ""}
+                  {paxSummary(i.pax)}
+                </p>
+                {i.supplierBookingRef && <p className="mt-1 text-xs font-bold text-success">Reserva confirmada · código {i.supplierBookingRef}</p>}
+              </div>
+              <p className="font-black text-ink tabular">{brl(i.chargedAmount)}</p>
+            </li>
+          ))}
+        </ul>
+        <div className="border-t border-line px-5 py-4 text-sm">
+          {Number(order.totalSubrinhoDiscount) + Number(order.totalAffiliateDiscount) > 0 && (
+            <div className="flex justify-between text-success">
+              <span>Descontos</span>
+              <span className="font-bold tabular">− {brl(Number(order.totalSubrinhoDiscount) + Number(order.totalAffiliateDiscount))}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-base">
+            <span className="font-bold">Total {order.paymentMethod === "PIX" ? "no Pix" : `no cartão (${order.installments}x sem juros)`}</span>
+            <span className="font-black tabular">{brl(order.amountCharged)}</span>
+          </div>
+          {card && <p className="mt-1 text-xs text-muted">{card.brand} final {card.last4}</p>}
+        </div>
+      </Card>
+
+      <div className="grid gap-5 sm:grid-cols-2">
+        <Card>
+          <CardHeader title="Titular da conta" />
+          <CardBody className="text-sm">
+            <p className="font-bold">{order.customerData.name}</p>
+            <p className="text-muted">{order.customerData.email}</p>
+          </CardBody>
+        </Card>
+        <Card>
+          <CardHeader title="Pagador" />
+          <CardBody className="text-sm">
+            <p className="font-bold">{order.payerData.name}</p>
+            <p className="text-muted">
+              {formatDocument(order.payerData.document)} · {order.payerData.email}
+            </p>
+          </CardBody>
+        </Card>
+      </div>
+      {order.travelers.length > 0 && (
+        <Card>
+          <CardHeader title="Viajantes" />
+          <CardBody className="text-sm">
+            <ul className="space-y-1">
+              {order.travelers.map((t, i) => (
+                <li key={i}>
+                  <span className="font-bold">{t.name}</span> {t.document ? <span className="text-muted">· {t.document}</span> : null}
+                </li>
+              ))}
+            </ul>
+          </CardBody>
+        </Card>
+      )}
+    </main>
+  );
+}

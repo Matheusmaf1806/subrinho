@@ -1,0 +1,62 @@
+@import "tailwindcss";
+@import "@fontsource-variable/nunito";
+
+/* Identidade Subrinho: vermelho, creme e ameixa (manual de marca). */
+:root {
+  /* Cor de destaque da loja (cada afiliado pode ter a sua). */
+  --store-accent: #e4113f;
+}
+
+@theme {
+  --font-sans: "Nunito Variable", ui-sans-serif, system-ui, sans-serif;
+
+  --color-brand: #e4113f;
+  --color-brand-50: #fdedf0;
+  --color-brand-100: #fbd5dd;
+  --color-brand-200: #f6a9b9;
+  --color-brand-600: #c40d35;
+  --color-brand-700: #9d0a2a;
+  --color-cream: #fdf3ee;
+  --color-cream-200: #f6e4da;
+  --color-plum: #360221;
+  --color-plum-700: #4d0a33;
+  --color-ink: #2a0a1f;
+  --color-muted: #7b5c6c;
+  --color-line: #ecdcd3;
+  --color-success: #0f8a4f;
+  --color-warning: #b86e00;
+}
+
+@theme inline {
+  --color-accent: var(--store-accent);
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background: #fffaf7;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: var(--color-brand-100);
+}
+
+/* Inputs de número sem setas */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+dialog::backdrop {
+  background: rgb(42 10 31 / 0.45);
+  backdrop-filter: blur(2px);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
