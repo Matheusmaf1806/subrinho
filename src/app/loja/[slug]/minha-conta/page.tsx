@@ -42,7 +42,7 @@ export default async function AccountPage({ params }: { params: Promise<{ slug: 
               {list.map((o) => (
                 <Tr key={o.id}>
                   <Td>
-                    <Link href={`/loja/${slug}/pedido/${o.id}`} className="font-semibold text-accent hover:underline">
+                    <Link href={`/loja/${slug}/pedido/${o.id}`} className="font-semibold text-accent-ink hover:underline">
                       {orderNumber(o.number)}
                     </Link>
                   </Td>

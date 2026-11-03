@@ -61,7 +61,7 @@ export default async function SubrinhoPanelLayout({ children }: { children: Reac
       nav={NAV}
       user={
         <div className="flex items-center gap-3">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-surface text-sm font-semibold text-brand" aria-hidden>
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-surface text-sm font-semibold text-brand-ink" aria-hidden>
             {initials || "S"}
           </span>
           <div className="min-w-0 flex-1">

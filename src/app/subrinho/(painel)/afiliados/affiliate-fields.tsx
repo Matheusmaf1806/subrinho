@@ -40,15 +40,6 @@ export function AffiliateFields({ a }: { a?: Affiliate }) {
         <Field label="WhatsApp" hint="Somente números, com DDI (ex.: 5511999990000)">
           <Input name="whatsapp" maxLength={20} inputMode="numeric" defaultValue={a?.whatsapp ?? ""} />
         </Field>
-        <Field label="Cor da loja">
-          <div className="flex items-center gap-3">
-            <Input type="color" name="brandColor" defaultValue={a?.brandColor ?? "#E4113F"} className="h-11 w-16 cursor-pointer p-1" />
-            <span className="text-xs text-muted">Cor de destaque usada na loja do afiliado</span>
-          </div>
-        </Field>
-        <Field label="URL do logo" className="sm:col-span-2">
-          <Input type="url" name="logoUrl" maxLength={500} placeholder="https://…" defaultValue={a?.logoUrl ?? ""} />
-        </Field>
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-2">

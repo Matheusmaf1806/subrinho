@@ -105,7 +105,7 @@ export default async function SubrinhoReportsPage() {
                   return (
                     <Tr key={r.id}>
                       <Td className="min-w-[14rem]">
-                        <Link href={`/subrinho/relatorios/${r.id}`} className="whitespace-nowrap font-semibold text-brand hover:underline">
+                        <Link href={`/subrinho/relatorios/${r.id}`} className="whitespace-nowrap font-semibold text-brand-ink hover:underline">
                           {periodLabel(r.periodStart, r.periodEnd)}
                         </Link>
                         {(r.summary?.byAffiliate?.length ?? 0) > 0 && (

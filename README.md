@@ -86,9 +86,33 @@ docs/                   Regras de negócio
 Stack: Next.js 16 (App Router, Server Actions), React 19, TypeScript, Tailwind CSS 4, Drizzle ORM, PostgreSQL,
 decimal.js (nunca float para dinheiro), Vitest.
 
+### White-label (cada agência com a sua marca)
+
+A Loja e o Painel do Afiliado são **100% da agência**. Em *Minha loja* (ADMIN da agência) ou no detalhe do
+afiliado no Painel Subrinho, um editor com **prévia ao vivo** define:
+
+| O quê | Detalhes |
+|---|---|
+| Logo | Versão para fundo claro (topo) e para fundo escuro (rodapé e painel). Upload PNG/JPG/WEBP ou link. Sem logo, a loja mostra as **iniciais da agência** na cor principal — nunca a marca Subrinho. |
+| Ícone da aba | Favicon próprio; sem ele, um monograma gerado na cor da agência (`/loja/<slug>/icone`). |
+| Cores | Cor principal (qualquer cor) e cor escura (blocos, botões e textos). O texto sobre a cor principal fica branco ou preto **automaticamente** (contraste WCAG) e a cor principal usada como texto é escurecida quando necessário. A cor escura precisa ter contraste ≥ 7:1 com o branco. |
+| Fonte | Moderna (Inter Tight), Geométrica (Manrope), Arredondada (Nunito) ou Elegante (Fraunces). |
+| Página inicial | Título (até 3 linhas), subtítulo, foto principal e secundária (upload, link ou fotos prontas). |
+| Rodapé | Frase, Instagram, contatos. |
+| “Tecnologia Subrinho” | Exibir ou ocultar — decidido pela Subrinho no Painel Subrinho. |
+
+Como funciona: `src/lib/theme.ts` transforma a marca em variáveis CSS (`--theme-brand`, `--theme-brand-fg`,
+`--theme-brand-ink`, `--theme-ink`, `--theme-font`); os tokens do Tailwind (`brand`, `accent`, `ink`, `font-sans`)
+leem essas variáveis. A Subrinho (sem tema) usa o vermelho Subrinho. Uploads ficam em `files` com `is_public` e são
+servidos por `/api/public/files/<id>` (só imagens, tipo conferido pelo conteúdo — SVG não é aceito).
+
+Exemplos no seed: `/loja/viagens-da-ana` (vermelho), `/loja/rota-brasil` (verde-petróleo, fonte geométrica) e
+`/loja/sol-e-mar` (amarelo + azul-marinho, fonte serifada, logo próprio, sem “tecnologia Subrinho”;
+login do painel: marina@solemar.com.br / afiliado123).
+
 ### Identidade visual
 
-- Uma cor de marca chapada (vermelho Subrinho `#E4113F`, ou a cor de cada afiliado na loja) + preto + branco + cinza
+- Uma cor de marca chapada (vermelho Subrinho `#E4113F`, ou a cor de cada agência) + cor escura + branco + cinza
   neutro; tipografia **Inter Tight** com títulos grandes e apertados (classe `display`); botões em pílula; cards sem
   bordas pesadas. Tokens em `src/app/globals.css`, componentes em `src/components/ui.tsx`.
 - Fotos: Unsplash (licença livre, inclusive uso comercial), servidas pelo CDN `images.unsplash.com`. O mapa de fotos

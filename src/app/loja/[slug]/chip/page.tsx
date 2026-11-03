@@ -36,7 +36,7 @@ export default async function ChipPage({ params, searchParams }: { params: Promi
               <div key={p.productId} className="flex flex-col rounded-[2rem] bg-surface p-6 sm:p-7">
                 <div className="flex items-center justify-between">
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold">
-                    <Wifi className="h-3.5 w-3.5 text-accent" /> {p.destination}
+                    <Wifi className="h-3.5 w-3.5 text-accent-ink" /> {p.destination}
                   </span>
                   <Smartphone className="h-5 w-5 text-muted" />
                 </div>

@@ -75,7 +75,7 @@ export default async function SubrinhoMarginsPage({ searchParams }: { searchPara
           <CardBody className="space-y-4">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
-                <p className="text-4xl font-semibold tabular text-brand">{pct(defaultPct)}</p>
+                <p className="text-4xl font-semibold tabular text-brand-ink">{pct(defaultPct)}</p>
                 <p className="text-xs text-muted">
                   {def ? `Atualizada em ${dateTime(def.updatedAt)}` : `Sem regra padrão — usando a margem do sistema (${pct(settings.fallbackSubrinhoMarginPct)}, em Configurações)`}
                 </p>

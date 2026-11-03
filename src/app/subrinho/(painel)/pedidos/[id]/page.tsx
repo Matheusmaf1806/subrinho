@@ -93,14 +93,14 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
     <>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <Link href="/subrinho/pedidos" className="mb-2 inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-brand">
+          <Link href="/subrinho/pedidos" className="mb-2 inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-brand-ink">
             ← Pedidos
           </Link>
           <h1 className="flex flex-wrap items-center gap-3 text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
             Pedido {orderNumber(o.number)} <OrderStatusBadge status={o.status} />
           </h1>
           <p className="mt-1 text-sm text-muted">
-            <Link href={`/subrinho/afiliados/${affiliate.id}`} className="font-semibold text-ink hover:text-brand">
+            <Link href={`/subrinho/afiliados/${affiliate.id}`} className="font-semibold text-ink hover:text-brand-ink">
               {affiliate.name}
             </Link>{" "}
             · criado em {dateTime(o.createdAt)}
@@ -199,7 +199,7 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
               </DetailRow>
               <DetailRow label={`Preço parcelado (taxa ${pct(o.installmentFeePct)})`}>{brl(o.totalInstallment)}</DetailRow>
               <DetailRow label="Valor cobrado" strong>
-                <span className="text-brand">{brl(o.amountCharged)}</span>
+                <span className="text-brand-ink">{brl(o.amountCharged)}</span>
               </DetailRow>
               {installmentFeeBrl.gt(0) && <DetailRow label="Taxa do parcelado embutida">{brl(installmentFeeBrl)}</DetailRow>}
               <DetailRow label="Receita Subrinho" strong>
@@ -266,7 +266,7 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
                   <Tr key={`${c.layer}-${c.id}`}>
                     <Td className="font-semibold">
                       {c.layer === "SUBRINHO" ? (
-                        <Link href={`/subrinho/cupons/${c.id}`} className="text-brand hover:underline">
+                        <Link href={`/subrinho/cupons/${c.id}`} className="text-brand-ink hover:underline">
                           {c.code}
                         </Link>
                       ) : (
@@ -391,7 +391,7 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
                 {
                   label: "Link do carrinho",
                   value: (
-                    <Link href={`/loja/${affiliate.slug}/carrinho/${cart.token}`} className="break-all font-mono text-xs text-brand hover:underline" target="_blank">
+                    <Link href={`/loja/${affiliate.slug}/carrinho/${cart.token}`} className="break-all font-mono text-xs text-brand-ink hover:underline" target="_blank">
                       /loja/{affiliate.slug}/carrinho/{cart.token}
                     </Link>
                   ),

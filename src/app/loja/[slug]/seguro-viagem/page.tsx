@@ -42,8 +42,8 @@ export default async function InsurancePage({ params, searchParams }: { params: 
               <div key={`${p.supplierCode}-${p.productId}`} className={`grid gap-6 rounded-[2rem] p-6 sm:grid-cols-[1.3fr_1fr_auto] sm:items-center sm:p-8 ${i === 1 ? "bg-ink text-white" : "bg-surface"}`}>
                 <div>
                   <div className="flex items-center gap-2">
-                    <ShieldCheck className={`h-5 w-5 ${i === 1 ? "text-white" : "text-accent"}`} />
-                    {i === 1 && <span className="rounded-full bg-accent px-2.5 py-1 text-xs font-semibold text-white">Mais escolhido</span>}
+                    <ShieldCheck className={`h-5 w-5 ${i === 1 ? "text-accent" : "text-accent-ink"}`} />
+                    {i === 1 && <span className="rounded-full bg-accent px-2.5 py-1 text-xs font-semibold text-accent-fg">Mais escolhido</span>}
                   </div>
                   <p className="mt-3 text-[1.75rem] font-semibold leading-none tracking-[-0.04em]">{p.title}</p>
                   <div className="mt-4 flex flex-wrap gap-1.5">

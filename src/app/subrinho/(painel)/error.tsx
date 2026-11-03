@@ -10,7 +10,7 @@ export default function SubrinhoPanelError({ error, reset }: { error: Error & { 
   }, [error]);
   return (
     <div className="mx-auto max-w-lg rounded-2xl border border-line bg-white px-6 py-12 text-center">
-      <TriangleAlert className="mx-auto h-10 w-10 text-brand" aria-hidden />
+      <TriangleAlert className="mx-auto h-10 w-10 text-brand-ink" aria-hidden />
       <h1 className="mt-3 text-xl font-semibold text-ink">Algo deu errado</h1>
       <p className="mt-1 text-sm text-muted">
         Não foi possível carregar ou concluir esta operação. Se você enviou arquivos, confira se o total não passa de 10 MB.

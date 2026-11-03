@@ -52,7 +52,7 @@ export function TicketBooking({
                 !o.available && "cursor-not-allowed opacity-50",
               )}
             >
-              <input type="radio" name="optionId" value={o.optionId} checked={opt === o.optionId} disabled={!o.available} onChange={() => setOpt(o.optionId)} className="mt-1 accent-[var(--store-accent)]" />
+              <input type="radio" name="optionId" value={o.optionId} checked={opt === o.optionId} disabled={!o.available} onChange={() => setOpt(o.optionId)} className="mt-1 accent-brand" />
               <span className="flex-1">
                 <span className="block text-[15px] font-semibold text-ink">{o.title}</span>
                 {o.description && <span className="block text-xs text-muted">{o.description}</span>}

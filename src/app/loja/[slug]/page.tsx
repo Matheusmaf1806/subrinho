@@ -6,7 +6,7 @@ import { INSURANCE_REGIONS } from "@/server/suppliers/mock/single-page";
 import { FlightPath } from "@/components/brand";
 import { ArrowChip, ButtonLink, cn } from "@/components/ui";
 import { photo, type PhotoKey } from "@/lib/images";
-import { getStore, getStorePricing } from "./_lib/store";
+import { getStore, getStorePricing, storeBrand } from "./_lib/store";
 import { COMING_SOON, STORE_CATEGORIES } from "./_components/category";
 import { ChipSearch, InsuranceSearch, LodgingSearch, TicketsSearch } from "./_components/search-forms";
 import { SearchTabs } from "./_components/search-tabs";
@@ -48,6 +48,7 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
   const store = await getStore(slug);
   const ctx = await getStorePricing(store.id);
   const base = `/loja/${store.slug}`;
+  const brand = storeBrand(store);
   const { d, minDate } = parseSearch({});
   const dest = (cat: Parameters<typeof adaptersFor>[0]) => [...new Set(adaptersFor(cat).flatMap((a) => a.destinations().map((x) => x.name)))];
 
@@ -78,39 +79,39 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
     <main>
       {/* ───────── Hero ───────── */}
       <section className="px-3 pt-3 sm:px-4">
-        <div className="relative mx-auto max-w-[1440px] overflow-hidden rounded-[2rem] bg-accent text-white sm:rounded-[2.5rem]">
-          <FlightPath className="pointer-events-none absolute left-[38%] top-10 hidden h-28 w-56 text-white/40 lg:block" />
+        <div className="relative mx-auto max-w-[1440px] overflow-hidden rounded-[2rem] bg-accent text-accent-fg sm:rounded-[2.5rem]">
+          <FlightPath className="pointer-events-none absolute left-[38%] top-10 hidden h-28 w-56 text-accent-fg/40 lg:block" />
           <div className="grid gap-8 px-6 pb-44 pt-12 sm:px-12 sm:pt-16 lg:grid-cols-[1.15fr_1fr] lg:pb-48">
             <div className="flex flex-col justify-between">
               <div>
-                <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3.5 py-1.5 text-[13px] font-semibold backdrop-blur">
-                  <span className="h-1.5 w-1.5 rounded-full bg-white" /> {store.name}
+                <span className="inline-flex items-center gap-2 rounded-full bg-accent-fg/15 px-3.5 py-1.5 text-[13px] font-semibold backdrop-blur">
+                  <span className="h-1.5 w-1.5 rounded-full bg-accent-fg" /> {store.name}
                 </span>
                 <h1 className="display mt-6 text-[clamp(3.4rem,7.2vw,7.5rem)]">
-                  Viaje mais.
-                  <br />
-                  Pague em 10x.
+                  {brand.heroLines.map((l, i) => (
+                    <span key={i} className="block">
+                      {l}
+                    </span>
+                  ))}
                 </h1>
-                <p className="mt-6 max-w-md text-[17px] leading-relaxed text-white/85">
-                  Ingressos, hotéis, casas, seguro viagem e chip no mesmo carrinho — com o atendimento da {store.name}.
-                </p>
+                <p className="mt-6 max-w-md text-[17px] leading-relaxed text-accent-fg/85">{brand.heroSubtitle}</p>
               </div>
             </div>
             <div className="hidden grid-cols-[1.15fr_1fr] gap-3 lg:grid">
               <div className="relative overflow-hidden rounded-[2rem]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={photo("heroWoman", 900, 1200)} alt="Viajante sorrindo" className="h-full w-full object-cover" />
+                <img src={brand.heroImage} alt="" className="h-full w-full object-cover" />
                 <span className="absolute bottom-4 left-4 rounded-full bg-white px-4 py-2 text-sm font-semibold text-ink">10x sem juros em tudo</span>
               </div>
               <div className="grid grid-rows-[1fr_1.25fr] gap-3">
-                <div className="flex flex-col justify-between rounded-[2rem] bg-ink p-6">
+                <div className="flex flex-col justify-between rounded-[2rem] bg-ink p-6 text-white">
                   <p className="text-[13px] font-medium text-white/60">Melhor preço</p>
                   <p className="text-6xl font-semibold leading-none tracking-[-0.06em]">Pix</p>
                   <p className="text-[13px] text-white/60">aprovação na hora</p>
                 </div>
                 <div className="overflow-hidden rounded-[2rem]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={photo("travelerCity", 700, 800)} alt="Viajante com mochila" className="h-full w-full object-cover" />
+                  <img src={brand.heroImage2} alt="" className="h-full w-full object-cover" />
                 </div>
               </div>
             </div>
@@ -136,7 +137,7 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={photo(t.image, i === 0 ? 1400 : 800)} alt="" className="absolute inset-0 h-full w-full object-cover opacity-90 transition duration-700 group-hover:scale-105" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-                <ArrowChip tone="light" className="absolute right-4 top-4 transition group-hover:bg-accent group-hover:text-white" />
+                <ArrowChip tone="light" className="absolute right-4 top-4 transition group-hover:bg-accent group-hover:text-accent-fg" />
                 <div className="absolute inset-x-0 bottom-0 p-5 sm:p-7">
                   <p className={cn("font-semibold leading-none tracking-[-0.04em]", i === 0 ? "text-[clamp(2.25rem,4vw,3.75rem)]" : "text-2xl sm:text-[1.75rem]")}>{c.short}</p>
                   <p className={cn("mt-2 text-white/80", i === 0 ? "text-base" : "hidden text-sm sm:block")}>{t.line}</p>
@@ -185,7 +186,7 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
         </div>
         <div className="flex min-h-[380px] flex-col justify-between rounded-[2rem] bg-surface p-8 sm:rounded-[2.5rem] sm:p-10">
           <p className="text-[15px] text-muted">No Pix</p>
-          <p className="text-[clamp(5rem,10vw,8.5rem)] font-semibold leading-[0.8] tracking-[-0.07em] text-accent">Pix</p>
+          <p className="text-[clamp(5rem,10vw,8.5rem)] font-semibold leading-[0.8] tracking-[-0.07em] text-accent-ink">Pix</p>
           <div>
             <p className="text-2xl font-semibold leading-tight tracking-[-0.03em]">Melhor preço e aprovação na hora.</p>
             <p className="mt-2 text-[15px] text-muted">E ainda dá para usar cupom de desconto no carrinho.</p>

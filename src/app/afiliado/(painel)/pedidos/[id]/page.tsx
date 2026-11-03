@@ -191,7 +191,7 @@ export default async function AfiliadoPedidoDetalhePage({ params }: { params: Pa
                     <li key={c.code} className="flex items-start justify-between gap-3 text-sm">
                       <div>
                         <p className="inline-flex items-center gap-1.5 font-semibold text-ink">
-                          <TicketPercent className="h-4 w-4 text-brand" aria-hidden /> {c.code}
+                          <TicketPercent className="h-4 w-4 text-brand-ink" aria-hidden /> {c.code}
                         </p>
                         <p className="text-xs text-muted">{c.rule}</p>
                       </div>
@@ -254,7 +254,7 @@ function OrderItem({ item: it }: { item: AffiliateOrderItemView }) {
     <article className="px-5 py-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wide text-brand">{CATEGORY_LABEL[it.category as keyof typeof CATEGORY_LABEL] ?? it.category}</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-brand-ink">{CATEGORY_LABEL[it.category as keyof typeof CATEGORY_LABEL] ?? it.category}</p>
           <h3 className="mt-0.5 text-base font-semibold text-ink">{it.title}</h3>
           {it.subtitle && <p className="text-sm font-semibold text-ink">{it.subtitle}</p>}
           <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
@@ -316,7 +316,7 @@ function PersonCard({ title, subtitle, icon, person }: { title: string; subtitle
       <CardHeader
         title={
           <span className="inline-flex items-center gap-2">
-            <span className="grid h-7 w-7 place-items-center rounded-lg bg-brand-50 text-brand">{icon}</span>
+            <span className="grid h-7 w-7 place-items-center rounded-lg bg-brand-50 text-brand-ink">{icon}</span>
             {title}
           </span>
         }

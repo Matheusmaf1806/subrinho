@@ -59,3 +59,20 @@ export function safeNext(store: Store, next: string | null | undefined, fallback
 export function appUrl() {
   return (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
 }
+
+// ───────── White-label ─────────
+import { DEFAULT_HERO_TITLE, DEFAULT_TAGLINE } from "@/lib/theme";
+import { photo } from "@/lib/images";
+
+/** Conteúdo de marca da loja, com padrões neutros quando o afiliado não personalizou. */
+export function storeBrand(store: Store) {
+  return {
+    heroLines: (store.heroTitle?.trim() || DEFAULT_HERO_TITLE).split(/\r?\n/).filter(Boolean),
+    heroSubtitle: store.heroSubtitle?.trim() || `Ingressos, hotéis, casas, seguro viagem e chip no mesmo carrinho — com o atendimento da ${store.name}.`,
+    heroImage: store.heroImageUrl || photo("heroWoman", 900, 1200),
+    heroImage2: store.heroImage2Url || photo("travelerCity", 700, 800),
+    tagline: store.tagline?.trim() || DEFAULT_TAGLINE,
+    instagram: store.instagram?.replace(/^@/, "").trim() || null,
+    favicon: store.faviconUrl || `/loja/${store.slug}/icone`,
+  };
+}

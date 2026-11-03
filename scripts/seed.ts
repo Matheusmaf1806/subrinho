@@ -15,6 +15,10 @@ import { createAffiliate, createAffiliateUser, createSubrinhoUser } from "../src
 import { upsertMarginRule } from "../src/server/admin/margins";
 import { createCoupon } from "../src/server/admin/coupons";
 import { recordFxRate } from "../src/server/fx";
+import { updateBranding } from "../src/server/admin/branding";
+import { files } from "../src/server/db/schema";
+import { readFileSync } from "node:fs";
+import { photo } from "../src/lib/images";
 import { DEFAULT_SETTINGS } from "../src/server/settings";
 import { SUPPLIERS, getAdapter } from "../src/server/suppliers/registry";
 import { addQuoteToCart, applyCouponToCart, createCart, recordCartView, type CartActor } from "../src/server/cart/service";
@@ -89,6 +93,42 @@ const rota = await createAffiliate(
   { name: "Rota Brasil Turismo", slug: "rota-brasil", email: "contato@rotabrasil.com.br", brandColor: "#0F766E", pixKey: "contato@rotabrasil.com.br" },
   { name: "Carlos Rocha", email: "carlos@rotabrasil.com.br", password: "afiliado123" },
 );
+
+// ───────── White-label: cada loja com a sua identidade ─────────
+async function publicAsset(path: string, filename: string) {
+  const data = readFileSync(path);
+  const [f] = await db.insert(files).values({ filename, mimeType: "image/png", size: data.length, data, isPublic: true, uploadedByType: "SUBRINHO", uploadedById: owner.id }).returning({ id: files.id });
+  return `/api/public/files/${f.id}`;
+}
+await updateBranding(db, ana.id, {
+  brandColor: "#E4113F", darkColor: "#0A0A0B", fontFamily: "inter-tight",
+  logoUrl: null, logoOnDarkUrl: null, faviconUrl: null,
+  heroTitle: "Viaje mais.\nPague em 10x.", heroSubtitle: null,
+  heroImageUrl: photo("heroWoman", 1200, 1500), heroImage2Url: photo("travelerCity", 900, 1000),
+  tagline: "Viajar com a Ana é viajar com quem entende.", instagram: "viagensdaana", showPoweredBy: true,
+});
+await updateBranding(db, rota.id, {
+  brandColor: "#0F766E", darkColor: "#0B2B26", fontFamily: "manrope",
+  logoUrl: null, logoOnDarkUrl: null, faviconUrl: null,
+  heroTitle: "O mundo\ncomeça aqui.", heroSubtitle: "Pacotes, hotéis e ingressos com o cuidado da Rota Brasil — atendimento de segunda a sábado.",
+  heroImageUrl: photo("travelerHiker", 1200, 1500), heroImage2Url: photo("lisbon", 900, 1000),
+  tagline: "Rota Brasil Turismo — viajando com você desde 2009.", instagram: "rotabrasil", showPoweredBy: true,
+});
+const solemar = await createAffiliate(
+  db,
+  { name: "Sol & Mar Viagens", slug: "sol-e-mar", email: "ola@solemar.com.br", phone: "(81) 3222-1100", whatsapp: "5581988887777", pixKey: "ola@solemar.com.br" },
+  { name: "Marina Costa", email: "marina@solemar.com.br", password: "afiliado123" },
+);
+await updateBranding(db, solemar.id, {
+  brandColor: "#FFC531", darkColor: "#10214A", fontFamily: "fraunces",
+  logoUrl: await publicAsset("scripts/seed-assets/sol-e-mar-logo.png", "sol-e-mar-logo.png"),
+  logoOnDarkUrl: await publicAsset("scripts/seed-assets/sol-e-mar-logo-dark.png", "sol-e-mar-logo-dark.png"),
+  faviconUrl: null,
+  heroTitle: "O verão\nnunca acaba.", heroSubtitle: "Resorts, casas com piscina e ingressos para curtir o ano inteiro — no Pix ou em 10x.",
+  heroImageUrl: photo("infinityPool", 1200, 1500), heroImage2Url: photo("tropicalResort", 900, 1000),
+  tagline: "Praia, sol e viagens sem preocupação.", instagram: "solemarviagens", showPoweredBy: false,
+});
+await upsertMarginRule(db, { owner: "AFFILIATE", affiliateId: solemar.id, scope: "DEFAULT", marginPct: "6", label: "Padrão" }, owner.id);
 
 for (const r of [
   { scope: "DEFAULT" as const, marginPct: "3.7", label: "Padrão" },
@@ -227,5 +267,6 @@ console.log("✔ Seed concluído");
 console.log("  Painel Subrinho: /subrinho/login  admin@subrinho.com.br / subrinho123");
 console.log("  Painel Afiliado: /afiliado/login  ana@viagensdaana.com.br / afiliado123");
 console.log("  Loja:            /loja/viagens-da-ana  maria@cliente.com.br / cliente123");
+console.log("  Outras lojas (white-label): /loja/rota-brasil  /loja/sol-e-mar (marina@solemar.com.br / afiliado123)");
 console.log(`  Carrinho compartilhado de exemplo: /loja/viagens-da-ana/carrinho/${c7.token}`);
 await closeDb();

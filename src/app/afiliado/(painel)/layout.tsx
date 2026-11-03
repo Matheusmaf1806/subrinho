@@ -13,6 +13,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { SubrinhoLogo } from "@/components/brand";
+import { monogram, themeStyle } from "@/lib/theme";
 import { PanelShell, type NavItem } from "@/components/panel-shell";
 import { requireAffiliateUser } from "@/server/auth/session";
 import { ROLE_LABEL, storePath } from "../_lib/helpers";
@@ -35,21 +36,31 @@ export default async function PainelAfiliadoLayout({ children }: { children: Rea
     ...(isAdmin ? [{ href: "/afiliado/usuarios", label: "Usuários", icon: <Users /> }] : []),
   ];
 
+  // White-label: o painel do afiliado usa a identidade da agência (cores, fonte e logo).
   return (
+    <div style={themeStyle(affiliate)} className="font-sans">
     <PanelShell
       brand={
-        <Link href="/afiliado" aria-label="Painel do Afiliado — início">
-          <SubrinhoLogo tone="brand" size="sm" />
+        <Link href="/afiliado" aria-label={`${affiliate.name} — início`} className="flex min-w-0 items-center gap-3">
+          {affiliate.logoOnDarkUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={affiliate.logoOnDarkUrl} alt={affiliate.name} className="h-9 w-auto max-w-[170px] object-contain" />
+          ) : (
+            <>
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[30%] bg-brand text-[14px] font-semibold tracking-[-0.04em] text-brand-fg">
+                {monogram(affiliate.name)}
+              </span>
+              <span className="truncate text-[17px] font-semibold tracking-[-0.03em] text-white">{affiliate.name}</span>
+            </>
+          )}
         </Link>
       }
       badge={
-        <div className="mt-2">
-          <span className="inline-flex rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-widest text-white">
-            Painel do Afiliado
+        <div className="mt-3 flex flex-col items-start gap-2 text-[11px] font-medium text-white/45">
+          <span className="whitespace-nowrap rounded-full bg-white/10 px-2.5 py-1 font-semibold uppercase tracking-[0.12em] text-white/70">Painel do Afiliado</span>
+          <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+            por <SubrinhoLogo tone="light" size="sm" className="origin-left scale-[0.6] opacity-60" />
           </span>
-          <p className="mt-1.5 truncate text-sm font-semibold text-white/90" title={affiliate.name}>
-            {affiliate.name}
-          </p>
         </div>
       }
       nav={nav}
@@ -64,7 +75,7 @@ export default async function PainelAfiliadoLayout({ children }: { children: Rea
                 {user.email}
               </p>
             </div>
-            <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-brand">{user.role}</span>
+            <span className="shrink-0 rounded-full bg-brand px-2 py-0.5 text-[11px] font-semibold text-brand-fg">{user.role}</span>
           </div>
           <p className="mt-1 text-xs text-white/75">
             {ROLE_LABEL[user.role]} · {affiliate.name}
@@ -92,5 +103,6 @@ export default async function PainelAfiliadoLayout({ children }: { children: Rea
     >
       {children}
     </PanelShell>
+    </div>
   );
 }

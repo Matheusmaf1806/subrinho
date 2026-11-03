@@ -127,7 +127,7 @@ export default async function AfiliadoPedidosPage({ searchParams }: { searchPara
                 {list.map((o) => (
                   <Tr key={o.id}>
                     <Td>
-                      <Link href={`/afiliado/pedidos/${o.id}`} className="font-semibold text-brand hover:text-brand-700 hover:underline">
+                      <Link href={`/afiliado/pedidos/${o.id}`} className="font-semibold text-brand-ink hover:text-brand-700 hover:underline">
                         {orderNumber(o.number)}
                       </Link>
                       <div className="mt-1">

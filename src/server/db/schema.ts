@@ -102,8 +102,21 @@ export const affiliates = pgTable("affiliates", {
   email: text("email"),
   phone: text("phone"),
   whatsapp: text("whatsapp"),
-  logoUrl: text("logo_url"),
-  brandColor: text("brand_color").notNull().default("#E4113F"),
+  // ── White-label: identidade da loja (cada afiliado tem a sua) ──
+  logoUrl: text("logo_url"), // logo para fundo claro
+  logoOnDarkUrl: text("logo_on_dark_url"), // logo para fundo escuro (rodapé)
+  faviconUrl: text("favicon_url"), // ícone da aba; sem ele, gera monograma
+  brandColor: text("brand_color").notNull().default("#E4113F"), // cor principal
+  darkColor: text("dark_color").notNull().default("#0A0A0B"), // cor escura (blocos, botões, texto)
+  fontFamily: text("font_family").notNull().default("inter-tight"),
+  heroTitle: text("hero_title"),
+  heroSubtitle: text("hero_subtitle"),
+  heroImageUrl: text("hero_image_url"),
+  heroImage2Url: text("hero_image2_url"),
+  tagline: text("tagline"), // frase do rodapé
+  instagram: text("instagram"),
+  /** Exibe "tecnologia Subrinho" na loja (decisão da Subrinho). */
+  showPoweredBy: boolean("show_powered_by").notNull().default(true),
   // Dados bancários para repasse
   pixKey: text("pix_key"),
   bankName: text("bank_name"),
@@ -552,6 +565,8 @@ export const files = pgTable("files", {
   mimeType: text("mime_type").notNull(),
   size: integer("size").notNull(),
   data: bytea("data").notNull(),
+  /** Arquivos públicos (logos, imagens da loja) podem ser servidos sem login. */
+  isPublic: boolean("is_public").notNull().default(false),
   uploadedByType: userTypeEnum("uploaded_by_type"),
   uploadedById: uuid("uploaded_by_id"),
   createdAt: ts("created_at").notNull().defaultNow(),

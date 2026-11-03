@@ -12,7 +12,7 @@ export function PayerFields({ defaultSame = true, sameLabel }: { defaultSame?: b
   return (
     <div className="space-y-3">
       <label className="flex cursor-pointer items-center gap-3 rounded-2xl bg-surface px-4 py-3.5 text-[15px] font-semibold text-ink">
-        <input type="checkbox" name="payerSame" checked={same} onChange={(e) => setSame(e.target.checked)} className="h-5 w-5 accent-[var(--store-accent)]" />
+        <input type="checkbox" name="payerSame" checked={same} onChange={(e) => setSame(e.target.checked)} className="h-5 w-5 accent-brand" />
         {sameLabel}
       </label>
       {!same && (
@@ -85,10 +85,10 @@ export function PaymentFields({ pix, installment, maxInstallments }: { pix: numb
           { key: "CARD" as const, icon: CreditCard, title: "Cartão de crédito", price: `${maxInstallments}x de ${fmt(Math.floor((installment / maxInstallments) * 100) / 100)}`, sub: `sem juros · total ${fmt(installment)}` },
         ].map((m) => (
           <label key={m.key} className={cn("flex cursor-pointer gap-3 rounded-[1.5rem] p-5 transition", method === m.key ? "bg-ink text-white" : "bg-surface text-ink hover:bg-surface-2")}>
-            <input type="radio" name="paymentMethod" value={m.key} checked={method === m.key} onChange={() => setMethod(m.key)} className="mt-1 accent-[var(--store-accent)]" />
+            <input type="radio" name="paymentMethod" value={m.key} checked={method === m.key} onChange={() => setMethod(m.key)} className="mt-1 accent-brand" />
             <span>
               <span className="flex items-center gap-1.5 text-[15px] font-semibold">
-                <m.icon className="h-4 w-4 text-accent" /> {m.title}
+                <m.icon className={cn("h-4 w-4", method === m.key ? "text-accent" : "text-accent-ink")} /> {m.title}
               </span>
               <span className="mt-2 block text-[1.6rem] font-semibold leading-none tracking-[-0.04em] tabular">{m.price}</span>
               <span className={cn("mt-1.5 block text-xs", method === m.key ? "text-white/60" : "text-muted")}>{m.sub}</span>

@@ -89,7 +89,7 @@ export default async function SubrinhoReportDetailPage({ params }: { params: Pro
                 return (
                   <Tr key={a.affiliateId}>
                     <Td>
-                      <Link href={`/subrinho/afiliados/${a.affiliateId}`} className="font-semibold text-ink hover:text-brand">
+                      <Link href={`/subrinho/afiliados/${a.affiliateId}`} className="font-semibold text-ink hover:text-brand-ink">
                         {a.name}
                       </Link>
                     </Td>
@@ -203,7 +203,7 @@ export default async function SubrinhoReportDetailPage({ params }: { params: Pro
               {orders.map((o) => (
                 <Tr key={o.id}>
                   <Td>
-                    <Link href={`/subrinho/pedidos/${o.id}`} className="font-semibold text-brand hover:underline">
+                    <Link href={`/subrinho/pedidos/${o.id}`} className="font-semibold text-brand-ink hover:underline">
                       {orderNumber(o.number)}
                     </Link>
                   </Td>

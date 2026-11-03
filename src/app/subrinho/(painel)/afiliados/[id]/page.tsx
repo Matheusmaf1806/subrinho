@@ -33,7 +33,9 @@ import { periodLabel } from "../../../_lib/dates";
 import { isUuid } from "../../../_lib/form";
 import { canDo, PERMS, SCOPE_LABEL } from "../../../_lib/labels";
 import { ruleTarget } from "../../../_lib/rules";
-import { addAffiliateUserAction, updateAffiliateAction } from "../actions";
+import { addAffiliateUserAction, updateAffiliateAction, updateAffiliateBrandingAction } from "../actions";
+import { BrandingEditor } from "@/components/branding-editor";
+import { brandingInitial, brandPresets } from "@/lib/branding-view";
 import { AffiliateFields } from "../affiliate-fields";
 
 export const metadata = { title: "Afiliado" };
@@ -64,7 +66,7 @@ export default async function AffiliateDetailPage({
     <>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <Link href="/subrinho/afiliados" className="mb-2 inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-brand">
+          <Link href="/subrinho/afiliados" className="mb-2 inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-brand-ink">
             ← Afiliados
           </Link>
           <h1 className="flex flex-wrap items-center gap-3 text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
@@ -94,6 +96,19 @@ export default async function AffiliateDetailPage({
         <Stat label="Comissão total" value={<Fit>{brl(row.commission)}</Fit>} />
         <Stat label="Clientes da loja" value={row.customersCount} />
       </div>
+
+      <section className="mt-10">
+        <h2 className="text-[1.75rem] font-semibold tracking-[-0.04em]">Identidade da loja (white-label)</h2>
+        <p className="mb-5 mt-1 text-[15px] text-muted">Logo, cores, fonte e conteúdo — tudo personalizado para {a.name}. Aqui também se decide se a loja mostra “tecnologia Subrinho”.</p>
+        <BrandingEditor
+          action={updateAffiliateBrandingAction}
+          initial={brandingInitial(a)}
+          presets={brandPresets()}
+          readOnly={!canEdit}
+          allowPoweredBy
+          hidden={{ id: a.id }}
+        />
+      </section>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[3fr_2fr]">
         <Card>
@@ -264,7 +279,7 @@ export default async function AffiliateDetailPage({
                       <ul className="space-y-0.5">
                         {p.proofs.map((f) => (
                           <li key={f.id}>
-                            <a href={`/api/files/${f.fileId}`} target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline">
+                            <a href={`/api/files/${f.fileId}`} target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-xs font-semibold text-brand-ink hover:underline">
                               <Paperclip className="h-3 w-3" aria-hidden /> {f.filename}
                             </a>
                           </li>
@@ -279,7 +294,7 @@ export default async function AffiliateDetailPage({
         )}
       </Card>
       <div className="mt-2 text-right">
-        <Link href={`/subrinho/repasses?afiliado=${a.id}`} className="text-sm font-semibold text-brand hover:underline">
+        <Link href={`/subrinho/repasses?afiliado=${a.id}`} className="text-sm font-semibold text-brand-ink hover:underline">
           Gerenciar repasses deste afiliado →
         </Link>
       </div>
@@ -304,7 +319,7 @@ export default async function AffiliateDetailPage({
               {orders.map(({ order: o }) => (
                 <Tr key={o.id}>
                   <Td>
-                    <Link href={`/subrinho/pedidos/${o.id}`} className="font-semibold text-brand hover:underline">
+                    <Link href={`/subrinho/pedidos/${o.id}`} className="font-semibold text-brand-ink hover:underline">
                       {orderNumber(o.number)}
                     </Link>
                   </Td>
@@ -322,7 +337,7 @@ export default async function AffiliateDetailPage({
         )}
       </Card>
       <div className="mt-2 text-right">
-        <Link href={`/subrinho/pedidos?afiliado=${a.id}`} className="text-sm font-semibold text-brand hover:underline">
+        <Link href={`/subrinho/pedidos?afiliado=${a.id}`} className="text-sm font-semibold text-brand-ink hover:underline">
           Ver todos os pedidos →
         </Link>
       </div>

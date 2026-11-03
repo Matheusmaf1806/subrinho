@@ -23,7 +23,7 @@ export default async function SubrinhoLoginPage() {
           <br />
           favorito da
           <br />
-          <span className="text-brand">tecnologia.</span>
+          <span className="text-brand-ink">tecnologia.</span>
         </>
       }
       footnote="Acesso restrito à equipe Subrinho."

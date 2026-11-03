@@ -171,7 +171,7 @@ export function PriceCalculator({ defaults }: { defaults: CalculatorDefaults }) 
           <ol className="space-y-2">
             {steps.map((s) => (
               <li key={s.n} className={cn("flex items-center gap-3 rounded-xl px-3 py-2.5", s.n >= 4 ? "bg-brand-50" : "bg-surface/70")}>
-                <span className={cn("grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-semibold", s.n >= 4 ? "bg-brand text-white" : "bg-white text-brand")}>
+                <span className={cn("grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-semibold", s.n >= 4 ? "bg-brand text-white" : "bg-white text-brand-ink")}>
                   {s.n}
                 </span>
                 <div className="min-w-0 flex-1">

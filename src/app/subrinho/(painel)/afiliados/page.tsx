@@ -55,14 +55,14 @@ export default async function SubrinhoAffiliatesPage() {
                   <Td>
                     <div className="flex items-center gap-2">
                       <span className="h-3 w-3 shrink-0 rounded-full ring-1 ring-line" style={{ background: a.brandColor }} aria-hidden />
-                      <Link href={`/subrinho/afiliados/${a.id}`} className="font-semibold text-ink hover:text-brand">
+                      <Link href={`/subrinho/afiliados/${a.id}`} className="font-semibold text-ink hover:text-brand-ink">
                         {a.name}
                       </Link>
                     </div>
                     {a.legalName && <div className="text-xs text-muted">{a.legalName}</div>}
                   </Td>
                   <Td>
-                    <Link href={`/loja/${a.slug}`} target="_blank" className="inline-flex items-center gap-1 font-mono text-xs text-brand hover:underline">
+                    <Link href={`/loja/${a.slug}`} target="_blank" className="inline-flex items-center gap-1 font-mono text-xs text-brand-ink hover:underline">
                       /loja/{a.slug} <ExternalLink className="h-3 w-3" aria-hidden />
                       <span className="sr-only">(abre em nova aba)</span>
                     </Link>

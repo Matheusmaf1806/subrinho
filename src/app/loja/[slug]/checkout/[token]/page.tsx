@@ -33,7 +33,7 @@ function Step({ n, title, subtitle, children }: { n: number; title: string; subt
   return (
     <section className="rounded-[2rem] bg-white p-6 ring-1 ring-inset ring-black/[0.06] sm:p-8">
       <div className="mb-6 flex items-start gap-4">
-        <span className="text-[2.75rem] font-semibold leading-[0.8] tracking-[-0.06em] text-accent tabular">{String(n).padStart(2, "0")}</span>
+        <span className="text-[2.75rem] font-semibold leading-[0.8] tracking-[-0.06em] text-accent-ink tabular">{String(n).padStart(2, "0")}</span>
         <div>
           <h2 className="text-[1.5rem] font-semibold leading-tight tracking-[-0.035em] text-ink">{title}</h2>
           {subtitle && <p className="mt-1 text-[14px] text-muted">{subtitle}</p>}

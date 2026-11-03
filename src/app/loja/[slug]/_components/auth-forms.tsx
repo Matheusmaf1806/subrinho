@@ -84,7 +84,7 @@ export function CustomerAuth({ login, register, agency, next, initial = "login" 
             <Input name="password" type="password" required />
           </label>
           <label className="flex items-center gap-3 rounded-2xl bg-surface px-4 py-3.5 text-[15px] font-semibold text-ink">
-            <input type="checkbox" name="adminMode" defaultChecked className="h-4 w-4 accent-[var(--store-accent)]" /> Entrar em modo ADMIN
+            <input type="checkbox" name="adminMode" defaultChecked className="h-4 w-4 accent-brand" /> Entrar em modo ADMIN
           </label>
           <SubmitButton variant="dark" size="lg" className="w-full" pendingText="Entrando…">
             Entrar como agência

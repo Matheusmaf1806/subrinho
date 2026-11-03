@@ -133,14 +133,14 @@ export default async function CartPage({ params, searchParams }: { params: Promi
             {open && (
               <div className="rounded-[2rem] bg-surface p-6">
                 <p className="inline-flex items-center gap-2 text-[17px] font-semibold tracking-[-0.02em] text-ink">
-                  <Share2 className="h-4 w-4 text-accent" /> Compartilhar carrinho
+                  <Share2 className="h-4 w-4 text-accent-ink" /> Compartilhar carrinho
                 </p>
                 <p className="mt-1 text-[14px] text-muted">Envie o link para quem vai pagar. Os preços são atualizados quando o link é aberto.</p>
                 <div className="mt-4 flex gap-2 rounded-full bg-white p-1">
                   <input readOnly value={shareUrl} className="min-w-0 flex-1 truncate bg-transparent px-4 text-xs text-muted outline-none" aria-label="Link do carrinho" />
                   <CopyButton text={shareUrl} label="Copiar link" className={buttonClass("dark", "sm")} />
                 </div>
-                <a href={`https://wa.me/?text=${waText}`} target="_blank" rel="noreferrer" className="mt-3 inline-flex h-9 items-center rounded-full px-1 text-[13px] font-semibold text-ink hover:text-accent">
+                <a href={`https://wa.me/?text=${waText}`} target="_blank" rel="noreferrer" className="mt-3 inline-flex h-9 items-center rounded-full px-1 text-[13px] font-semibold text-ink hover:text-accent-ink">
                   Enviar pelo WhatsApp →
                 </a>
               </div>

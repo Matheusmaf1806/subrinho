@@ -117,7 +117,7 @@ export default async function SubrinhoSuppliersPage() {
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {FUTURE_CATEGORIES.map((c) => (
               <li key={c} className="rounded-2xl border border-dashed border-brand-200 bg-brand-50/40 p-4">
-                <div className="flex items-center gap-2 text-brand">
+                <div className="flex items-center gap-2 text-brand-ink">
                   <Sparkles className="h-4 w-4" aria-hidden />
                   <span className="text-[11px] font-semibold uppercase tracking-wider">Em breve</span>
                 </div>

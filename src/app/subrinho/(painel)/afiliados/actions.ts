@@ -7,6 +7,7 @@ import type { ActionState } from "@/components/ui-client";
 import { db } from "@/server/db";
 import { requireSubrinhoUser } from "@/server/auth/session";
 import { createAffiliate, createAffiliateUser, updateAffiliate, type AffiliateInput } from "@/server/admin/affiliates";
+import { BrandingError, brandingFromForm, updateBranding } from "@/server/admin/branding";
 import { actionError, checkbox, FormError, optText, text, uuid } from "../../_lib/form";
 import { PERMS } from "../../_lib/labels";
 
@@ -19,8 +20,6 @@ const UserSchema = z.object({
 function affiliateInput(fd: FormData, withActive: boolean): AffiliateInput {
   const email = optText(fd, "email");
   if (email && !z.email().safeParse(email).success) throw new FormError("E-mail da agência inválido");
-  const logoUrl = optText(fd, "logoUrl");
-  if (logoUrl && !/^https?:\/\/\S+$/i.test(logoUrl) && !logoUrl.startsWith("/")) throw new FormError("URL do logo inválida");
   return {
     name: text(fd, "name"),
     slug: text(fd, "slug"),
@@ -29,8 +28,6 @@ function affiliateInput(fd: FormData, withActive: boolean): AffiliateInput {
     email,
     phone: optText(fd, "phone"),
     whatsapp: optText(fd, "whatsapp"),
-    logoUrl,
-    brandColor: optText(fd, "brandColor"),
     pixKey: optText(fd, "pixKey"),
     bankName: optText(fd, "bankName"),
     bankAgency: optText(fd, "bankAgency"),
@@ -89,6 +86,25 @@ export async function addAffiliateUserAction(_prev: ActionState, fd: FormData): 
     revalidatePath(`/subrinho/afiliados/${affiliateId}`);
     return { ok: true, message: `Usuário ${u.name} criado (${role === "ADMIN" ? "ADMIN" : "Agente"}).` };
   } catch (e) {
+    return actionError(e);
+  }
+}
+
+/** White-label: identidade da loja do afiliado (inclui exibir ou não "tecnologia Subrinho"). */
+export async function updateAffiliateBrandingAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  try {
+    const user = await requireSubrinhoUser(PERMS.affiliates);
+    const id = uuid(fd, "id", "Afiliado");
+    const a = await db.transaction(async (tx) => {
+      const input = await brandingFromForm(tx, fd, { type: "SUBRINHO", id: user.id }, { allowPoweredBy: true });
+      return updateBranding(tx, id, input);
+    });
+    revalidatePath(`/subrinho/afiliados/${id}`);
+    revalidatePath(`/loja/${a.slug}`, "layout");
+    revalidatePath("/afiliado", "layout");
+    return { ok: true, message: `Identidade da loja ${a.name} salva.` };
+  } catch (e) {
+    if (e instanceof BrandingError) return { error: e.message };
     return actionError(e);
   }
 }

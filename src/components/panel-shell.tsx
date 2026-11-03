@@ -39,7 +39,7 @@ export function PanelShell({
             isActive(i) ? "bg-white text-ink" : "text-white/60 hover:bg-white/[0.07] hover:text-white",
           )}
         >
-          <span className={cn("grid h-5 w-5 place-items-center [&>svg]:h-[18px] [&>svg]:w-[18px]", isActive(i) ? "text-brand" : "")}>{i.icon}</span>
+          <span className={cn("grid h-5 w-5 place-items-center [&>svg]:h-[18px] [&>svg]:w-[18px]", isActive(i) ? "text-brand-ink" : "")}>{i.icon}</span>
           {i.label}
         </Link>
       ))}

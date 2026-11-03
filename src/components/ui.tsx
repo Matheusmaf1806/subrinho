@@ -15,8 +15,8 @@ type Variant = "primary" | "accent" | "secondary" | "outline" | "ghost" | "dange
 type Size = "sm" | "md" | "lg";
 
 const VARIANT: Record<Variant, string> = {
-  primary: "bg-brand text-white hover:bg-brand-600",
-  accent: "bg-accent text-white hover:brightness-110",
+  primary: "bg-brand text-brand-fg hover:bg-brand-600",
+  accent: "bg-accent text-accent-fg hover:brightness-110",
   secondary: "bg-surface text-ink hover:bg-surface-2",
   outline: "bg-white text-ink ring-1 ring-inset ring-line hover:ring-ink/30",
   ghost: "text-ink hover:bg-surface",
@@ -49,7 +49,7 @@ export function ButtonLink({ variant, size, className, ...p }: ComponentProps<ty
 
 /** Seta dentro de um círculo — o “chip” de ação da marca. */
 export function ArrowChip({ className, tone = "dark" }: { className?: string; tone?: "dark" | "light" | "brand" }) {
-  const t = tone === "light" ? "bg-white text-ink" : tone === "brand" ? "bg-brand text-white" : "bg-ink text-white";
+  const t = tone === "light" ? "bg-white text-ink" : tone === "brand" ? "bg-brand text-brand-fg" : "bg-ink text-white";
   return (
     <span className={cn("inline-grid h-9 w-9 shrink-0 place-items-center rounded-full", t, className)} aria-hidden>
       <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none">
@@ -103,7 +103,7 @@ export function PageHeader({ title, subtitle, actions, back }: { title: ReactNod
 type Tone = "neutral" | "brand" | "success" | "warning" | "danger" | "info" | "dark";
 const TONE: Record<Tone, string> = {
   neutral: "bg-surface text-ink/70",
-  brand: "bg-brand-50 text-brand-700",
+  brand: "bg-brand-50 text-brand-ink",
   success: "bg-emerald-50 text-emerald-700",
   warning: "bg-amber-50 text-amber-800",
   danger: "bg-red-50 text-red-700",
@@ -135,8 +135,8 @@ export function statusTone(status: string): Tone {
 }
 
 export function Stat({ label, value, hint, tone = "default", icon, className }: { label: string; value: ReactNode; hint?: ReactNode; tone?: "default" | "brand" | "dark"; icon?: ReactNode; className?: string }) {
-  const styles = tone === "brand" ? "bg-brand text-white" : tone === "dark" ? "bg-ink text-white" : "bg-white text-ink ring-1 ring-inset ring-black/[0.06]";
-  const sub = tone === "default" ? "text-muted" : "text-white/70";
+  const styles = tone === "brand" ? "bg-brand text-brand-fg" : tone === "dark" ? "bg-ink text-white" : "bg-white text-ink ring-1 ring-inset ring-black/[0.06]";
+  const sub = tone === "default" ? "text-muted" : tone === "brand" ? "text-brand-fg/70" : "text-white/70";
   return (
     <div className={cn("flex min-h-[9.5rem] flex-col justify-between rounded-3xl p-6", styles, className)}>
       <div className={cn("flex items-center justify-between gap-2 text-[13px] font-medium", sub)}>

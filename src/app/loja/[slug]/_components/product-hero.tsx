@@ -54,7 +54,7 @@ export function ProductHero({ p, back }: { p: PricedDetail; back: { href: string
             <ul className="space-y-3">
               {p.highlights.map((h) => (
                 <li key={h} className="flex items-start gap-3 text-[15px] text-ink">
-                  <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-accent text-white">
+                  <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-accent text-accent-fg">
                     <Check className="h-3.5 w-3.5" strokeWidth={3} />
                   </span>
                   {h}

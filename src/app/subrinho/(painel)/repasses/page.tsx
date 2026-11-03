@@ -161,13 +161,13 @@ export default async function SubrinhoPayoutsPage({ searchParams }: { searchPara
                 return (
                   <Tr key={p.id}>
                     <Td className="min-w-[16rem]">
-                      <Link href={`/subrinho/afiliados/${a.id}`} className="font-semibold text-ink hover:text-brand">
+                      <Link href={`/subrinho/afiliados/${a.id}`} className="font-semibold text-ink hover:text-brand-ink">
                         {a.name}
                       </Link>
                       <BankData a={a} />
                     </Td>
                     <Td className="whitespace-nowrap">
-                      <Link href={`/subrinho/pedidos?afiliado=${a.id}&status=PAID`} className="hover:text-brand">
+                      <Link href={`/subrinho/pedidos?afiliado=${a.id}&status=PAID`} className="hover:text-brand-ink">
                         {periodLabel(p.periodStart, p.periodEnd)}
                       </Link>
                     </Td>
@@ -199,7 +199,7 @@ export default async function SubrinhoPayoutsPage({ searchParams }: { searchPara
                                 href={`/api/files/${f.fileId}`}
                                 target="_blank"
                                 rel="noopener"
-                                className="inline-flex max-w-[14rem] items-center gap-1 text-xs font-semibold text-brand hover:underline"
+                                className="inline-flex max-w-[14rem] items-center gap-1 text-xs font-semibold text-brand-ink hover:underline"
                                 title={f.note ?? undefined}
                               >
                                 <Paperclip className="h-3 w-3 shrink-0" aria-hidden />

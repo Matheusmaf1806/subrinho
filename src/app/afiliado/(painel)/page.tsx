@@ -107,7 +107,7 @@ export default async function AfiliadoDashboardPage() {
             title="Últimos pedidos"
             subtitle="Pedidos mais recentes da sua loja"
             actions={
-              <Link href="/afiliado/pedidos" className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:text-brand-700">
+              <Link href="/afiliado/pedidos" className="inline-flex items-center gap-1 text-sm font-semibold text-brand-ink hover:text-brand-700">
                 Ver todos <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
             }
@@ -150,7 +150,7 @@ export default async function AfiliadoDashboardPage() {
             title="Próximos repasses"
             subtitle="Sua comissão é paga 5 dias úteis após o fechamento da quinzena"
             actions={
-              <Link href="/afiliado/financeiro" className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:text-brand-700">
+              <Link href="/afiliado/financeiro" className="inline-flex items-center gap-1 text-sm font-semibold text-brand-ink hover:text-brand-700">
                 Financeiro <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
             }
@@ -190,7 +190,7 @@ export default async function AfiliadoDashboardPage() {
 
       {isAdmin && (
         <p className="mt-6 flex items-center gap-2 text-xs text-muted">
-          <ShieldCheck className="h-4 w-4 text-brand" aria-hidden />
+          <ShieldCheck className="h-4 w-4 text-brand-ink" aria-hidden />
           Você é ADMIN desta agência: pode alterar margens, cupons, dados da loja e usuários.
         </p>
       )}

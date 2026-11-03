@@ -141,7 +141,7 @@ export function ItemBreakdown({ item: i, index, rules, paymentMethod }: { item: 
         </div>
         <div className="text-right">
           <p className="text-xs font-semibold text-muted">Valor cobrado</p>
-          <p className="text-xl font-semibold tabular text-brand">{brl(i.chargedAmount)}</p>
+          <p className="text-xl font-semibold tabular text-brand-ink">{brl(i.chargedAmount)}</p>
           {check.ok ? (
             <Badge tone="success" className="mt-1">
               Conta conferida

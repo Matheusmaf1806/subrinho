@@ -53,7 +53,7 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
 
       {pending && order.paymentMethod === "PIX" && pix && (
         <Card>
-          <CardHeader title={<span className="inline-flex items-center gap-2"><QrCode className="h-5 w-5 text-accent" /> Pague com Pix</span>} subtitle={`Valor: ${brl(order.amountCharged)}`} />
+          <CardHeader title={<span className="inline-flex items-center gap-2"><QrCode className="h-5 w-5 text-accent-ink" /> Pague com Pix</span>} subtitle={`Valor: ${brl(order.amountCharged)}`} />
           <CardBody>
             {pixExpired ? (
               <Alert tone="warning" title="Este Pix expirou">

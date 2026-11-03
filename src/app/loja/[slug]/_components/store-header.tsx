@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { LogOut, ShieldCheck, ShoppingBag, User } from "lucide-react";
 import type { StoreViewer } from "@/server/auth/session";
-import { SubrinhoSymbol } from "@/components/brand";
 import type { Store } from "../_lib/store";
 import { logoutAction, toggleAdminModeAction } from "../actions";
 import { STORE_CATEGORIES } from "./category";
+import { StoreMark } from "./store-mark";
 
 export function StoreHeader({ store, viewer, cartCount, cartHref }: { store: Store; viewer: StoreViewer | null; cartCount: number; cartHref: string }) {
   const base = `/loja/${store.slug}`;
@@ -34,18 +34,13 @@ export function StoreHeader({ store, viewer, cartCount, cartHref }: { store: Sto
       )}
       <div className="mx-auto flex h-[72px] max-w-[1440px] items-center justify-between gap-6 px-4 sm:px-8">
         <Link href={base} className="flex min-w-0 items-center gap-3">
-          {store.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={store.logoUrl} alt={store.name} className="h-9 w-auto max-w-[160px] object-contain" />
-          ) : (
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[30%] bg-accent text-white">
-              <SubrinhoSymbol className="h-5 w-auto" />
+          <StoreMark store={store} />
+          {!store.logoUrl && (
+            <span className="min-w-0 leading-none">
+              <span className="block truncate text-[19px] font-semibold tracking-[-0.04em] text-ink">{store.name}</span>
+              {store.showPoweredBy && <span className="mt-1 block text-[11px] font-medium text-muted">tecnologia Subrinho</span>}
             </span>
           )}
-          <span className="min-w-0 leading-none">
-            <span className="block truncate text-[19px] font-semibold tracking-[-0.04em] text-ink">{store.name}</span>
-            <span className="mt-1 block text-[11px] font-medium text-muted">tecnologia Subrinho</span>
-          </span>
         </Link>
         <nav className="hidden items-center gap-1 rounded-full bg-surface p-1 lg:flex">
           {STORE_CATEGORIES.map((c) => (
@@ -78,7 +73,7 @@ export function StoreHeader({ store, viewer, cartCount, cartHref }: { store: Sto
           <Link href={cartHref} className="relative inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-white hover:bg-ink-2">
             <ShoppingBag className="h-4 w-4" />
             <span className="hidden sm:inline">Carrinho</span>
-            {cartCount > 0 && <span className="grid h-6 min-w-6 place-items-center rounded-full bg-accent px-1.5 text-xs font-semibold text-white">{cartCount}</span>}
+            {cartCount > 0 && <span className="grid h-6 min-w-6 place-items-center rounded-full bg-accent px-1.5 text-xs font-semibold text-accent-fg">{cartCount}</span>}
           </Link>
         </div>
       </div>

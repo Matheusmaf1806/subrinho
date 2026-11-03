@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
-import { photo } from "@/lib/images";
-import { getStore, safeNext, viewerFor } from "../_lib/store";
+import { getStore, safeNext, storeBrand, viewerFor } from "../_lib/store";
 import { CustomerAuth } from "../_components/auth-forms";
 import { agencyLoginAction, customerLoginAction, customerRegisterAction } from "../actions";
 
@@ -13,6 +12,7 @@ export default async function LoginPage({ params, searchParams }: { params: Prom
   const viewer = await viewerFor(store);
   const next = safeNext(store, sp.next);
   if (viewer) redirect(next);
+  const brand = storeBrand(store);
   return (
     <main className="mx-auto grid max-w-[1440px] gap-3 px-3 pt-3 sm:px-4 lg:grid-cols-2">
       <div className="flex flex-col justify-center px-3 py-10 sm:px-10 lg:py-16">
@@ -30,13 +30,15 @@ export default async function LoginPage({ params, searchParams }: { params: Prom
       </div>
       <div className="relative hidden min-h-[720px] overflow-hidden rounded-[2.5rem] bg-accent lg:block">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={photo("heroMan", 1200, 1500)} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        <img src={brand.heroImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 p-12 text-white">
           <p className="display text-[clamp(3rem,5vw,5rem)]">
-            Viaje mais.
-            <br />
-            Pague em 10x.
+            {brand.heroLines.map((l, i) => (
+              <span key={i} className="block">
+                {l}
+              </span>
+            ))}
           </p>
         </div>
       </div>

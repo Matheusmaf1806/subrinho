@@ -31,7 +31,7 @@ export function Cover({
       <img src={src} alt={title} loading={big ? "eager" : "lazy"} className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]" />
       {location && (
         <span className={cn("absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 font-semibold text-ink backdrop-blur", big ? "text-sm" : "text-xs")}>
-          <Icon className="h-3.5 w-3.5 text-accent" /> {location}
+          <Icon className="h-3.5 w-3.5 text-accent-ink" /> {location}
         </span>
       )}
       {overlay}

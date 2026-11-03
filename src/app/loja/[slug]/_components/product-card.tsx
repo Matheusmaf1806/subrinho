@@ -30,7 +30,7 @@ export function ProductCard({ p, href, note }: { p: PricedSummary; href: string;
           <div className="leading-tight">
             <p className="text-xs text-muted">a partir de</p>
             <p className="text-xl font-semibold tracking-[-0.03em] tabular">
-              {brl(p.price.pix)} <span className="text-[13px] font-semibold tracking-normal text-accent">Pix</span>
+              {brl(p.price.pix)} <span className="text-[13px] font-semibold tracking-normal text-accent-ink">Pix</span>
             </p>
             <p className="text-xs text-muted tabular">
               ou {p.price.plan.count}x {brl(p.price.plan.installment)}

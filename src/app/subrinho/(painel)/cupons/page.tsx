@@ -66,7 +66,7 @@ export default async function SubrinhoCouponsPage() {
                 return (
                   <Tr key={c.id}>
                     <Td>
-                      <Link href={`/subrinho/cupons/${c.id}`} className="font-mono font-semibold text-brand hover:underline">
+                      <Link href={`/subrinho/cupons/${c.id}`} className="font-mono font-semibold text-brand-ink hover:underline">
                         {c.code}
                       </Link>
                       {c.description && <div className="max-w-[16rem] text-xs text-muted">{c.description}</div>}

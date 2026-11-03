@@ -6,6 +6,9 @@ import { requireAffiliateUser } from "@/server/auth/session";
 import { appUrl, storePath } from "../../_lib/helpers";
 import { updateStoreAction } from "./actions";
 import { StoreForm } from "./store-form";
+import { BrandingEditor } from "@/components/branding-editor";
+import { brandingInitial, brandPresets } from "@/lib/branding-view";
+import { updateBrandingAction } from "./branding-actions";
 
 export const metadata: Metadata = { title: "Minha loja" };
 
@@ -53,14 +56,19 @@ export default async function AfiliadoLojaPage() {
         </CardBody>
       </Card>
 
+      <h2 className="mb-1 mt-2 text-[1.75rem] font-semibold tracking-[-0.04em]">Identidade da loja</h2>
+      <p className="mb-5 text-[15px] text-muted">Logo, cores, fonte e conteúdo da página inicial — a loja é 100% da sua agência.</p>
+      <div className="mb-12">
+        <BrandingEditor action={updateBrandingAction} initial={brandingInitial(affiliate)} presets={brandPresets()} readOnly={readOnly} />
+      </div>
+
+      <h2 className="mb-5 text-[1.75rem] font-semibold tracking-[-0.04em]">Contato e repasse</h2>
       <StoreForm
         action={updateStoreAction}
         readOnly={readOnly}
         storeUrl={storeUrl}
         initial={{
           name: affiliate.name,
-          brandColor: affiliate.brandColor,
-          logoUrl: affiliate.logoUrl ?? "",
           email: affiliate.email ?? "",
           phone: affiliate.phone ?? "",
           whatsapp: affiliate.whatsapp ?? "",

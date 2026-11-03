@@ -127,7 +127,7 @@ export default async function AfiliadoFinanceiroPage() {
                                   href={fileHref(pr.fileId)}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex max-w-[14rem] items-center gap-1.5 text-sm font-semibold text-brand hover:text-brand-700 hover:underline"
+                                  className="inline-flex max-w-[14rem] items-center gap-1.5 text-sm font-semibold text-brand-ink hover:text-brand-700 hover:underline"
                                   title={pr.filename}
                                 >
                                   <FileText className="h-4 w-4 shrink-0" aria-hidden />
@@ -155,7 +155,7 @@ export default async function AfiliadoFinanceiroPage() {
             <CardHeader
               title={
                 <span className="inline-flex items-center gap-2">
-                  <Landmark className="h-4 w-4 text-brand" aria-hidden /> Dados para repasse
+                  <Landmark className="h-4 w-4 text-brand-ink" aria-hidden /> Dados para repasse
                 </span>
               }
               subtitle="Conta onde a Subrinho deposita a sua comissão"
@@ -175,7 +175,7 @@ export default async function AfiliadoFinanceiroPage() {
                 <DetailRow label="Conta">{affiliate.bankAccount || "—"}</DetailRow>
               </dl>
               {user.role === "ADMIN" ? (
-                <Link href="/afiliado/loja#dados-bancarios" className="mt-3 inline-flex text-sm font-semibold text-brand hover:text-brand-700">
+                <Link href="/afiliado/loja#dados-bancarios" className="mt-3 inline-flex text-sm font-semibold text-brand-ink hover:text-brand-700">
                   Alterar dados bancários →
                 </Link>
               ) : (
