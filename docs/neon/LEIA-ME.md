@@ -1,10 +1,14 @@
 # Carregar o banco no Neon (sem terminal)
 
-1. Neon → seu projeto → **Tables**. Veja se já existem tabelas (`affiliates`, `orders`…).
-2. Abra o **SQL Editor**, apague o texto de exemplo e cole **um** dos arquivos:
-   - **Nenhuma tabela** → `subrinho-completo.sql` (cria as tabelas e coloca os dados de exemplo)
-   - **Tabelas já existem e estão vazias** (o deploy na Vercel com `DATABASE_URL` já criou) → `subrinho-somente-dados.sql`
-3. Clique em **Run**. Tudo roda numa transação: se der erro, nada fica pela metade.
+Use **um único arquivo**: `subrinho-instalar.sql`. Ele funciona em qualquer situação — banco vazio, tabelas já
+criadas pelo deploy, instalação pela metade ou já instalada (o que já existe é mantido; pode rodar de novo sem erro).
+
+1. Neon → seu projeto → **SQL Editor**.
+2. Se aparecer **“Failed transaction: ROLLBACK required”**, clique em **ROLLBACK** primeiro.
+3. Apague todo o texto do editor, cole o arquivo inteiro e clique em **Run**.
+4. No final aparece uma tabela com `lojas = 3`, `pedidos = 6`, `fornecedores = 10` e `status = instalado`.
+
+Se der erro, clique na aba do comando com **ERROR** (abaixo do botão Run) para ver a mensagem.
 
 Acessos de exemplo — **troque as senhas** antes de usar com clientes reais:
 
@@ -22,5 +26,4 @@ DATABASE_URL="url-do-neon" npm run db:migrate
 DATABASE_URL="url-do-neon" npm run db:seed
 ```
 
-Os arquivos são gerados a partir do seed (`scripts/seed.ts`); para regenerar após mudanças, rode o seed num banco
-local e exporte com `pg_dump --column-inserts --no-owner --no-privileges`.
+Para regenerar o arquivo depois de mudar o schema ou o seed: `npm run db:reset && npm run neon:sql`.
