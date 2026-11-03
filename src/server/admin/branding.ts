@@ -30,12 +30,13 @@ export type BrandingInput = {
 export const IMAGE_FIELDS = ["logoUrl", "logoOnDarkUrl", "faviconUrl", "heroImageUrl", "heroImage2Url"] as const;
 export type ImageField = (typeof IMAGE_FIELDS)[number];
 
+/** Limites por arquivo. A Vercel aceita até 4,5 MB por requisição (soma de todos os arquivos enviados juntos). */
 const MAX_BYTES: Record<ImageField, number> = {
-  logoUrl: 2 * 1024 * 1024,
-  logoOnDarkUrl: 2 * 1024 * 1024,
-  faviconUrl: 1024 * 1024,
-  heroImageUrl: 6 * 1024 * 1024,
-  heroImage2Url: 6 * 1024 * 1024,
+  logoUrl: 1024 * 1024,
+  logoOnDarkUrl: 1024 * 1024,
+  faviconUrl: 512 * 1024,
+  heroImageUrl: 3 * 1024 * 1024,
+  heroImage2Url: 3 * 1024 * 1024,
 };
 
 const LABEL: Record<ImageField, string> = {
@@ -57,7 +58,10 @@ export function sniffImage(buf: Buffer): "image/png" | "image/jpeg" | "image/web
 export const publicFileUrl = (id: string) => `/api/public/files/${id}`;
 
 export async function savePublicImage(tx: Tx, field: ImageField, file: File, by: { type: UserType; id: string }): Promise<string> {
-  if (file.size > MAX_BYTES[field]) throw new BrandingError(`${LABEL[field]}: arquivo maior que ${Math.round(MAX_BYTES[field] / 1024 / 1024)} MB`);
+  if (file.size > MAX_BYTES[field]) {
+    const max = MAX_BYTES[field] >= 1024 * 1024 ? `${MAX_BYTES[field] / 1024 / 1024} MB` : `${MAX_BYTES[field] / 1024} KB`;
+    throw new BrandingError(`${LABEL[field]}: arquivo maior que ${max}`);
+  }
   const data = Buffer.from(await file.arrayBuffer());
   const mime = sniffImage(data);
   if (!mime) throw new BrandingError(`${LABEL[field]}: envie PNG, JPG ou WEBP`);

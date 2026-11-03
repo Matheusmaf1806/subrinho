@@ -44,6 +44,33 @@ Acessos do seed:
 Pagamentos estão em modo de testes (`PAYMENT_PROVIDER=mock`): o Pix gera um “copia e cola” válido e a página do
 pedido tem o botão “Simular pagamento”; no cartão, qualquer número é aprovado, exceto final `0002` (recusado).
 
+## Deploy na Vercel
+
+1. **Banco:** crie um PostgreSQL (Vercel Postgres/Neon, Supabase…) e copie a URL de conexão (com `?sslmode=require`).
+2. **Variáveis de ambiente** do projeto na Vercel:
+
+   | Variável | Valor |
+   |---|---|
+   | `DATABASE_URL` | URL do PostgreSQL |
+   | `APP_URL` | URL pública (ex.: `https://subrinho.vercel.app`) — usada nos links de carrinho |
+   | `CRON_SECRET` | um segredo qualquer — a Vercel envia nos crons e as rotas `/api/cron/*` exigem |
+   | `FX_PROVIDER` | `manual` (cotação lançada no Painel Subrinho), `awesomeapi` ou `poolvo` |
+   | `PAYMENT_PROVIDER` | `mock` até o gateway ser integrado |
+
+3. **Deploy:** o script `vercel-build` aplica as migrações do banco e depois roda `next build`
+   (sem `DATABASE_URL`, só avisa e segue).
+4. **Dados iniciais (opcional):** rode uma vez, apontando para o banco de produção:
+   `DATABASE_URL=... npm run db:seed`
+
+**Crons (`vercel.json`):** o plano Hobby permite cron no máximo 1x por dia, então:
+- fechamento de quinzena: dias 1 e 16 às 03h (Brasília);
+- câmbio: 1x por dia às 07h (Brasília). Além disso, o câmbio é atualizado **sob demanda**: ao calcular preços, se a
+  cotação gravada tiver mais de `FX_MAX_AGE_MINUTES` (padrão 30), o sistema busca uma nova na API configurada
+  (com limite de 3 s; se a API falhar, usa a última cotação gravada). Assim o dólar continua dinâmico mesmo no Hobby.
+
+**Uploads:** a Vercel aceita até 4,5 MB por requisição — por isso os limites são 1 MB (logos), 500 KB (ícone) e
+3 MB (fotos da página inicial); fotos grandes devem ser enviadas uma de cada vez.
+
 ## Scripts
 
 | Comando | O que faz |

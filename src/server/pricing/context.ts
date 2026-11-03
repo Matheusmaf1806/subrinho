@@ -1,7 +1,7 @@
 import { eq, isNull, or, and } from "drizzle-orm";
 import type { Tx } from "@/server/db";
 import { marginRules } from "@/server/db/schema";
-import { getCurrentFx } from "@/server/fx";
+import { ensureFreshFx, getCurrentFx } from "@/server/fx";
 import { getSettings } from "@/server/settings";
 import type { PricingContext } from "./cart-pricing";
 import { MarginBook, type MarginRuleLite } from "./margins";
@@ -32,6 +32,7 @@ export async function loadMarginRules(tx: Tx, affiliateId: string): Promise<Marg
 
 /** Tudo que é preciso para precificar itens de uma loja (margens, câmbio, taxa do parcelado). */
 export async function loadPricingContext(tx: Tx, affiliateId: string): Promise<PricingContext> {
+  await ensureFreshFx(tx);
   const [rules, fx, s] = await Promise.all([loadMarginRules(tx, affiliateId), getCurrentFx(tx), getSettings(tx)]);
   return {
     affiliateId,

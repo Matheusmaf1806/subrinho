@@ -90,3 +90,39 @@ export async function refreshFxFromProvider(tx: Tx, provider = configuredFxProvi
 export async function fxHistory(tx: Tx, limit = 50) {
   return tx.select().from(fxRates).orderBy(desc(fxRates.fetchedAt)).limit(limit);
 }
+
+// ───────── Câmbio sempre atualizado sem depender de cron frequente ─────────
+// (no plano Hobby da Vercel o cron roda no máximo 1x por dia)
+
+const MAX_AGE_MS = Number(process.env.FX_MAX_AGE_MINUTES ?? 30) * 60_000;
+const REFRESH_TIMEOUT_MS = 3_000;
+let inflight: Promise<void> | null = null;
+let lastAttempt = 0;
+
+/**
+ * Se houver provedor configurado (FX_PROVIDER) e a cotação mais recente for mais velha que
+ * FX_MAX_AGE_MINUTES (padrão 30), busca uma nova antes de precificar. Falhas não quebram a
+ * página: o preço usa a última cotação gravada.
+ */
+export async function ensureFreshFx(tx: Tx): Promise<void> {
+  const provider = configuredFxProvider();
+  if (!provider) return;
+  if (inflight) return inflight;
+  if (Date.now() - lastAttempt < 60_000) return; // no máximo 1 tentativa por minuto por instância
+  const [latest] = await tx.select({ fetchedAt: fxRates.fetchedAt }).from(fxRates).orderBy(desc(fxRates.fetchedAt)).limit(1);
+  if (latest && Date.now() - latest.fetchedAt.getTime() < MAX_AGE_MS) return;
+  lastAttempt = Date.now();
+  inflight = (async () => {
+    try {
+      await Promise.race([
+        refreshFxFromProvider(tx, provider),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), REFRESH_TIMEOUT_MS)),
+      ]);
+    } catch (e) {
+      console.warn(`[câmbio] não foi possível atualizar via ${provider.name}: ${String(e)} — usando a última cotação gravada`);
+    } finally {
+      inflight = null;
+    }
+  })();
+  return inflight;
+}

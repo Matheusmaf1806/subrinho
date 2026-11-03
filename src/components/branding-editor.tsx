@@ -222,11 +222,11 @@ export function BrandingEditor({
       <ActionForm action={action} className="space-y-4" onSuccess={() => setFileKey((k) => k + 1)}>
         {hidden && Object.entries(hidden).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
         <fieldset disabled={readOnly} className="space-y-4">
-          <Section icon={<ImagePlus />} title="Logo e ícone" hint="PNG, JPG ou WEBP. Sem logo, a loja usa as iniciais da agência na cor principal.">
+          <Section icon={<ImagePlus />} title="Logo e ícone" hint="PNG, JPG ou WEBP. Sem logo, a loja usa as iniciais da agência na cor principal. Fotos grandes: envie uma de cada vez.">
             <div className="grid gap-6 lg:grid-cols-2">
-              <ImageField key={`logo-${fileKey}`} field="logoUrl" label="Logo (fundo claro)" hint="Topo da loja — até 2 MB" current={initial.logoUrl} onPreview={setLogo} disabled={readOnly} />
-              <ImageField key={`logoDark-${fileKey}`} field="logoOnDarkUrl" label="Logo (fundo escuro)" hint="Rodapé e painel — até 2 MB" current={initial.logoOnDarkUrl} onPreview={setLogoDark} disabled={readOnly} dark />
-              <ImageField key={`fav-${fileKey}`} field="faviconUrl" label="Ícone da aba (favicon)" hint="Quadrado, até 1 MB" current={initial.faviconUrl} onPreview={() => {}} disabled={readOnly} />
+              <ImageField key={`logo-${fileKey}`} field="logoUrl" label="Logo (fundo claro)" hint="Topo da loja — até 1 MB" current={initial.logoUrl} onPreview={setLogo} disabled={readOnly} />
+              <ImageField key={`logoDark-${fileKey}`} field="logoOnDarkUrl" label="Logo (fundo escuro)" hint="Rodapé e painel — até 1 MB" current={initial.logoOnDarkUrl} onPreview={setLogoDark} disabled={readOnly} dark />
+              <ImageField key={`fav-${fileKey}`} field="faviconUrl" label="Ícone da aba (favicon)" hint="Quadrado, até 500 KB" current={initial.faviconUrl} onPreview={() => {}} disabled={readOnly} />
             </div>
           </Section>
 
@@ -271,8 +271,8 @@ export function BrandingEditor({
                 <textarea name="heroSubtitle" rows={2} value={heroSubtitle} onChange={(e) => setHeroSubtitle(e.target.value)} maxLength={220} placeholder={`Ingressos, hotéis, casas, seguro viagem e chip no mesmo carrinho — com o atendimento da ${initial.name}.`} className={cn(inputClass, "h-auto py-3")} />
               </label>
               <div className="grid gap-6 lg:grid-cols-2">
-                <ImageField key={`h1-${fileKey}`} field="heroImageUrl" label="Foto principal" hint="Vertical — até 6 MB" current={initial.heroImageUrl} presets={presets} preset={presetOf(initial.heroImageUrl)} onPreview={setHero1} disabled={readOnly} />
-                <ImageField key={`h2-${fileKey}`} field="heroImage2Url" label="Foto secundária" hint="Até 6 MB" current={initial.heroImage2Url} presets={presets} preset={presetOf(initial.heroImage2Url)} onPreview={setHero2} disabled={readOnly} />
+                <ImageField key={`h1-${fileKey}`} field="heroImageUrl" label="Foto principal" hint="Vertical — até 3 MB" current={initial.heroImageUrl} presets={presets} preset={presetOf(initial.heroImageUrl)} onPreview={setHero1} disabled={readOnly} />
+                <ImageField key={`h2-${fileKey}`} field="heroImage2Url" label="Foto secundária" hint="Até 3 MB" current={initial.heroImage2Url} presets={presets} preset={presetOf(initial.heroImage2Url)} onPreview={setHero2} disabled={readOnly} />
               </div>
             </div>
           </Section>
