@@ -59,8 +59,9 @@ pedido tem o botão “Simular pagamento”; no cartão, qualquer número é apr
 
 3. **Deploy:** o script `vercel-build` aplica as migrações do banco e depois roda `next build`
    (sem `DATABASE_URL`, só avisa e segue).
-4. **Dados iniciais (opcional):** rode uma vez, apontando para o banco de produção:
-   `DATABASE_URL=... npm run db:seed`
+4. **Dados iniciais (opcional):** pelo SQL Editor do Neon, cole `docs/neon/subrinho-completo.sql` (banco vazio) ou
+   `docs/neon/subrinho-somente-dados.sql` (tabelas já criadas pelo deploy) — veja `docs/neon/LEIA-ME.md`.
+   Ou pelo terminal: `DATABASE_URL=... npm run db:seed`
 
 **Crons (`vercel.json`):** o plano Hobby permite cron no máximo 1x por dia, então:
 - fechamento de quinzena: dias 1 e 16 às 03h (Brasília);
