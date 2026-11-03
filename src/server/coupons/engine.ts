@@ -166,13 +166,13 @@ export function computeCoupon(c: CouponDef, items: CouponItem[]): CouponResult {
 
   if (eligible.length === 0) return empty("Nenhum item do carrinho é elegível para este cupom");
   if (c.minSubtotal && eligibleSubtotal.lt(d(c.minSubtotal)))
-    return empty(`Compra mínima de R$ ${d(c.minSubtotal).toFixed(2).replace(".", ",")} nos itens elegíveis`);
+    return empty(`Compra mínima de ${d(c.minSubtotal).toNumber().toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} nos itens elegíveis`);
 
   const requested = requestedDiscount(c, eligibleSubtotal);
   if (requested.lte(0)) {
     if (c.discountType === "CONDITIONAL")
       return empty(
-        `Desconto a partir de R$ ${d(c.stepAmount).toFixed(2).replace(".", ",")} em itens elegíveis`,
+        `Desconto a partir de ${d(c.stepAmount).toNumber().toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} em itens elegíveis`,
       );
     return empty("Cupom sem desconto aplicável");
   }
@@ -200,10 +200,10 @@ export function computeCoupon(c: CouponDef, items: CouponItem[]): CouponResult {
 }
 
 export function describeCoupon(c: Pick<CouponDef, "discountType" | "percentOff" | "amountOff" | "stepAmount">): string {
-  const brl = (v: string | null) => `R$ ${d(v).toFixed(2).replace(".", ",")}`;
+  const brl = (v: string | null) => d(v).toNumber().toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   switch (c.discountType) {
     case "PERCENT":
-      return `${d(c.percentOff).toString().replace(".", ",")}% de desconto`;
+      return `${d(c.percentOff).toNumber().toLocaleString("pt-BR", { maximumFractionDigits: 2 })}% de desconto`;
     case "FIXED":
       return `${brl(c.amountOff)} de desconto`;
     case "CONDITIONAL":

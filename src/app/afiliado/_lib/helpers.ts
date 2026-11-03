@@ -127,12 +127,25 @@ export function optStr(fd: FormData, key: string): string | null {
   return str(fd, key) || null;
 }
 
-/** Aceita "1234.56", "1.234,56" ou "1234,56"; vazio → null. */
+/** Percentual: aceita "8.5" ou "8,5"; vazio → null. */
 export function decimalField(fd: FormData, key: string): string | null {
-  let v = str(fd, key).replace(/\s/g, "").replace(/^R\$/i, "").replace(/%$/, "");
+  let v = str(fd, key).replace(/\s/g, "").replace(/%$/, "");
   if (!v) return null;
   if (v.includes(",")) v = v.replace(/\./g, "").replace(",", ".");
   return v;
+}
+
+/** Converte valor em R$ digitado no formato brasileiro ("10.000", "1.234,56", "1234,5", "1500.75"). */
+export function parseBrMoney(raw: string): string | null {
+  let v = raw.replace(/\s/g, "").replace(/^R\$/i, "");
+  if (!v) return null;
+  if (v.includes(",")) v = v.replace(/\./g, "").replace(",", ".");
+  else if (/^\d{1,3}(\.\d{3})+$/.test(v)) v = v.replace(/\./g, ""); // "10.000" = dez mil
+  return v;
+}
+
+export function moneyField(fd: FormData, key: string): string | null {
+  return parseBrMoney(str(fd, key));
 }
 
 /** Mensagem amigável para erros dos serviços (validações de negócio). */

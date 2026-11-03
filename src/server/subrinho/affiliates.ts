@@ -4,12 +4,15 @@ import type { Tx } from "@/server/db";
 import { affiliates, payouts } from "@/server/db/schema";
 import { listPayoutProofs } from "@/server/payouts/service";
 
-const paidOrders = sql<number>`(select count(*)::int from orders o where o.affiliate_id = ${affiliates.id} and o.status = 'PAID')`;
-const gmv = sql<string>`(select coalesce(sum(o.amount_charged), 0)::text from orders o where o.affiliate_id = ${affiliates.id} and o.status = 'PAID')`;
-const commission = sql<string>`(select coalesce(sum(o.affiliate_commission), 0)::text from orders o where o.affiliate_id = ${affiliates.id} and o.status = 'PAID')`;
-const subrinhoRevenue = sql<string>`(select coalesce(sum(o.subrinho_revenue), 0)::text from orders o where o.affiliate_id = ${affiliates.id} and o.status = 'PAID')`;
-const usersCount = sql<number>`(select count(*)::int from affiliate_users u where u.affiliate_id = ${affiliates.id})`;
-const customersCount = sql<number>`(select count(*)::int from customers c where c.affiliate_id = ${affiliates.id})`;
+// Obs.: em selects de uma tabela só o Drizzle não qualifica as colunas (${affiliates.id} vira "id"),
+// o que dentro de uma subconsulta apontaria para a tabela interna — por isso a referência explícita.
+const AFF_ID = sql.raw(`"affiliates"."id"`);
+const paidOrders = sql<number>`(select count(*)::int from orders o where o.affiliate_id = ${AFF_ID} and o.status = 'PAID')`;
+const gmv = sql<string>`(select coalesce(sum(o.amount_charged), 0)::text from orders o where o.affiliate_id = ${AFF_ID} and o.status = 'PAID')`;
+const commission = sql<string>`(select coalesce(sum(o.affiliate_commission), 0)::text from orders o where o.affiliate_id = ${AFF_ID} and o.status = 'PAID')`;
+const subrinhoRevenue = sql<string>`(select coalesce(sum(o.subrinho_revenue), 0)::text from orders o where o.affiliate_id = ${AFF_ID} and o.status = 'PAID')`;
+const usersCount = sql<number>`(select count(*)::int from affiliate_users u where u.affiliate_id = ${AFF_ID})`;
+const customersCount = sql<number>`(select count(*)::int from customers c where c.affiliate_id = ${AFF_ID})`;
 
 export async function listAffiliatesWithStats(tx: Tx) {
   return tx

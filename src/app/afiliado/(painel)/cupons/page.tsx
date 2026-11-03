@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import { Lock, Plus, TicketPercent } from "lucide-react";
 import { Alert, Badge, Card, CardHeader, EmptyState, PageHeader, Table, Td, Th, THead, Tr, buttonClass } from "@/components/ui";
-import { brl, date } from "@/lib/format";
+import { brl, date, pct } from "@/lib/format";
 import { localDate } from "@/lib/tz";
 import { db } from "@/server/db";
 import type { coupons as couponsTable } from "@/server/db/schema";
 import { requireAffiliateUser } from "@/server/auth/session";
 import { listCoupons, subrinhoCouponsForStore } from "@/server/admin/coupons";
-import { describeCoupon } from "@/server/coupons/engine";
 import { ACTIVE_CATEGORIES, CATEGORY_LABEL } from "@/server/suppliers/types";
 import { createCouponAction, setCouponActiveAction, updateCouponAction } from "./actions";
 import { CouponModal, ToggleCouponForm, type CouponFormValues } from "./coupon-form";
@@ -17,6 +16,8 @@ export const metadata: Metadata = { title: "Cupons" };
 type Coupon = typeof couponsTable.$inferSelect;
 
 const num = (v: string | null) => (v === null ? "" : String(Number(v)));
+/** Valor em R$ para o campo de texto do formulário ("10000.00" → "10000", "1500.50" → "1500,5"). */
+const money = (v: string | null) => (v === null ? "" : String(Number(v)).replace(".", ","));
 
 function toFormValues(c: Coupon): CouponFormValues {
   return {
@@ -25,10 +26,10 @@ function toFormValues(c: Coupon): CouponFormValues {
     description: c.description ?? "",
     discountType: c.discountType,
     percentOff: num(c.percentOff),
-    amountOff: num(c.amountOff),
-    stepAmount: num(c.stepAmount),
-    maxDiscount: num(c.maxDiscount),
-    minSubtotal: num(c.minSubtotal),
+    amountOff: money(c.amountOff),
+    stepAmount: money(c.stepAmount),
+    maxDiscount: money(c.maxDiscount),
+    minSubtotal: money(c.minSubtotal),
     categories: c.categories,
     startsAt: c.startsAt ? localDate(c.startsAt) : "",
     endsAt: c.endsAt ? localDate(c.endsAt) : "",
@@ -43,6 +44,18 @@ function couponStatus(c: Coupon, now: Date): { label: string; tone: "success" | 
   if (c.maxRedemptions !== null && c.redemptions >= c.maxRedemptions) return { label: "Esgotado", tone: "warning" };
   if (c.startsAt && now < c.startsAt) return { label: "Agendado", tone: "info" };
   return { label: "Ativo", tone: "success" };
+}
+
+/** Regra do cupom em texto (mesma lógica de describeCoupon, com R$ no formato brasileiro). */
+function ruleText(c: Coupon) {
+  switch (c.discountType) {
+    case "PERCENT":
+      return `${pct(c.percentOff)} de desconto`;
+    case "FIXED":
+      return `${brl(c.amountOff)} de desconto`;
+    case "CONDITIONAL":
+      return `${brl(c.amountOff)} a cada ${brl(c.stepAmount)}`;
+  }
 }
 
 function validity(c: Coupon) {
@@ -140,7 +153,7 @@ export default async function AfiliadoCuponsPage() {
                       <p className="font-black tracking-wide text-ink">{c.code}</p>
                       {c.description && <p className="max-w-xs text-xs text-muted">{c.description}</p>}
                     </Td>
-                    <Td className="whitespace-nowrap font-semibold">{describeCoupon(c)}</Td>
+                    <Td className="whitespace-nowrap font-semibold">{ruleText(c)}</Td>
                     <Td className="text-muted">{categoriesText(c)}</Td>
                     <Td className="whitespace-nowrap text-muted">{conditions(c)}</Td>
                     <Td className="whitespace-nowrap text-muted">{validity(c)}</Td>
@@ -201,7 +214,7 @@ export default async function AfiliadoCuponsPage() {
                       <p className="font-black tracking-wide text-ink">{c.code}</p>
                       {c.description && <p className="max-w-xs text-xs text-muted">{c.description}</p>}
                     </Td>
-                    <Td className="whitespace-nowrap font-semibold">{describeCoupon(c)}</Td>
+                    <Td className="whitespace-nowrap font-semibold">{ruleText(c)}</Td>
                     <Td className="text-muted">{categoriesText(c)}</Td>
                     <Td className="whitespace-nowrap text-muted">{conditions(c)}</Td>
                     <Td className="whitespace-nowrap text-muted">{validity(c)}</Td>

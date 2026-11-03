@@ -4,6 +4,7 @@ import { marginRules, type Category, type MarginScope } from "@/server/db/schema
 import { marginScopeKey, type MarginOwner } from "@/server/pricing/margins";
 import { d } from "@/server/pricing/money";
 import { getSettings } from "@/server/settings";
+import { parseBrNumber } from "@/lib/br";
 
 export class MarginError extends Error {}
 
@@ -21,7 +22,8 @@ export type MarginRuleInput = {
 
 /** Cria ou atualiza a regra do alvo (1 regra por alvo). Margem sempre ≥ 0%. */
 export async function upsertMarginRule(tx: Tx, input: MarginRuleInput, userId: string) {
-  const pct = d(String(input.marginPct).replace(",", "."));
+  const parsed = parseBrNumber(input.marginPct);
+  const pct = d(parsed === null || parsed === "NaN" ? NaN : parsed);
   if (pct.isNaN()) throw new MarginError("Margem inválida");
   if (pct.lt(0)) throw new MarginError("A margem não pode ser menor que 0%");
   if (pct.gte(100)) throw new MarginError("A margem precisa ser menor que 100%");

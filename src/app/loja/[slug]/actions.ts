@@ -284,19 +284,19 @@ export async function placeOrderAction(slug: string, token: string, _prev: Actio
       : { name: fd.get("payerName"), document: fd.get("payerDocument"), email: fd.get("payerEmail"), phone: fd.get("payerPhone") ?? undefined };
     const payerParsed = personSchema.safeParse(payerRaw);
     if (!payerParsed.success) return { error: payerParsed.error.issues[0].message };
+    const address = {
+      zip: str(fd.get("zip")),
+      street: str(fd.get("street")),
+      number: str(fd.get("number")),
+      complement: str(fd.get("complement")),
+      district: str(fd.get("district")),
+      city: str(fd.get("city")),
+      state: str(fd.get("state")),
+    };
     const payer: PersonData = {
       ...payerParsed.data,
       document: payerParsed.data.document,
-      address: {
-        zip: str(fd.get("zip")),
-        street: str(fd.get("street")),
-        number: str(fd.get("number")),
-        complement: str(fd.get("complement")),
-        district: str(fd.get("district")),
-        city: str(fd.get("city")),
-        state: str(fd.get("state")),
-        country: "BR",
-      },
+      address: Object.values(address).some(Boolean) ? { ...address, country: "BR" } : null,
     };
 
     // Viajantes

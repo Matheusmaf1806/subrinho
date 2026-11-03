@@ -63,17 +63,19 @@ export function optUuid(fd: FormData, key: string): string | null {
 /**
  * Número decimal digitado em formato brasileiro ou internacional ("2.465,00", "2465.00", "4,5%").
  * Retorna string normalizada com ponto decimal, ou null se vazio.
+ * `money: true` → "10.000" (sem vírgula, grupos de 3) é lido como dez mil, como no Brasil.
  */
-export function parseDecimal(raw: string, label: string): string | null {
+export function parseDecimal(raw: string, label: string, opts: { money?: boolean } = {}): string | null {
   let s = raw.trim().replace(/\s|R\$|%|US\$|€|\$/g, "");
   if (!s) return null;
   if (s.includes(",")) s = s.replace(/\./g, "").replace(",", ".");
+  else if (opts.money && /^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, "");
   if (!/^-?\d+(\.\d+)?$/.test(s)) throw new FormError(`${label}: número inválido`);
   return s;
 }
 
-export function decimal(fd: FormData, key: string, label: string): string | null {
-  return parseDecimal(text(fd, key), label);
+export function decimal(fd: FormData, key: string, label: string, opts: { money?: boolean } = {}): string | null {
+  return parseDecimal(text(fd, key), label, opts);
 }
 
 export function requiredDecimal(fd: FormData, key: string, label: string): string {

@@ -33,3 +33,19 @@ export function formatDocument(s: string | null | undefined): string {
   if (c.length === 14) return c.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
   return s;
 }
+
+/**
+ * Converte número digitado no formato brasileiro ou internacional para string decimal.
+ * "10.000" → "10000" · "1.234,56" → "1234.56" · "10,5" → "10.5" · "4.5" → "4.5" · "R$ 100" → "100"
+ */
+export function parseBrNumber(input: string | number | null | undefined): string | null {
+  if (input === null || input === undefined) return null;
+  let s = String(input).trim().replace(/[R$\s%]/g, "");
+  if (!s) return null;
+  if (s.includes(",")) {
+    s = s.replace(/\./g, "").replace(",", ".");
+  } else if (/^\d{1,3}(\.\d{3})+$/.test(s)) {
+    s = s.replace(/\./g, ""); // "10.000" = dez mil
+  }
+  return /^-?\d+(\.\d+)?$/.test(s) ? s : "NaN";
+}

@@ -31,7 +31,7 @@ import type { CouponSnapshot } from "@/server/subrinho/coupons";
 import { d } from "@/server/pricing/money";
 import { CATEGORY_LABEL } from "@/server/suppliers/types";
 import { brl, date, dateTime, fxRate, orderNumber, pct } from "@/lib/format";
-import { InfoList, JsonDetails, OrderStatusBadge, PayoutStatusBadge, SectionTitle } from "../../../_components/bits";
+import { Fit, InfoList, JsonDetails, OrderStatusBadge, PayoutStatusBadge, SectionTitle } from "../../../_components/bits";
 import { isUuid } from "../../../_lib/form";
 import { canDo, EVENT_LABEL, PAYMENT_METHOD_LABEL, PERMS, USER_TYPE_LABEL, VIEW_PAGE_LABEL } from "../../../_lib/labels";
 import { cancelOrderAction, confirmPaymentAction } from "./actions";
@@ -161,11 +161,11 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
         </Alert>
       )}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <Stat label="Valor cobrado" value={brl(o.amountCharged)} tone="brand" hint={o.paymentMethod === "PIX" ? "Pix" : `Cartão ${o.installments}x`} />
-        <Stat label="Custo R$" value={brl(o.totalCostBrl)} />
-        <Stat label="Receita Subrinho" value={brl(o.subrinhoRevenue)} tone="dark" />
-        <Stat label="Comissão afiliado" value={brl(o.affiliateCommission)} />
+      <div className="grid grid-cols-1 gap-3 min-[520px]:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+        <Stat label="Valor cobrado" value={<Fit>{brl(o.amountCharged)}</Fit>} tone="brand" hint={o.paymentMethod === "PIX" ? "Pix" : `Cartão ${o.installments}x`} />
+        <Stat label="Custo R$" value={<Fit>{brl(o.totalCostBrl)}</Fit>} />
+        <Stat label="Receita Subrinho" value={<Fit>{brl(o.subrinhoRevenue)}</Fit>} tone="dark" />
+        <Stat label="Comissão afiliado" value={<Fit>{brl(o.affiliateCommission)}</Fit>} />
         <Stat label="Repasse" value={date(extras.payout?.scheduledDate ?? o.payoutDate)} hint={<PayoutStatusBadge status={extras.payout?.status ?? (o.status === "PAID" ? "OPEN" : null)} />} />
       </div>
 

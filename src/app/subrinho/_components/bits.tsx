@@ -60,3 +60,8 @@ export function ReadOnlyNotice({ children }: { children?: ReactNode }) {
     </p>
   );
 }
+
+/** Valor de <Stat> que pode quebrar linha em colunas estreitas (evita estourar o card no celular). */
+export function Fit({ children }: { children: ReactNode }) {
+  return <span className="block min-w-0 [overflow-wrap:anywhere]">{children}</span>;
+}

@@ -20,7 +20,7 @@ import {
   Tr,
   buttonClass,
 } from "@/components/ui";
-import { ActionForm, Modal, SubmitButton } from "@/components/ui-client";
+import { Modal, SubmitButton } from "@/components/ui-client";
 import { db } from "@/server/db";
 import { requireSubrinhoUser } from "@/server/auth/session";
 import { listAffiliateUsers } from "@/server/admin/affiliates";
@@ -28,7 +28,8 @@ import { listMarginRules } from "@/server/admin/margins";
 import { listOrdersForSubrinho } from "@/server/orders/queries";
 import { affiliatePayouts, getAffiliateWithStats } from "@/server/subrinho/affiliates";
 import { brl, date, dateTime, orderNumber, pct } from "@/lib/format";
-import { ActiveBadge, InfoList, OrderStatusBadge, PayoutStatusBadge, ReadOnlyNotice, SectionTitle } from "../../../_components/bits";
+import { ActiveBadge, Fit, InfoList, OrderStatusBadge, PayoutStatusBadge, ReadOnlyNotice, SectionTitle } from "../../../_components/bits";
+import { StickyActionForm } from "../../../_components/sticky-form";
 import { periodLabel } from "../../../_lib/dates";
 import { isUuid } from "../../../_lib/form";
 import { canDo, PERMS, SCOPE_LABEL } from "../../../_lib/labels";
@@ -87,11 +88,11 @@ export default async function AffiliateDetailPage({
         </Alert>
       )}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 min-[520px]:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
         <Stat label="Pedidos pagos" value={row.paidOrders} />
-        <Stat label="GMV" value={brl(row.gmv)} tone="brand" />
-        <Stat label="Receita Subrinho" value={brl(row.subrinhoRevenue)} tone="dark" />
-        <Stat label="Comissão total" value={brl(row.commission)} />
+        <Stat label="GMV" value={<Fit>{brl(row.gmv)}</Fit>} tone="brand" />
+        <Stat label="Receita Subrinho" value={<Fit>{brl(row.subrinhoRevenue)}</Fit>} tone="dark" />
+        <Stat label="Comissão total" value={<Fit>{brl(row.commission)}</Fit>} />
         <Stat label="Clientes da loja" value={row.customersCount} />
       </div>
 
@@ -100,13 +101,13 @@ export default async function AffiliateDetailPage({
           <CardHeader title="Cadastro" subtitle="Dados da agência, da loja e para repasse" />
           <CardBody className="py-5">
             {canEdit ? (
-              <ActionForm action={updateAffiliateAction} className="space-y-6">
+              <StickyActionForm action={updateAffiliateAction} className="space-y-6">
                 <input type="hidden" name="id" value={a.id} />
                 <AffiliateFields a={a} />
                 <div className="flex justify-end">
                   <SubmitButton>Salvar alterações</SubmitButton>
                 </div>
-              </ActionForm>
+              </StickyActionForm>
             ) : (
               <div className="space-y-4">
                 <ReadOnlyNotice />
@@ -141,7 +142,7 @@ export default async function AffiliateDetailPage({
                       </>
                     }
                   >
-                    <ActionForm action={addAffiliateUserAction} resetOnSuccess className="space-y-4">
+                    <StickyActionForm action={addAffiliateUserAction} resetOnSuccess className="space-y-4">
                       <input type="hidden" name="affiliateId" value={a.id} />
                       <Field label="Nome">
                         <Input name="name" required maxLength={120} autoComplete="off" />
@@ -159,7 +160,7 @@ export default async function AffiliateDetailPage({
                         </Select>
                       </Field>
                       <SubmitButton pendingText="Criando…">Criar usuário</SubmitButton>
-                    </ActionForm>
+                    </StickyActionForm>
                   </Modal>
                 )
               }

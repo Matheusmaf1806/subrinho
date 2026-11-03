@@ -27,3 +27,21 @@ describe("Pix copia e cola", () => {
     expect(crc16(code.slice(0, -4))).toBe(code.slice(-4));
   });
 });
+
+import { parseBrNumber } from "@/lib/br";
+import { describeCoupon } from "@/server/coupons/engine";
+
+describe("números no formato brasileiro", () => {
+  it.each([
+    ["10.000", "10000"],
+    ["1.234,56", "1234.56"],
+    ["10,5", "10.5"],
+    ["4.5", "4.5"],
+    ["R$ 100", "100"],
+    ["12%", "12"],
+    ["abc", "NaN"],
+  ])("%s → %s", (i, o) => expect(parseBrNumber(i)).toBe(o));
+  it("descrição de cupom com milhar", () => {
+    expect(describeCoupon({ discountType: "CONDITIONAL", percentOff: null, amountOff: "100", stepAmount: "10000" }).replace(/ /g, " ")).toBe("R$ 100,00 a cada R$ 10.000,00");
+  });
+});

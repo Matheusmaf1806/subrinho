@@ -7,7 +7,7 @@ import { db } from "@/server/db";
 import type { DiscountType } from "@/server/db/schema";
 import { createCoupon, setCouponActive, updateCoupon, type CouponInput } from "@/server/admin/coupons";
 import { ACTIVE_CATEGORIES, FUTURE_CATEGORIES } from "@/server/suppliers/types";
-import { decimalField, isIsoDate, isUuid, optStr, requireAdminForAction, serviceErrorMessage, str } from "../../_lib/helpers";
+import { decimalField, isIsoDate, isUuid, moneyField, optStr, requireAdminForAction, serviceErrorMessage, str } from "../../_lib/helpers";
 
 const TYPES: DiscountType[] = ["PERCENT", "FIXED", "CONDITIONAL"];
 const ALLOWED_CATEGORIES = new Set<string>([...ACTIVE_CATEGORIES, ...FUTURE_CATEGORIES]);
@@ -39,10 +39,10 @@ function parseCoupon(fd: FormData): CouponInput | { error: string } {
     description: optStr(fd, "description"),
     discountType,
     percentOff: discountType === "PERCENT" ? decimalField(fd, "percentOff") : null,
-    amountOff: discountType !== "PERCENT" ? decimalField(fd, "amountOff") : null,
-    stepAmount: discountType === "CONDITIONAL" ? decimalField(fd, "stepAmount") : null,
-    maxDiscount: discountType !== "FIXED" ? decimalField(fd, "maxDiscount") : null,
-    minSubtotal: decimalField(fd, "minSubtotal"),
+    amountOff: discountType !== "PERCENT" ? moneyField(fd, "amountOff") : null,
+    stepAmount: discountType === "CONDITIONAL" ? moneyField(fd, "stepAmount") : null,
+    maxDiscount: discountType !== "FIXED" ? moneyField(fd, "maxDiscount") : null,
+    minSubtotal: moneyField(fd, "minSubtotal"),
     categories: [...new Set(fd.getAll("categories").map(String))].filter((c) => ALLOWED_CATEGORIES.has(c)),
     // Validade no fuso do negócio: do início do dia inicial ao fim do dia final.
     startsAt: startsRaw ? startOfLocalDay(startsRaw) : null,

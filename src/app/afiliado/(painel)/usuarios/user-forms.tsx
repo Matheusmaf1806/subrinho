@@ -3,7 +3,8 @@
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { ActionForm, SubmitButton, type ActionState } from "@/components/ui-client";
-import { buttonClass, Field, Input, Select } from "@/components/ui";
+import { buttonClass, Field, Input } from "@/components/ui";
+import { SyncedSelect } from "../../_components/synced-inputs";
 
 type Action = (prev: ActionState, fd: FormData) => Promise<ActionState>;
 
@@ -31,10 +32,10 @@ export function NewUserForm({ action }: { action: Action }) {
         <Input type="password" name="password" required minLength={8} autoComplete="new-password" />
       </Field>
       <Field label="Perfil">
-        <Select name="role" value={v.role} onChange={(e) => setV({ ...v, role: e.target.value })}>
+        <SyncedSelect name="role" value={v.role} onChange={(e) => setV({ ...v, role: e.target.value })}>
           <option value="AGENT">Agente — vende e acompanha pedidos</option>
           <option value="ADMIN">Administrador — acesso total</option>
-        </Select>
+        </SyncedSelect>
       </Field>
       <SubmitButton className="w-full" pendingText="Criando…">
         Criar usuário

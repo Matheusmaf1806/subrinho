@@ -31,7 +31,7 @@ import {
   type Kpis,
 } from "@/server/subrinho/dashboard";
 import { brl, date, dateTime, fxRate, orderNumber } from "@/lib/format";
-import { OrderStatusBadge } from "../_components/bits";
+import { Fit, OrderStatusBadge } from "../_components/bits";
 import { periodLabel } from "../_lib/dates";
 import { canDo, CURRENCY_LABEL, PERMS } from "../_lib/labels";
 import { closeFortnightAction } from "./relatorios/actions";
@@ -40,18 +40,18 @@ export const metadata = { title: "Visão geral" };
 
 function KpiGrid({ k }: { k: Kpis }) {
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-      <Stat label="GMV cobrado" value={brl(k.gmv)} tone="brand" icon={<TrendingUp className="h-4 w-4" aria-hidden />} hint={`Custo ${brl(k.costBrl)}`} />
-      <Stat label="Receita Subrinho" value={brl(k.subrinhoRevenue)} tone="dark" icon={<Coins className="h-4 w-4" aria-hidden />} hint="Margem − descontos Subrinho" />
-      <Stat label="Comissões afiliados" value={brl(k.affiliateCommission)} icon={<HandCoins className="h-4 w-4 text-muted" aria-hidden />} />
+    <div className="grid grid-cols-1 gap-3 min-[520px]:grid-cols-2 lg:grid-cols-3">
+      <Stat label="GMV cobrado" value={<Fit>{brl(k.gmv)}</Fit>} tone="brand" icon={<TrendingUp className="h-4 w-4" aria-hidden />} hint={`Custo ${brl(k.costBrl)}`} />
+      <Stat label="Receita Subrinho" value={<Fit>{brl(k.subrinhoRevenue)}</Fit>} tone="dark" icon={<Coins className="h-4 w-4" aria-hidden />} hint="Margem − descontos Subrinho" />
+      <Stat label="Comissões afiliados" value={<Fit>{brl(k.affiliateCommission)}</Fit>} icon={<HandCoins className="h-4 w-4 text-muted" aria-hidden />} />
       <Stat
         label="Descontos"
-        value={brl(k.discounts)}
+        value={<Fit>{brl(k.discounts)}</Fit>}
         icon={<TicketPercent className="h-4 w-4 text-muted" aria-hidden />}
         hint={`Subrinho ${brl(k.subrinhoDiscount)} · Afiliado ${brl(k.affiliateDiscount)}`}
       />
       <Stat label="Pedidos pagos" value={k.orders} icon={<ShoppingBag className="h-4 w-4 text-muted" aria-hidden />} />
-      <Stat label="Ticket médio" value={brl(k.avgTicket)} icon={<Receipt className="h-4 w-4 text-muted" aria-hidden />} />
+      <Stat label="Ticket médio" value={<Fit>{brl(k.avgTicket)}</Fit>} icon={<Receipt className="h-4 w-4 text-muted" aria-hidden />} />
     </div>
   );
 }

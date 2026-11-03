@@ -4,6 +4,7 @@ import { useActionState, useId, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import { ActionForm, Modal, SubmitButton, type ActionState } from "@/components/ui-client";
 import { buttonClass, cn, Field, Input, Textarea } from "@/components/ui";
+import { SyncedCheckable } from "../../_components/synced-inputs";
 
 type Action = (prev: ActionState, fd: FormData) => Promise<ActionState>;
 type DiscountType = "PERCENT" | "FIXED" | "CONDITIONAL";
@@ -48,7 +49,18 @@ const TYPE_OPTIONS: { value: DiscountType; title: string; hint: string }[] = [
 ];
 
 const brlFmt = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-const fmt = (v: string) => (v && Number.isFinite(Number(v)) ? brlFmt.format(Number(v)) : "R$ —");
+
+/** Mesmo critério do servidor: "10.000" = dez mil, "1.234,56", "1234,5" ou "1500.75". */
+function parseBrMoney(raw: string): number {
+  let v = raw.replace(/\s/g, "").replace(/^R\$/i, "");
+  if (v.includes(",")) v = v.replace(/\./g, "").replace(",", ".");
+  else if (/^\d{1,3}(\.\d{3})+$/.test(v)) v = v.replace(/\./g, "");
+  return v ? Number(v) : NaN;
+}
+const fmt = (v: string) => {
+  const n = parseBrMoney(v);
+  return Number.isFinite(n) ? brlFmt.format(n) : "R$ —";
+};
 
 function preview(v: CouponFormValues, labels: Record<string, string>) {
   let main: string;
@@ -67,13 +79,14 @@ function MoneyInput(props: { name: string; value: string; onChange: (v: string) 
     <div className="relative">
       <span className="pointer-events-none absolute inset-y-0 left-3 grid place-items-center text-sm font-bold text-muted">R$</span>
       <Input
-        type="number"
+        type="text"
         inputMode="decimal"
-        step="0.01"
-        min="0"
+        autoComplete="off"
+        pattern={"[0-9.,]*"}
+        title="Valor em reais, ex.: 10.000,00"
         name={props.name}
         required={props.required}
-        placeholder={props.placeholder}
+        placeholder={props.placeholder ?? "0,00"}
         value={props.value}
         onChange={(e) => props.onChange(e.target.value)}
         className="pl-10 tabular"
@@ -141,7 +154,7 @@ function CouponFields({ initial, categories }: { initial: CouponFormValues; cate
                 v.discountType === t.value ? "border-brand bg-brand-50 ring-2 ring-brand/15" : "border-line bg-white hover:border-brand-200",
               )}
             >
-              <input
+              <SyncedCheckable
                 type="radio"
                 name="discountType"
                 value={t.value}
@@ -186,7 +199,7 @@ function CouponFields({ initial, categories }: { initial: CouponFormValues; cate
         )}
         {v.discountType === "CONDITIONAL" && (
           <Field label="A cada (em compras elegíveis)">
-            <MoneyInput name="stepAmount" required value={v.stepAmount} onChange={(x) => set("stepAmount", x)} placeholder="10000" />
+            <MoneyInput name="stepAmount" required value={v.stepAmount} onChange={(x) => set("stepAmount", x)} placeholder="10.000,00" />
           </Field>
         )}
         {v.discountType !== "FIXED" && (
@@ -213,7 +226,7 @@ function CouponFields({ initial, categories }: { initial: CouponFormValues; cate
                   on ? "border-brand bg-brand text-white" : "border-line bg-white text-ink hover:border-brand-200",
                 )}
               >
-                <input
+                <SyncedCheckable
                   type="checkbox"
                   name="categories"
                   value={c.value}
@@ -238,7 +251,7 @@ function CouponFields({ initial, categories }: { initial: CouponFormValues; cate
       </div>
 
       <label className="flex items-center gap-2 text-sm font-bold text-ink">
-        <input
+        <SyncedCheckable
           type="checkbox"
           name="active"
           checked={v.active}

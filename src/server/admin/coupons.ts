@@ -3,6 +3,7 @@ import type { Tx } from "@/server/db";
 import { coupons, type CouponIssuer, type DiscountType } from "@/server/db/schema";
 import { d } from "@/server/pricing/money";
 import { ACTIVE_CATEGORIES, FUTURE_CATEGORIES } from "@/server/suppliers/types";
+import { parseBrNumber } from "@/lib/br";
 
 export class CouponAdminError extends Error {}
 
@@ -24,7 +25,10 @@ export type CouponInput = {
   affiliateId?: string | null;
 };
 
-const num = (v: string | null | undefined) => (v === null || v === undefined || v === "" ? null : d(String(v).replace(",", ".")));
+const num = (v: string | null | undefined) => {
+  const p = parseBrNumber(v);
+  return p === null ? null : d(p === "NaN" ? NaN : p);
+};
 
 function validate(input: CouponInput) {
   const code = input.code.trim().toUpperCase();
@@ -64,7 +68,7 @@ function validate(input: CouponInput) {
     startsAt: input.startsAt ?? null,
     endsAt: input.endsAt ?? null,
     maxRedemptions: input.maxRedemptions ?? null,
-    active: input.active ?? true,
+    active: input.active,
   };
 }
 
@@ -92,7 +96,7 @@ export async function createCoupon(
   await assertNoCollision(tx, v.code, issuer, affiliateId);
   const [c] = await tx
     .insert(coupons)
-    .values({ ...v, issuer, affiliateId, scopeKey: issuer === "SUBRINHO" ? "SUBRINHO" : affiliateId!, createdByType: actor.type, createdById: actor.id })
+    .values({ ...v, active: v.active ?? true, issuer, affiliateId, scopeKey: issuer === "SUBRINHO" ? "SUBRINHO" : affiliateId!, createdByType: actor.type, createdById: actor.id })
     .returning();
   return c;
 }
@@ -102,7 +106,8 @@ export async function updateCoupon(tx: Tx, id: string, owner: { issuer: CouponIs
   const v = validate(input);
   const affiliateId = owner.issuer === "AFFILIATE" ? owner.affiliateId! : input.affiliateId ?? null;
   await assertNoCollision(tx, v.code, owner.issuer, affiliateId, current.id);
-  const [c] = await tx.update(coupons).set({ ...v, affiliateId }).where(eq(coupons.id, id)).returning();
+  // `active` ausente mantém o estado atual (não reativa cupom sem querer).
+  const [c] = await tx.update(coupons).set({ ...v, active: v.active ?? current.active, affiliateId }).where(eq(coupons.id, id)).returning();
   return c;
 }
 

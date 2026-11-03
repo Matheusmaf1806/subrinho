@@ -1,7 +1,8 @@
 import { Card, CardBody, Field, Input, PageHeader } from "@/components/ui";
-import { ActionForm, SubmitButton } from "@/components/ui-client";
+import { SubmitButton } from "@/components/ui-client";
 import { requireSubrinhoUser } from "@/server/auth/session";
 import { ReadOnlyNotice } from "../../../_components/bits";
+import { StickyActionForm } from "../../../_components/sticky-form";
 import { canDo, PERMS } from "../../../_lib/labels";
 import { createAffiliateAction } from "../actions";
 import { AffiliateFields } from "../affiliate-fields";
@@ -20,7 +21,7 @@ export default async function NewAffiliatePage() {
       ) : (
         <Card className="max-w-3xl">
           <CardBody className="py-6">
-            <ActionForm action={createAffiliateAction} className="space-y-6">
+            <StickyActionForm action={createAffiliateAction} className="space-y-6">
               <AffiliateFields />
               <fieldset className="grid gap-4 sm:grid-cols-3">
                 <legend className="mb-3 text-sm font-black uppercase tracking-wide text-muted">Primeiro usuário (ADMIN da agência)</legend>
@@ -37,7 +38,7 @@ export default async function NewAffiliatePage() {
               <div className="flex justify-end">
                 <SubmitButton pendingText="Cadastrando…">Cadastrar afiliado</SubmitButton>
               </div>
-            </ActionForm>
+            </StickyActionForm>
           </CardBody>
         </Card>
       )}
