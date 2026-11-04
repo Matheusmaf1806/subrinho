@@ -122,7 +122,7 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
                     </span>
                   </div>
                   {!isMockPayments() && !paymentProvider().pixAutoConfirm && (
-                    <p className="text-xs text-muted">Depois de pagar, a confirmação é feita pela nossa equipe — esta página atualiza sozinha.</p>
+                    <p className="text-xs text-muted">Depois de pagar, a confirmação é feita pela nossa equipe. Esta página atualiza sozinha.</p>
                   )}
                   {isMockPayments() && (
                     <form action={simulatePixPaymentAction.bind(null, slug, order.id)}>
@@ -163,9 +163,9 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
                 ) : i.supplierStatus === "CANCELLED" ? (
                   <p className="mt-1 text-xs font-semibold text-red-700">Reserva cancelada</p>
                 ) : order.status === "PAID" && (order.paymentData as { simulated?: boolean } | null)?.simulated ? (
-                  <p className="mt-1 text-xs font-semibold text-amber-800">Pagamento de teste — nenhuma reserva é feita no fornecedor</p>
+                  <p className="mt-1 text-xs font-semibold text-amber-800">Pagamento de teste: nenhuma reserva é feita no fornecedor</p>
                 ) : order.status === "PAID" ? (
-                  <p className="mt-1 text-xs font-semibold text-muted">Reserva em processamento — você recebe a confirmação em breve</p>
+                  <p className="mt-1 text-xs font-semibold text-muted">Reserva em processamento, você recebe a confirmação em breve</p>
                 ) : null}
               </div>
               <p className="font-semibold text-ink tabular">{brl(i.chargedAmount)}</p>

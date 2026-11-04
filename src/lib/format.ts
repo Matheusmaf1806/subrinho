@@ -30,18 +30,18 @@ export function fxRate(v: Num): string {
 
 /** Data (YYYY-MM-DD ou Date) → dd/mm/aaaa. */
 export function date(v: string | Date | null | undefined): string {
-  if (!v) return "—";
+  if (!v) return "-";
   if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v.split("-").reverse().join("/");
   return new Date(v).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 }
 
 export function dateTime(v: string | Date | null | undefined): string {
-  if (!v) return "—";
+  if (!v) return "-";
   return new Date(v).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 export function weekdayDate(v: string | null | undefined): string {
-  if (!v) return "—";
+  if (!v) return "-";
   const [y, m, d] = v.split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, d, 12)).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
 }

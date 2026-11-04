@@ -99,7 +99,7 @@ export default async function AffiliateDetailPage({
 
       <section className="mt-10">
         <h2 className="text-[1.75rem] font-semibold tracking-[-0.04em]">Identidade da loja (white-label)</h2>
-        <p className="mb-5 mt-1 text-[15px] text-muted">Logo, cores, fonte e conteúdo — tudo personalizado para {a.name}. Aqui também se decide se a loja mostra “tecnologia Subrinho”.</p>
+        <p className="mb-5 mt-1 text-[15px] text-muted">Logo, cores, fonte e conteúdo: tudo personalizado para {a.name}. Aqui também se decide se a loja mostra “tecnologia Subrinho”.</p>
         <BrandingEditor
           action={updateAffiliateBrandingAction}
           initial={brandingInitial(a)}
@@ -214,7 +214,7 @@ export default async function AffiliateDetailPage({
             <CardHeader title="Margens do afiliado" subtitle="Definidas pela agência no Painel do Afiliado (somente leitura)" />
             {rules.length === 0 ? (
               <CardBody>
-                <p className="text-sm text-muted">Nenhuma regra — usa a margem padrão do sistema.</p>
+                <p className="text-sm text-muted">Nenhuma regra. Usa a margem padrão do sistema.</p>
               </CardBody>
             ) : (
               <Table>
@@ -274,7 +274,7 @@ export default async function AffiliateDetailPage({
                   </Td>
                   <Td>
                     {p.proofs.length === 0 ? (
-                      <span className="text-muted">—</span>
+                      <span className="text-muted">-</span>
                     ) : (
                       <ul className="space-y-0.5">
                         {p.proofs.map((f) => (

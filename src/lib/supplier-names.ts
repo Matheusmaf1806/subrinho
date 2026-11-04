@@ -2,6 +2,8 @@
  * Textos que o fornecedor manda (observações da tarifa, descrições) às vezes citam o nome dele
  * ("Booked and payable by …"). Para o cliente e a agência, a frase inteira com o nome sai.
  */
+import { noEmDash } from "./text";
+
 const NAMES =
   /\b(hotel ?beds|go ?global|gogloballtd|best ?buy|ggt|mapro|master ?vacation ?homes?|rate ?hawk|tu ?experien[cz]a|nadio|intermac|hero ?seguros?|esimx|travelapi)\b/i;
 
@@ -11,7 +13,7 @@ export function mentionsSupplier(text: string | null | undefined): boolean {
 
 export function stripSupplierMentions(text: string | null | undefined): string {
   if (!text) return "";
-  return text
+  return noEmDash(text)
     .split(/\n/)
     .map((line) =>
       line

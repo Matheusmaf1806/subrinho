@@ -24,7 +24,7 @@ const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) 
 const pctInput = (v: string | null | undefined) => (v ? String(Number(v)).replace(".", ",") : "");
 
 function RuleControls({ canEdit, rule, fields, label, placeholder }: { canEdit: boolean; rule?: Rule; fields: Record<string, string | null | undefined>; label: string; placeholder?: string }) {
-  if (!canEdit) return <span className="font-semibold tabular">{rule ? pct(rule.marginPct) : "—"}</span>;
+  if (!canEdit) return <span className="font-semibold tabular">{rule ? pct(rule.marginPct) : "-"}</span>;
   return (
     <div className="flex flex-wrap items-center gap-2">
       <InlinePercentForm action={upsertSubrinhoMarginAction} fields={fields} defaultValue={pctInput(rule?.marginPct)} placeholder={placeholder} label={label} />
@@ -77,7 +77,7 @@ export default async function SubrinhoMarginsPage({ searchParams }: { searchPara
               <div>
                 <p className="text-4xl font-semibold tabular text-brand-ink">{pct(defaultPct)}</p>
                 <p className="text-xs text-muted">
-                  {def ? `Atualizada em ${dateTime(def.updatedAt)}` : `Sem regra padrão — usando a margem do sistema (${pct(settings.fallbackSubrinhoMarginPct)}, em Configurações)`}
+                  {def ? `Atualizada em ${dateTime(def.updatedAt)}` : `Sem regra padrão, usando a margem do sistema (${pct(settings.fallbackSubrinhoMarginPct)}, em Configurações)`}
                 </p>
               </div>
               {canEdit && (
@@ -247,7 +247,7 @@ export default async function SubrinhoMarginsPage({ searchParams }: { searchPara
                     <option value="">Escolha…</option>
                     {SUPPLIERS.map((s) => (
                       <option key={s.code} value={s.code}>
-                        {s.name} — {CATEGORY_LABEL[s.category]}
+                        {s.name} · {CATEGORY_LABEL[s.category]}
                       </option>
                     ))}
                   </AutoSubmitSelect>
@@ -266,7 +266,7 @@ export default async function SubrinhoMarginsPage({ searchParams }: { searchPara
                       <option value="">{products.length ? "Escolha…" : "Nenhum produto encontrado"}</option>
                       {products.map((p) => (
                         <option key={p.productId} value={p.productId}>
-                          {p.title} — {p.location}
+                          {p.title} · {p.location}
                         </option>
                       ))}
                     </AutoSubmitSelect>
@@ -344,7 +344,7 @@ export default async function SubrinhoMarginsPage({ searchParams }: { searchPara
                                       supplierCode: supplierMeta.code,
                                       productId: pickedProduct.productId,
                                       optionId: o.optionId,
-                                      label: `${pickedProduct.title} — ${o.title}`,
+                                      label: `${pickedProduct.title} · ${o.title}`,
                                     }}
                                     label={`Margem para a opção ${o.title}`}
                                     placeholder={pctInput(productPct)}

@@ -6,6 +6,7 @@
  *   Se o usuário estiver logado ao criar, o carrinho fica vinculado a ele (quem gerou).
  * - Cada acesso é registrado (cart_views) e contado (carts.view_count).
  */
+import { noEmDash } from "@/lib/text";
 import { and, asc, eq, inArray, lte, sql } from "drizzle-orm";
 import type { Tx } from "@/server/db";
 import { cartCoupons, cartItems, carts, cartViews, coupons, type CouponIssuer, type PaxConfig, type UserType } from "@/server/db/schema";
@@ -90,8 +91,8 @@ export async function addQuoteToCart(tx: Tx, cart: Cart, q: Quote): Promise<Cart
       supplierCode: q.supplierCode,
       productId: q.productId,
       optionId: q.optionId,
-      title: q.title,
-      subtitle: q.subtitle,
+      title: noEmDash(q.title),
+      subtitle: noEmDash(q.subtitle),
       imageUrl: q.imageUrl,
       location: q.location,
       serviceDate: q.serviceDate,
@@ -169,7 +170,7 @@ export async function changeItemPax(tx: Tx, cart: Cart, itemId: string, pax: Pax
       pax: q.pax,
       lines: q.lines,
       costCurrency: q.currency,
-      subtitle: q.subtitle,
+      subtitle: noEmDash(q.subtitle),
       details: { ...q.details, paxRules: q.paxRules },
       supplierQuoteRef: q.quoteRef,
       quotedAt: new Date(),

@@ -99,7 +99,7 @@ export class MaproClient {
     if (res.status >= 400 || obj.error || obj.status === 0) {
       const msg = obj.message || obj.msg || res.body.slice(0, 200) || "erro sem descrição";
       if (res.status === 401 || obj.error === "invalid-auth") {
-        throw new MaproApiError(res.status, obj.error ?? "invalid-auth", /not assigned to any account/i.test(msg) ? "token ainda não vinculado a nenhuma administradora — peça à MAPRO para associar o token à conta" : "token recusado — confira MAPRO_API_TOKEN", label);
+        throw new MaproApiError(res.status, obj.error ?? "invalid-auth", /not assigned to any account/i.test(msg) ? "token ainda não vinculado a nenhuma administradora, peça à MAPRO para associar o token à conta" : "token recusado, confira MAPRO_API_TOKEN", label);
       }
       throw new MaproApiError(res.status, obj.error ?? "", msg, label);
     }

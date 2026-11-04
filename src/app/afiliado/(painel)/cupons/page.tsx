@@ -73,7 +73,7 @@ function conditions(c: Coupon) {
   const parts: string[] = [];
   if (c.minSubtotal) parts.push(`Mínimo ${brl(c.minSubtotal)}`);
   if (c.maxDiscount) parts.push(`Máx. ${brl(c.maxDiscount)}`);
-  return parts.length ? parts.join(" · ") : "—";
+  return parts.length ? parts.join(" · ") : "-";
 }
 
 export default async function AfiliadoCuponsPage() {
@@ -118,7 +118,7 @@ export default async function AfiliadoCuponsPage() {
       )}
 
       <Alert tone="info" className="mb-6">
-        Os cupons da agência descontam <strong>apenas da sua margem</strong> — nunca abaixo de 0%. Se o desconto pedido for maior que a sua margem nos
+        Os cupons da agência descontam <strong>apenas da sua margem</strong>, nunca abaixo de 0%. Se o desconto pedido for maior que a sua margem nos
         itens elegíveis, ele é limitado automaticamente. Cada carrinho aceita 1 cupom da agência (além de 1 cupom da Subrinho, se houver).
       </Alert>
 

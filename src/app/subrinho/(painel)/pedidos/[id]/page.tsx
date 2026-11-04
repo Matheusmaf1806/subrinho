@@ -64,7 +64,7 @@ function sanitize(v: unknown): unknown {
 }
 
 function Person({ p, extra }: { p: PersonData | null | undefined; extra?: ReactNode }) {
-  if (!p) return <p className="text-sm text-muted">—</p>;
+  if (!p) return <p className="text-sm text-muted">-</p>;
   const a = p.address;
   const address = a ? [a.street && `${a.street}${a.number ? `, ${a.number}` : ""}`, a.complement, a.district, a.city && `${a.city}${a.state ? `/${a.state}` : ""}`, a.zip, a.country].filter(Boolean).join(" · ") : null;
   return (
@@ -134,7 +134,7 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
                 <input type="hidden" name="orderId" value={o.id} />
                 <p className="text-sm text-muted">
                   Use quando o pagamento de <strong className="text-ink">{brl(o.amountCharged)}</strong> foi recebido fora do gateway. O pedido passa a
-                  <strong className="text-ink"> Pago</strong> e o repasse é agendado. Itens de fornecedores com API real (hotéis) ficam “Aguardando emissão” — emita a reserva em cada item.
+                  <strong className="text-ink"> Pago</strong> e o repasse é agendado. Itens de fornecedores com API real (hotéis) ficam “Aguardando emissão”: emita a reserva em cada item.
                 </p>
                 <Field label="Observação (opcional)">
                   <Textarea name="note" maxLength={500} placeholder="Ex.: Pix conferido no extrato do dia" />
@@ -248,18 +248,18 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
                       ? `Cartão ou conta PayPal · até ${o.installments}x`
                       : `${PAYMENT_METHOD_LABEL[o.paymentMethod] ?? o.paymentMethod}${o.paymentMethod === "CARD" ? ` · ${o.installments}x` : ""}`,
                 },
-                { label: "Referência", value: <span className="break-all font-mono text-xs">{o.paymentRef ?? "—"}</span> },
+                { label: "Referência", value: <span className="break-all font-mono text-xs">{o.paymentRef ?? "-"}</span> },
                 ...(card
                   ? [
-                      { label: "Cartão", value: `${card.brand ?? "—"} •••• ${card.last4 ?? "????"}` },
-                      { label: "Titular", value: card.holder ?? "—" },
-                      { label: "Retorno do gateway", value: card.message ?? "—" },
+                      { label: "Cartão", value: `${card.brand ?? "-"} •••• ${card.last4 ?? "????"}` },
+                      { label: "Titular", value: card.holder ?? "-" },
+                      { label: "Retorno do gateway", value: card.message ?? "-" },
                     ]
                   : []),
                 ...(paypal
                   ? [
-                      { label: "PayPal · pedido", value: <span className="break-all font-mono text-xs">{paypal.orderId ?? "— (cliente ainda não abriu o PayPal)"}</span> },
-                      { label: "PayPal · situação", value: paypal.status === "PENDING" ? `Em análise no PayPal (${paypal.pendingReason ?? "?"})` : (PAYPAL_STATUS_LABEL[paypal.status ?? ""] ?? paypal.status ?? "—") },
+                      { label: "PayPal · pedido", value: <span className="break-all font-mono text-xs">{paypal.orderId ?? "- (cliente ainda não abriu o PayPal)"}</span> },
+                      { label: "PayPal · situação", value: paypal.status === "PENDING" ? `Em análise no PayPal (${paypal.pendingReason ?? "?"})` : (PAYPAL_STATUS_LABEL[paypal.status ?? ""] ?? paypal.status ?? "-") },
                       ...(paypal.captureId ? [{ label: "PayPal · captura", value: <span className="break-all font-mono text-xs">{paypal.captureId}</span> }] : []),
                       ...(paypal.method ? [{ label: "Pago com", value: paypal.method }] : []),
                       ...(paypal.payer ? [{ label: "Conta do pagador", value: paypal.payer }] : []),
@@ -269,16 +269,16 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
                   : []),
                 ...(pix
                   ? [
-                      { label: "Pix txid", value: <span className="break-all font-mono text-xs">{pix.txid ?? "—"}</span> },
+                      { label: "Pix txid", value: <span className="break-all font-mono text-xs">{pix.txid ?? "-"}</span> },
                       { label: "Pix expira em", value: dateTime(pix.expiresAt) },
                     ]
                   : []),
-                { label: "Confirmado em", value: typeof pd.confirmedAt === "string" ? dateTime(pd.confirmedAt) : "—" },
+                { label: "Confirmado em", value: typeof pd.confirmedAt === "string" ? dateTime(pd.confirmedAt) : "-" },
                 ...(manualBy ? [{ label: "Confirmado manualmente por", value: extras.staffNames.get(manualBy) ?? manualBy }] : []),
                 ...(pd.declined ? [{ label: "Situação", value: <Badge tone="danger">Pagamento recusado</Badge> }] : []),
               ]}
             />
-            <JsonDetails label="Dados de pagamento (sanitizados — sem número de cartão)" value={sanitize(pd)} />
+            <JsonDetails label="Dados de pagamento (sanitizados, sem número de cartão)" value={sanitize(pd)} />
           </CardBody>
         </Card>
       </div>
@@ -323,8 +323,8 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
                         <div className="text-muted">{c.categories.map((k) => CATEGORY_LABEL[k as keyof typeof CATEGORY_LABEL] ?? k).join(", ")}</div>
                       ) : null}
                     </Td>
-                    <Td className="text-right tabular">{c.eligibleSubtotal ? brl(c.eligibleSubtotal) : "—"}</Td>
-                    <Td className="text-right tabular">{c.requested ? brl(c.requested) : "—"}</Td>
+                    <Td className="text-right tabular">{c.eligibleSubtotal ? brl(c.eligibleSubtotal) : "-"}</Td>
+                    <Td className="text-right tabular">{c.requested ? brl(c.requested) : "-"}</Td>
                     <Td className="text-right font-semibold tabular">
                       {brl(c.applied)}
                       {c.limitedByMargin && <div className="text-[11px] font-semibold text-amber-700">limitado pela margem</div>}
@@ -428,7 +428,7 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
                 },
                 {
                   label: "Finalizado por",
-                  value: extras.placedBy ? `${extras.placedBy.name} (agência, ${extras.placedBy.role}) — modo ADMIN` : "O próprio cliente",
+                  value: extras.placedBy ? `${extras.placedBy.name} (agência, ${extras.placedBy.role}), modo ADMIN` : "O próprio cliente",
                 },
                 { label: "Acessos até o pedido", value: o.cartViewCountAtOrder },
                 { label: "Acessos totais", value: `${cart.viewCount} · ${uniqueVisitors} visitante(s) distinto(s)` },
@@ -469,9 +469,9 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
                     <Td className="whitespace-nowrap">{dateTime(v.viewedAt)}</Td>
                     <Td>{VIEW_PAGE_LABEL[v.page] ?? v.page}</Td>
                     <Td>{v.viewerType ? USER_TYPE_LABEL[v.viewerType] : "Anônimo"}</Td>
-                    <Td className="font-mono text-xs">{(v.visitorId ?? v.ipHash ?? "—").slice(0, 10)}</Td>
+                    <Td className="font-mono text-xs">{(v.visitorId ?? v.ipHash ?? "-").slice(0, 10)}</Td>
                     <Td className="max-w-[16rem] truncate text-xs text-muted" title={v.userAgent ?? undefined}>
-                      {v.userAgent ?? "—"}
+                      {v.userAgent ?? "-"}
                     </Td>
                   </Tr>
                 ))}
@@ -512,8 +512,8 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
               <InfoList
                 className="sm:grid-cols-1"
                 items={[
-                  { label: "IP", value: <span className="font-mono text-xs">{o.ip ?? "—"}</span> },
-                  { label: "Navegador (user agent)", value: <span className="break-all text-xs">{o.userAgent ?? "—"}</span> },
+                  { label: "IP", value: <span className="font-mono text-xs">{o.ip ?? "-"}</span> },
+                  { label: "Navegador (user agent)", value: <span className="break-all text-xs">{o.userAgent ?? "-"}</span> },
                 ]}
               />
             </CardBody>

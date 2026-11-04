@@ -49,7 +49,7 @@ export function SupplierBookingPanel({
         <div className="min-w-0 space-y-1 text-sm">
           <p className="flex flex-wrap items-center gap-2 font-semibold text-ink">
             <Building2 className="h-4 w-4 text-muted" aria-hidden /> Reserva no fornecedor
-            <Badge tone={tone(s)}>{s ? (BOOKING_STATUS_LABEL[s] ?? s) : live ? "Aguardando pagamento" : "—"}</Badge>
+            <Badge tone={tone(s)}>{s ? (BOOKING_STATUS_LABEL[s] ?? s) : live ? "Aguardando pagamento" : "-"}</Badge>
             {!live && <Badge tone="neutral">Catálogo simulado</Badge>}
           </p>
           {i.supplierBookingRef && (
@@ -162,7 +162,7 @@ export function SupplierBookingPanel({
                     A reserva será feita agora na <strong>{supplierName(i.supplierCode)}</strong> com os hóspedes, as datas e {i.category === "HOUSES" ? "a casa" : "o quarto"} deste pedido.
                   </Alert>
                   <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
-                    <li>Antes de reservar, o sistema procura uma reserva já feita com a nossa referência — nunca reserva duas vezes.</li>
+                    <li>Antes de reservar, o sistema procura uma reserva já feita com a nossa referência: nunca reserva duas vezes.</li>
                     <li>
                       Não reserva se o fornecedor pedir mais que o custo vendido ({money(i.costForeign, i.costCurrency)}).
                     </li>
@@ -176,7 +176,7 @@ export function SupplierBookingPanel({
         )}
       </div>
       {live && simulatedPayment && !i.supplierBookingRef && (
-        <Alert tone="warning" className="mt-3" title="Pagamento simulado — emissão bloqueada">
+        <Alert tone="warning" className="mt-3" title="Pagamento simulado: emissão bloqueada">
           Este pedido foi “pago” pelo botão de teste, sem dinheiro real. Nenhuma reserva é feita no fornecedor para ele.
         </Alert>
       )}

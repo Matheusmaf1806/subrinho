@@ -47,8 +47,8 @@ export default async function AfiliadoLojaPage() {
             <DetailRow label="Identificador (slug)">{affiliate.slug}</DetailRow>
           </dl>
           <dl>
-            <DetailRow label="Razão social">{affiliate.legalName || "—"}</DetailRow>
-            <DetailRow label="CPF/CNPJ">{affiliate.document || "—"}</DetailRow>
+            <DetailRow label="Razão social">{affiliate.legalName || "-"}</DetailRow>
+            <DetailRow label="CPF/CNPJ">{affiliate.document || "-"}</DetailRow>
           </dl>
           <div className="mt-2 md:col-span-2">
             <CopyButton text={storeUrl} label="Copiar link da loja" copiedLabel="Link copiado!" />
@@ -57,7 +57,7 @@ export default async function AfiliadoLojaPage() {
       </Card>
 
       <h2 className="mb-1 mt-2 text-[1.75rem] font-semibold tracking-[-0.04em]">Identidade da loja</h2>
-      <p className="mb-5 text-[15px] text-muted">Logo, cores, fonte e conteúdo da página inicial — a loja é 100% da sua agência.</p>
+      <p className="mb-5 text-[15px] text-muted">Logo, cores, fonte e conteúdo da página inicial: a loja é 100% da sua agência.</p>
       <div className="mb-12">
         <BrandingEditor action={updateBrandingAction} initial={brandingInitial(affiliate)} presets={brandPresets()} readOnly={readOnly} />
       </div>

@@ -90,7 +90,7 @@ export type PricedCart = {
 export function fxRateFor(ctx: Pick<PricingContext, "fx">, currency: Currency): Decimal {
   if (currency === "BRL") return new Decimal(1);
   const r = ctx.fx[currency];
-  if (!r) throw new Error(`Cotação ${currency}/BRL indisponível — atualize o câmbio no Painel Subrinho`);
+  if (!r) throw new Error(`Cotação ${currency}/BRL indisponível, atualize o câmbio no Painel Subrinho`);
   return d(r.rate);
 }
 

@@ -27,7 +27,7 @@ export function isValidCnpj(raw: string): boolean {
 export const isValidCpfOrCnpj = (s: string) => isValidCpf(s) || isValidCnpj(s);
 
 export function formatDocument(s: string | null | undefined): string {
-  if (!s) return "—";
+  if (!s) return "-";
   const c = onlyDigits(s);
   if (c.length === 11) return c.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
   if (c.length === 14) return c.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");

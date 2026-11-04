@@ -150,7 +150,7 @@ export class PaypalClient {
       const issue = e.details?.[0]?.issue ?? null;
       const msg =
         res.status === 401 && label === "/v1/oauth2/token"
-          ? `${e.error_description || "credenciais recusadas"} — confira PAYPAL_CLIENT_ID/PAYPAL_CLIENT_SECRET e o ambiente (${this.cfg.baseUrl})`
+          ? `${e.error_description || "credenciais recusadas"}, confira PAYPAL_CLIENT_ID/PAYPAL_CLIENT_SECRET e o ambiente (${this.cfg.baseUrl})`
           : e.details?.[0]?.description || e.message || e.error_description || res.body.slice(0, 200) || "erro sem descrição";
       throw new PaypalApiError(res.status, e.name ?? e.error ?? "", issue, e.debug_id ?? null, msg, label);
     }

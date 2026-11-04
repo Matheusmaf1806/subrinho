@@ -3,6 +3,7 @@ import type { PaxConfig } from "@/server/db/schema";
 import type { PaxRule } from "@/server/suppliers/types";
 import { money } from "@/server/pricing/money";
 import { mediaUrl } from "@/server/media";
+import { noEmDash } from "@/lib/text";
 import { stripSupplierMentions, stripSupplierMentionsList } from "@/lib/supplier-names";
 
 type View = NonNullable<Awaited<ReturnType<typeof loadCartView>>>;
@@ -16,8 +17,8 @@ export function toItemVMs(view: View, opts: { adminMode: boolean }) {
     return {
       id: i.id,
       category: i.category,
-      title: i.title,
-      subtitle: i.subtitle,
+      title: noEmDash(i.title),
+      subtitle: noEmDash(i.subtitle),
       location: i.location,
       imageUrl: mediaUrl(i.imageUrl),
       serviceDate: i.serviceDate,

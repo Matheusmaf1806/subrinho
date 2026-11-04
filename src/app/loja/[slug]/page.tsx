@@ -7,6 +7,7 @@ import { adaptersFor } from "@/server/suppliers/registry";
 import { INSURANCE_REGIONS } from "@/server/suppliers/mock/single-page";
 import { ArrowChip, cn } from "@/components/ui";
 import { photo, type PhotoKey } from "@/lib/images";
+import { noEmDash } from "@/lib/text";
 import { getStore, getStorePricing, storeBrand } from "./_lib/store";
 import { COMING_SOON } from "./_components/category";
 import { storeCategories } from "./_lib/categories";
@@ -60,7 +61,7 @@ function STEPS(max: number, pix: boolean) {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const store = await getStore((await params).slug);
   const cats = await storeCategories();
-  const description = store.heroSubtitle?.trim() || defaultSubtitle(store.name, cats.live.map((c) => c.category));
+  const description = noEmDash(store.heroSubtitle?.trim()) || defaultSubtitle(store.name, cats.live.map((c) => c.category));
   // o openGraph da página substitui o do layout inteiro: repete título e foto
   return { description, openGraph: { title: store.name, description, images: [storeBrand(store).heroImage] } };
 }
@@ -235,7 +236,7 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
             <img src={photo("airportBoard", 700, 560)} alt="" className="aspect-[5/4] w-full object-cover" loading="lazy" />
             <figcaption className="mt-4 px-1">
               <p className="text-[1.35rem] font-semibold leading-[1.05] tracking-[-0.035em] text-ink">Gente de verdade cuidando da sua viagem.</p>
-              <p className="mt-2 text-[13px] text-muted">— atendimento {store.name}</p>
+              <p className="mt-2 text-[13px] text-muted">Atendimento {store.name}</p>
             </figcaption>
           </figure>
         </div>
@@ -253,7 +254,7 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
           <div className="relative">
             <p className="text-2xl font-semibold leading-tight tracking-[-0.03em]">{pixAvailable ? "O melhor preço da loja." : "Preço e disponibilidade confirmados."}</p>
             <p className="mt-2 text-[15px] text-muted">
-              {pixAvailable ? "E ainda dá para usar cupom de desconto no carrinho." : "Conferimos tudo com cada fornecedor — e dá para usar cupom de desconto no carrinho."}
+              {pixAvailable ? "E ainda dá para usar cupom de desconto no carrinho." : "Conferimos tudo com cada fornecedor, e dá para usar cupom de desconto no carrinho."}
             </p>
           </div>
         </div>

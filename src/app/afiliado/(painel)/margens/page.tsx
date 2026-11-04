@@ -114,7 +114,7 @@ export default async function AfiliadoMargensPage() {
           <div>
             <p className="text-3xl font-semibold tabular text-ink">{pct(ov.defaultEffective.pct)}</p>
             <p className="mt-1 text-sm text-muted">
-              {ov.defaultRule ? "Definida pela sua agência." : `Você ainda não definiu — vale o padrão da plataforma (${pct(ov.fallbackPct)}).`}
+              {ov.defaultRule ? "Definida pela sua agência." : `Você ainda não definiu, vale o padrão da plataforma (${pct(ov.fallbackPct)}).`}
             </p>
           </div>
           {canEdit && (
@@ -265,7 +265,7 @@ export default async function AfiliadoMargensPage() {
                                       value={o.rule?.pct ?? ""}
                                       placeholder={String(Number(o.effective.pct))}
                                       max={max}
-                                      label={`Margem de ${p.title} — ${o.title} (%)`}
+                                      label={`Margem de ${p.title} · ${o.title} (%)`}
                                     />
                                     {o.rule && <RemoveRuleForm action={deleteMarginRuleAction} ruleId={o.rule.id} />}
                                   </div>
@@ -325,7 +325,7 @@ export default async function AfiliadoMargensPage() {
                           hidden={{ ruleId: r.id }}
                           value={r.pct}
                           max={max}
-                          label={`Margem de ${r.title}${r.optionTitle ? ` — ${r.optionTitle}` : ""} (%)`}
+                          label={`Margem de ${r.title}${r.optionTitle ? `, ${r.optionTitle}` : ""} (%)`}
                         />
                         <RemoveRuleForm action={deleteMarginRuleAction} ruleId={r.id} />
                       </div>

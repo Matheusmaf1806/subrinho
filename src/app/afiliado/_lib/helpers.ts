@@ -85,7 +85,7 @@ export function bookingStatusLabel(s: string | null): { label: string; tone: "su
       // a equipe Subrinho resolve; para a agência é "em processamento"
       return { label: "Reserva em processamento", tone: "warning" };
     default:
-      return { label: s ?? "—", tone: "neutral" };
+      return { label: s ?? "-", tone: "neutral" };
   }
 }
 

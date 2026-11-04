@@ -33,13 +33,13 @@ export const BOOKING_STATUS_LABEL: Record<string, string> = {
   AWAITING_ISSUE: "Aguardando emissão",
   ISSUING: "Emitindo…",
   CONFIRMED: "Reserva confirmada",
-  PENDING: "Pedido enviado — aguardando confirmação do fornecedor",
+  PENDING: "Pedido enviado, aguardando confirmação do fornecedor",
   CANCEL_REQUESTED: "Cancelamento solicitado",
   SIMULATED: "Simulação",
   REJECTED: "Recusada pelo fornecedor",
   CANCELLED: "Cancelada no fornecedor",
   BOOKING_FAILED: "Falha na emissão",
-  ISSUE_UNKNOWN: "Sem resposta do fornecedor — verificar",
+  ISSUE_UNKNOWN: "Sem resposta do fornecedor, verificar",
 };
 
 const RETRYABLE = new Set<string>([BOOKING_STATUS.AWAITING_ISSUE, BOOKING_STATUS.BOOKING_FAILED, BOOKING_STATUS.ISSUE_UNKNOWN, BOOKING_STATUS.REJECTED]);
@@ -88,10 +88,10 @@ export async function issueItemBooking(
     .where(eq(orderItems.id, itemId));
   if (!row) throw new BookingIssueError("Item não encontrado");
   const { item, order } = row;
-  if (order.status !== "PAID") throw new BookingIssueError("O pedido ainda não está pago — a reserva só é emitida depois do pagamento");
+  if (order.status !== "PAID") throw new BookingIssueError("O pedido ainda não está pago. A reserva só é emitida depois do pagamento");
   // Pagamento simulado (ambiente sem gateway) não é dinheiro de verdade: nunca vira reserva real com custo.
   if (isSimulatedPayment(order.paymentData) && process.env.ALLOW_SIMULATED_ISSUE !== "1")
-    throw new BookingIssueError("Pagamento simulado (teste) — não é dinheiro real, então nenhuma reserva é emitida no fornecedor. Confirme um pagamento real antes.");
+    throw new BookingIssueError("Pagamento simulado (teste): não é dinheiro real, então nenhuma reserva é emitida no fornecedor. Confirme um pagamento real antes.");
   if (item.supplierStatus === BOOKING_STATUS.CONFIRMED || item.supplierStatus === BOOKING_STATUS.PENDING)
     return { itemId, status: item.supplierStatus, bookingRef: item.supplierBookingRef, message: "Este item já tem reserva no fornecedor" };
 
@@ -162,7 +162,7 @@ export async function issueItemBooking(
       const voucher = await adapter.voucher(bookingRef, payload).catch(() => null);
       if (voucher) payload.voucher = voucher;
     }
-    message = status === "CONFIRMED" ? `Reserva confirmada (${bookingRef})` : status === "PENDING" ? `Pedido enviado ao fornecedor (${bookingRef}) — aguardando confirmação` : `Fornecedor respondeu: ${BOOKING_STATUS_LABEL[status] ?? status}`;
+    message = status === "CONFIRMED" ? `Reserva confirmada (${bookingRef})` : status === "PENDING" ? `Pedido enviado ao fornecedor (${bookingRef}), aguardando confirmação` : `Fornecedor respondeu: ${BOOKING_STATUS_LABEL[status] ?? status}`;
   } catch (e) {
     const timeout = e instanceof SupplierIntegrationError && e.detail?.timeout === true;
     status = timeout ? BOOKING_STATUS.ISSUE_UNKNOWN : BOOKING_STATUS.BOOKING_FAILED;

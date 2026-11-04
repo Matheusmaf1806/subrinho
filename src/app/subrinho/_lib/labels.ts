@@ -45,13 +45,13 @@ export const PAYMENT_METHOD_LABEL: Record<string, string> = { PIX: "Pix", CARD: 
 
 export const PAYPAL_STATUS_LABEL: Record<string, string> = {
   AWAITING_BUYER: "Aguardando o cliente abrir o PayPal",
-  CREATED: "Aberto no PayPal — aguardando o cliente",
+  CREATED: "Aberto no PayPal, aguardando o cliente",
   PAYER_ACTION_REQUIRED: "Aguardando confirmação do cliente no PayPal",
-  APPROVED: "Aprovado pelo cliente — captura em andamento",
+  APPROVED: "Aprovado pelo cliente, captura em andamento",
   COMPLETED: "Capturado (dinheiro recebido)",
   DECLINED: "Recusado",
   FAILED: "Falhou",
-  MISMATCH: "Valor não confere com o pedido — verificar no PayPal",
+  MISMATCH: "Valor não confere com o pedido, verificar no PayPal",
 };
 
 export const DISCOUNT_TYPE_LABEL: Record<string, string> = {
@@ -78,9 +78,9 @@ export const EVENT_LABEL: Record<string, string> = {
   PAYPAL_ORDER_CREATED: "Pagamento aberto no PayPal",
   PAYPAL_CAPTURED: "Pagamento capturado no PayPal",
   PAYMENT_PENDING: "Pagamento em análise no PayPal",
-  PAYMENT_MISMATCH: "Pagamento não confere com o pedido — verificar",
+  PAYMENT_MISMATCH: "Pagamento não confere com o pedido, verificar",
   PAYMENT_REFUNDED: "Estorno registrado no PayPal",
-  PAYMENT_REVERSED: "Contestação/estorno forçado no PayPal — verificar",
+  PAYMENT_REVERSED: "Contestação/estorno forçado no PayPal, verificar",
 };
 
 export const VIEW_PAGE_LABEL: Record<string, string> = {

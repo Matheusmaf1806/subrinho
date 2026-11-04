@@ -19,7 +19,7 @@ export default async function SubrinhoAffiliatesPage() {
     <>
       <PageHeader
         title="Afiliados"
-        subtitle="Agências parceiras — cada uma com a sua loja."
+        subtitle="Agências parceiras, cada uma com a sua loja."
         actions={
           canEdit && (
             <ButtonLink href="/subrinho/afiliados/novo">

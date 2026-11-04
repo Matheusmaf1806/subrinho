@@ -35,7 +35,7 @@ export function Cover({
         // eslint-disable-next-line @next/next/no-img-element
         <img src={src} alt={title} loading={big ? "eager" : "lazy"} className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]" />
       ) : (
-        <div className="absolute inset-0 grid place-items-center text-muted" role="img" aria-label={`${title} — sem foto`}>
+        <div className="absolute inset-0 grid place-items-center text-muted" role="img" aria-label={`${title}, sem foto`}>
           <Icon className="h-10 w-10 opacity-40" />
         </div>
       )}

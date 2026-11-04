@@ -85,7 +85,7 @@ export default async function AfiliadoCarrinhosPage({ searchParams }: { searchPa
                     </Td>
                     <Td className="text-right tabular">{c.items}</Td>
                     <Td className="text-right tabular">{c.viewCount}</Td>
-                    <Td className="whitespace-nowrap text-muted">{c.lastViewedAt ? dateTime(c.lastViewedAt) : "—"}</Td>
+                    <Td className="whitespace-nowrap text-muted">{c.lastViewedAt ? dateTime(c.lastViewedAt) : "-"}</Td>
                     <Td>
                       <Badge tone={statusTone(c.status)}>{CART_STATUS_LABEL[c.status] ?? c.status}</Badge>
                     </Td>

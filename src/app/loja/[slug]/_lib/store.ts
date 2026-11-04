@@ -63,13 +63,14 @@ export function appUrl() {
 // ───────── White-label ─────────
 import { DEFAULT_HERO_TITLE, DEFAULT_TAGLINE } from "@/lib/theme";
 import { photo } from "@/lib/images";
+import { noEmDash } from "@/lib/text";
 
 /** Conteúdo de marca da loja, com padrões neutros quando o afiliado não personalizou. */
 export function storeBrand(store: Store) {
   return {
-    heroLines: (store.heroTitle?.trim() || DEFAULT_HERO_TITLE).split(/\r?\n/).filter(Boolean),
+    heroLines: (noEmDash(store.heroTitle?.trim()) || DEFAULT_HERO_TITLE).split(/\r?\n/).filter(Boolean),
     heroImage: store.heroImageUrl || photo("heroWoman", 900, 1200),
-    tagline: store.tagline?.trim() || DEFAULT_TAGLINE,
+    tagline: noEmDash(store.tagline?.trim()) || DEFAULT_TAGLINE,
     instagram: store.instagram?.replace(/^@/, "").trim() || null,
     favicon: store.faviconUrl || `/loja/${store.slug}/icone`,
   };

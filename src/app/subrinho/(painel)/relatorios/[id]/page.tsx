@@ -103,7 +103,7 @@ export default async function SubrinhoReportDetailPage({ params }: { params: Pro
                           <span className="text-xs text-muted">{date(p.scheduledDate)}</span>
                         </Link>
                       ) : (
-                        <span className="text-muted">—</span>
+                        <span className="text-muted">-</span>
                       )}
                     </Td>
                   </Tr>

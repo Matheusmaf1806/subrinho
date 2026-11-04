@@ -60,7 +60,7 @@ export class GgtApiError extends SupplierIntegrationError {
     readonly debug: string | null,
     readonly operation: string,
   ) {
-    super(`GGT ${operation}: ${message}${code ? ` (código ${code})` : ""}${debug ? ` — ${debug}` : ""}`, { code, debug, operation });
+    super(`GGT ${operation}: ${message}${code ? ` (código ${code})` : ""}${debug ? `, ${debug}` : ""}`, { code, debug, operation });
   }
 }
 
@@ -151,7 +151,7 @@ export class GgtClient {
     if (result) return unescapeXml(result[1]).trim();
     if (/<MakeRequestResult\s*\/>/.test(body)) throw new SupplierIntegrationError(`GGT ${op.name}: resposta vazia`, { operation: op.name });
     const fault = body.match(/<(?:soap12?:)?Text[^>]*>([\s\S]*?)<\/(?:soap12?:)?Text>|<faultstring>([\s\S]*?)<\/faultstring>/);
-    throw new SupplierIntegrationError(`GGT ${op.name}: HTTP ${res.status}${fault ? ` — ${unescapeXml(fault[1] ?? fault[2]).slice(0, 300)}` : ""}`, { operation: op.name, status: res.status });
+    throw new SupplierIntegrationError(`GGT ${op.name}: HTTP ${res.status}${fault ? `, ${unescapeXml(fault[1] ?? fault[2]).slice(0, 300)}` : ""}`, { operation: op.name, status: res.status });
   }
 
   /** Requisição com resposta XML → objeto <Main>. Lança GgtApiError quando a GGT devolve erro. */

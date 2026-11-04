@@ -62,13 +62,13 @@ export default async function AfiliadoPedidoDetalhePage({ params }: { params: Pa
           {/* Pessoas */}
           <div className="grid gap-6 md:grid-cols-2">
             <PersonCard
-              title="Cliente — quem tem a conta"
+              title="Cliente (quem tem a conta)"
               subtitle="Usuário da loja que fez o pedido"
               icon={<UserRound className="h-4 w-4" aria-hidden />}
               person={o.customer}
             />
             <PersonCard
-              title="Pagador — quem pagou"
+              title="Pagador (quem pagou)"
               subtitle={o.payer.name === o.customer.name && o.payer.document === o.customer.document ? "Mesma pessoa da conta" : "Pessoa diferente da conta"}
               icon={<Wallet className="h-4 w-4" aria-hidden />}
               person={o.payer}
@@ -89,7 +89,7 @@ export default async function AfiliadoPedidoDetalhePage({ params }: { params: Pa
                       {i + 1}. {t.name}
                     </span>
                     <span className="text-muted">
-                      {[t.document && `Documento ${t.document}`, t.birthDate && `Nasc. ${date(t.birthDate)}`, t.email, t.phone].filter(Boolean).join(" · ") || "—"}
+                      {[t.document && `Documento ${t.document}`, t.birthDate && `Nasc. ${date(t.birthDate)}`, t.email, t.phone].filter(Boolean).join(" · ") || "-"}
                     </span>
                   </li>
                 ))}
@@ -153,10 +153,10 @@ export default async function AfiliadoPedidoDetalhePage({ params }: { params: Pa
                   </span>
                 </DetailRow>
                 {o.payment.method === "CARD" && (
-                  <DetailRow label="Cartão">{[o.payment.brand, o.payment.last4 && `final ${o.payment.last4}`].filter(Boolean).join(" · ") || "—"}</DetailRow>
+                  <DetailRow label="Cartão">{[o.payment.brand, o.payment.last4 && `final ${o.payment.last4}`].filter(Boolean).join(" · ") || "-"}</DetailRow>
                 )}
                 <DetailRow label="Valor cobrado">{brl(o.payment.amountPaid)}</DetailRow>
-                <DetailRow label="Pago em">{o.paidAt ? dateTime(o.paidAt) : "—"}</DetailRow>
+                <DetailRow label="Pago em">{o.paidAt ? dateTime(o.paidAt) : "-"}</DetailRow>
               </dl>
             </CardBody>
           </Card>
@@ -325,9 +325,9 @@ function PersonCard({ title, subtitle, icon, person }: { title: string; subtitle
       <CardBody>
         <dl>
           <DetailRow label="Nome">{person.name}</DetailRow>
-          <DetailRow label="E-mail">{person.email ? <span className="break-all">{person.email}</span> : "—"}</DetailRow>
-          <DetailRow label="Telefone">{person.phone || "—"}</DetailRow>
-          <DetailRow label="CPF/CNPJ">{person.document || "—"}</DetailRow>
+          <DetailRow label="E-mail">{person.email ? <span className="break-all">{person.email}</span> : "-"}</DetailRow>
+          <DetailRow label="Telefone">{person.phone || "-"}</DetailRow>
+          <DetailRow label="CPF/CNPJ">{person.document || "-"}</DetailRow>
           {person.birthDate && <DetailRow label="Nascimento">{date(person.birthDate)}</DetailRow>}
           {address && <DetailRow label="Endereço">{address}</DetailRow>}
         </dl>

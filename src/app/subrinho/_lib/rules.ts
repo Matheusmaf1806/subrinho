@@ -7,7 +7,7 @@ import { SCOPE_LABEL } from "./labels";
 type Rule = Pick<typeof marginRules.$inferSelect, "scope" | "category" | "supplierCode" | "productId" | "optionId" | "label">;
 
 export function supplierName(code: string | null | undefined): string {
-  if (!code) return "—";
+  if (!code) return "-";
   return SUPPLIERS.find((s) => s.code === code)?.name ?? code;
 }
 
@@ -17,7 +17,7 @@ export function ruleTarget(r: Rule): string {
     case "DEFAULT":
       return "Todos os produtos";
     case "CATEGORY":
-      return r.category ? CATEGORY_LABEL[r.category] : "—";
+      return r.category ? CATEGORY_LABEL[r.category] : "-";
     case "SUPPLIER":
       return supplierName(r.supplierCode);
     case "PRODUCT":

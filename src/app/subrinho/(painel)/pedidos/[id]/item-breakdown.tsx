@@ -83,8 +83,8 @@ export function ItemBreakdown({
     { step: "Custo na moeda", formula: "Σ preço unitário × quantidade", value: money(i.costForeign, cur), kind: "strong" },
     {
       step: "Câmbio",
-      formula: cur === "BRL" ? "Tarifa em reais — sem conversão" : `${cur} → BRL (cotação congelada no pedido)`,
-      value: cur === "BRL" ? "—" : `× ${fxRate(i.fxRate)}`,
+      formula: cur === "BRL" ? "Tarifa em reais, sem conversão" : `${cur} → BRL (cotação congelada no pedido)`,
+      value: cur === "BRL" ? "-" : `× ${fxRate(i.fxRate)}`,
     },
     { step: "Custo R$", formula: cur === "BRL" ? "custo na moeda" : `${money(i.costForeign, cur)} × ${fxRate(i.fxRate)}`, value: brl(i.costBrl), kind: "strong" },
     {
@@ -100,7 +100,7 @@ export function ItemBreakdown({
       ? [
           {
             step: <span className="text-amber-800">Preço mínimo do fornecedor</span>,
-            formula: `PIX não pode ficar abaixo de ${brl(floor.minPixBrl)} — margem Subrinho subiu de ${pct(floor.ruleSubrinhoPct ?? "0")} (regra) para ${pct(i.subrinhoMarginPct)}`,
+            formula: `PIX não pode ficar abaixo de ${brl(floor.minPixBrl)}, margem Subrinho subiu de ${pct(floor.ruleSubrinhoPct ?? "0")} (regra) para ${pct(i.subrinhoMarginPct)}`,
             value: `≥ ${brl(floor.minPixBrl)}`,
           } as Row,
         ]
@@ -124,8 +124,8 @@ export function ItemBreakdown({
       value: `+ ${brl(i.affiliateMarginAmount)}`,
     },
     { step: "NET Afiliado (PIX sem desconto)", formula: `${brl(i.netSubrinho)} ÷ (1 − ${pct(i.affiliateMarginPct)})`, value: brl(i.netAffiliate), kind: "strong" },
-    { step: "Desconto Subrinho", formula: "cupom Subrinho — sai da margem Subrinho", value: `− ${brl(i.subrinhoDiscount)}`, kind: "minus" },
-    { step: "Desconto afiliado", formula: "cupom do afiliado — sai da margem do afiliado", value: `− ${brl(i.affiliateDiscount)}`, kind: "minus" },
+    { step: "Desconto Subrinho", formula: "cupom Subrinho, sai da margem Subrinho", value: `− ${brl(i.subrinhoDiscount)}`, kind: "minus" },
+    { step: "Desconto afiliado", formula: "cupom do afiliado, sai da margem do afiliado", value: `− ${brl(i.affiliateDiscount)}`, kind: "minus" },
     { step: "Preço PIX", formula: "NET Afiliado − descontos", value: brl(i.finalPix), kind: "result" },
     { step: "Taxa do parcelado", formula: "embutida no preço parcelado", value: pct(i.installmentFeePct) },
     { step: "PARCELADO (sem juros)", formula: `${brl(i.finalPix)} ÷ (1 − ${pct(i.installmentFeePct)})`, value: brl(i.finalInstallment), kind: "result" },
@@ -244,12 +244,12 @@ export function ItemBreakdown({
           </div>
           <div>
             <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Cotação (quoteRef)</dt>
-            <dd className="break-all font-mono text-xs">{i.supplierQuoteRef ?? "—"}</dd>
+            <dd className="break-all font-mono text-xs">{i.supplierQuoteRef ?? "-"}</dd>
           </div>
           <div>
             <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Reserva (bookingRef)</dt>
             <dd className="break-all font-mono text-xs">
-              {i.supplierBookingRef ?? "—"}{" "}
+              {i.supplierBookingRef ?? "-"}{" "}
               {i.supplierStatus && (
                 <Badge tone={i.supplierStatus === "CONFIRMED" ? "success" : ["BOOKING_FAILED", "REJECTED", "CANCELLED"].includes(i.supplierStatus) ? "danger" : "warning"} className="ml-1">
                   {i.supplierStatus}

@@ -82,7 +82,7 @@ export function parseCityName(raw: string, style: "GGT" | "HOTELBEDS"): { city: 
 
 /** Grava a lista completa de destinos de um fornecedor (upsert + remove os que saíram da lista). */
 export async function saveSupplierDestinations(supplierCode: string, rows: DestinationRow[]): Promise<number> {
-  if (!rows.length) throw new Error(`O fornecedor ${supplierCode} não retornou destinos — nada foi alterado`);
+  if (!rows.length) throw new Error(`O fornecedor ${supplierCode} não retornou destinos, nada foi alterado`);
   const db = getDb();
   const unique = [...new Map(rows.map((r) => [r.code, r])).values()];
   const now = new Date();

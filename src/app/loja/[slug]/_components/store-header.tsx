@@ -33,7 +33,7 @@ export function StoreHeader({
               <ShieldCheck className="h-4 w-4 text-white/70" />
               {viewer.adminMode ? (
                 <span>
-                  <strong className="font-semibold">Modo ADMIN</strong> <span className="text-white/60">— altere a margem dos itens no checkout, só neste carrinho</span>
+                  <strong className="font-semibold">Modo ADMIN</strong> <span className="text-white/60">· altere a margem dos itens no checkout, só neste carrinho</span>
                 </span>
               ) : (
                 <span>Logado como agência · {viewer.user.name}</span>

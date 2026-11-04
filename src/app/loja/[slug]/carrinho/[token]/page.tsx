@@ -66,7 +66,7 @@ export default async function CartPage({ params, searchParams }: { params: Promi
               {view.removedNotices.map((i) => (
                 <li key={i.id}>
                   {i.title}
-                  {i.subtitle ? ` — ${i.subtitle}` : ""} {i.serviceDate ? `(${date(i.serviceDate)})` : ""}: {i.statusReason}
+                  {i.subtitle ? `, ${i.subtitle}` : ""} {i.serviceDate ? `(${date(i.serviceDate)})` : ""}: {i.statusReason}
                 </li>
               ))}
             </ul>

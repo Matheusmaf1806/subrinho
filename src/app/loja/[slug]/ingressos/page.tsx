@@ -49,7 +49,7 @@ export default async function TicketsPage({ params, searchParams }: { params: Pr
           </MobileSearchToggle>
         </ListingHeader>
       ) : (
-        <ListingHeader eyebrow="Ingressos e experiências" image="colosseumArches" title="Ingressos sem fila." subtitle="Parques, museus e passeios com data marcada — no Pix ou em 10x sem juros.">
+        <ListingHeader eyebrow="Ingressos e experiências" image="colosseumArches" title="Ingressos sem fila." subtitle="Parques, museus e passeios com data marcada, no Pix ou em 10x sem juros.">
           {search}
         </ListingHeader>
       )}

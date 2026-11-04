@@ -75,15 +75,15 @@ export function CouponFields({
             </Field>
           </>
         )}
-        <Field label="Desconto máximo (R$)" hint="Opcional — teto do desconto">
+        <Field label="Desconto máximo (R$)" hint="Opcional: teto do desconto">
           <Input name="maxDiscount" inputMode="decimal" defaultValue={num(c.maxDiscount)} />
         </Field>
-        <Field label="Compra mínima (R$)" hint="Opcional — nos itens elegíveis">
+        <Field label="Compra mínima (R$)" hint="Opcional: nos itens elegíveis">
           <Input name="minSubtotal" inputMode="decimal" defaultValue={num(c.minSubtotal)} />
         </Field>
       </fieldset>
       <p className="-mt-3 text-xs text-muted">
-        O desconto sai somente da margem Subrinho de cada item e nunca a deixa abaixo de 0% — se não houver margem suficiente, o desconto é limitado.
+        O desconto sai somente da margem Subrinho de cada item e nunca a deixa abaixo de 0%. Se não houver margem suficiente, o desconto é limitado.
       </p>
 
       <fieldset>

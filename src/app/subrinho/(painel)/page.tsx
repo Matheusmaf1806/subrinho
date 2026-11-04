@@ -169,7 +169,7 @@ export default async function SubrinhoDashboardPage() {
                     <p className="text-sm font-semibold text-ink">{CURRENCY_LABEL[c]}</p>
                     <p className="text-xs text-muted">{r ? `${r.source} · ${dateTime(r.fetchedAt)}` : "Sem cotação cadastrada"}</p>
                   </div>
-                  <p className="text-xl font-semibold tabular text-ink">{r ? `R$ ${fxRate(r.rate)}` : "—"}</p>
+                  <p className="text-xl font-semibold tabular text-ink">{r ? `R$ ${fxRate(r.rate)}` : "-"}</p>
                 </div>
               );
             })}

@@ -172,10 +172,10 @@ export class TueClient {
     }
     if (res.status >= 400) {
       const e = (data ?? {}) as ErrorRS;
-      const detail = Array.isArray(e.errors) && e.errors.length ? ` — ${e.errors.map((x) => (typeof x === "string" ? x : JSON.stringify(x))).join("; ").slice(0, 300)}` : "";
+      const detail = Array.isArray(e.errors) && e.errors.length ? `, ${e.errors.map((x) => (typeof x === "string" ? x : JSON.stringify(x))).join("; ").slice(0, 300)}` : "";
       const msg =
         res.status === 401 || res.status === 403
-          ? `${detail ? detail.slice(3) : e.error_description || e.error_message || "credenciais recusadas"} — confira TUEXPERIENCIA_USERNAME/PASSWORD/DISTRIBUTOR_ID e o ambiente (TUEXPERIENCIA_ENVIRONMENT=${this.cfg.environment})`
+          ? `${detail ? detail.slice(2) : e.error_description || e.error_message || "credenciais recusadas"}, confira TUEXPERIENCIA_USERNAME/PASSWORD/DISTRIBUTOR_ID e o ambiente (TUEXPERIENCIA_ENVIRONMENT=${this.cfg.environment})`
           : `${e.error_description || e.error_message || res.body.slice(0, 200) || "erro sem descrição"}${detail}`;
       throw new TueApiError(res.status, e.error ?? "", msg, label, e.error_reference ?? null);
     }

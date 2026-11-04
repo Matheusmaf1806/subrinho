@@ -33,8 +33,8 @@ export function NewUserForm({ action }: { action: Action }) {
       </Field>
       <Field label="Perfil">
         <SyncedSelect name="role" value={v.role} onChange={(e) => setV({ ...v, role: e.target.value })}>
-          <option value="AGENT">Agente — vende e acompanha pedidos</option>
-          <option value="ADMIN">Administrador — acesso total</option>
+          <option value="AGENT">Agente: vende e acompanha pedidos</option>
+          <option value="ADMIN">Administrador: acesso total</option>
         </SyncedSelect>
       </Field>
       <SubmitButton className="w-full" pendingText="Criando…">

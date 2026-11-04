@@ -23,7 +23,7 @@ export async function closeFortnightAction(_prev: ActionState, fd: FormData): Pr
     const today = todayLocal();
     if (raw && !isIsoDate(raw)) throw new FormError("Data inválida");
     const period = raw ? fortnightOf(raw) : lastClosedFortnight(today);
-    if (period.end >= today) throw new FormError(`A quinzena ${periodLabel(period.start, period.end)} ainda não terminou — só é possível fechá-la a partir de ${date(addDays(period.end, 1))}.`);
+    if (period.end >= today) throw new FormError(`A quinzena ${periodLabel(period.start, period.end)} ainda não terminou. Só é possível fechá-la a partir de ${date(addDays(period.end, 1))}.`);
 
     const r = await db.transaction((tx) => closeFortnight(tx, period, { type: "SUBRINHO", id: user.id }));
     revalidatePath("/subrinho", "layout");

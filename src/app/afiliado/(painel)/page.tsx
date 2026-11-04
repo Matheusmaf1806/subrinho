@@ -95,7 +95,7 @@ export default async function AfiliadoDashboardPage() {
           </>
         ) : (
           <>
-            Entre na sua loja com o seu acesso da agência, monte o carrinho e compartilhe o link com o cliente — o carrinho nunca expira. Somente
+            Entre na sua loja com o seu acesso da agência, monte o carrinho e compartilhe o link com o cliente: o carrinho nunca expira. Somente
             usuários <strong>ADMIN</strong> podem entrar em modo ADMIN para alterar margens no checkout.
           </>
         )}
@@ -167,7 +167,7 @@ export default async function AfiliadoDashboardPage() {
                 <li key={p.key} className="flex items-center justify-between gap-3 px-5 py-3">
                   <div className="flex min-w-0 items-center gap-3">
                     <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl bg-brand-50 leading-none text-brand-700" aria-hidden>
-                      <span className="text-lg font-semibold">{p.date ? p.date.slice(8, 10) : "—"}</span>
+                      <span className="text-lg font-semibold">{p.date ? p.date.slice(8, 10) : "-"}</span>
                       {p.date && <span className="mt-0.5 text-[10px] font-semibold uppercase">{monthShort(p.date)}</span>}
                     </div>
                     <div className="min-w-0">

@@ -695,7 +695,7 @@ export function createTueAdapter(cfg: TueConfig, opts: { transport?: Transport }
       const q = await adapter.quote({ productId: item.productId, optionId: item.optionId, date: item.serviceDate ?? undefined, pax: item.pax });
       const cost = q.lines.reduce((s, l) => s.plus(new Decimal(l.unitCost).times(l.quantity)), new Decimal(0));
       if (item.maxCost) {
-        if (item.maxCost.currency !== q.currency) throw new SupplierError(`O fornecedor mudou a moeda do ingresso (${q.currency}) — não reservamos`);
+        if (item.maxCost.currency !== q.currency) throw new SupplierError(`O fornecedor mudou a moeda do ingresso (${q.currency}), não reservamos`);
         if (cost.gt(new Decimal(item.maxCost.amount).plus("0.01"))) throw new SupplierError(`O fornecedor aumentou o preço (${q.currency} ${cost.toFixed(2)} > vendido ${new Decimal(item.maxCost.amount).toFixed(2)}). A reserva não foi feita.`);
       }
       const d = q.details as { productTypes: { type: string; id: string; count: number }[]; availabilityId: string | null; travelDate: string | null; expectedSalesTotal: string };
@@ -737,7 +737,7 @@ export function createTueAdapter(cfg: TueConfig, opts: { transport?: Transport }
       const required = (res.reservation_checkout_fields ?? []).filter((f) => f.checkout_field_restriction === "REQUIRED");
       if (required.length) {
         await release("Dados extras obrigatórios");
-        throw new SupplierError(`Este ingresso exige dados extras (${required.map((f) => f.checkout_field_type ?? f.checkout_field_id).join(", ")}) — emita pelo portal da Tu Experienza`);
+        throw new SupplierError(`Este ingresso exige dados extras (${required.map((f) => f.checkout_field_type ?? f.checkout_field_id).join(", ")}), emita pelo portal da Tu Experienza`);
       }
       // conferência do preço do servidor (recomendação da Tue): não confirma se subiu
       const server = res.reservation_pricing?.price_total ? new Decimal(money2(res.reservation_pricing.price_total)) : null;
@@ -772,7 +772,7 @@ export function createTueAdapter(cfg: TueConfig, opts: { transport?: Transport }
           const found = await adapter.findBooking!({ ...item, reference }).catch(() => null);
           if (found) return found;
         }
-        if (e instanceof TueApiError && e.status === 402) throw new SupplierError("A Tu Experienza recusou por limite de crédito da conta (HTTP 402) — fale com o gerente de conta");
+        if (e instanceof TueApiError && e.status === 402) throw new SupplierError("A Tu Experienza recusou por limite de crédito da conta (HTTP 402), fale com o gerente de conta");
         if (e instanceof TueApiError && e.status < 500 && e.status !== 401 && e.status !== 403 && e.status !== 429) {
           await release("Confirmação recusada");
           throw new SupplierError(`A Tu Experienza recusou a confirmação: ${e.message.replace(/^Tue [^:]*: /, "")}`);
@@ -794,7 +794,7 @@ export function createTueAdapter(cfg: TueConfig, opts: { transport?: Transport }
     },
 
     async cancelBooking(bookingRef: string, o: { simulate: boolean }): Promise<CancelResult> {
-      if (o.simulate) throw new SupplierError("A Tu Experienza não simula a multa — confira a política do ingresso antes de cancelar");
+      if (o.simulate) throw new SupplierError("A Tu Experienza não simula a multa, confira a política do ingresso antes de cancelar");
       try {
         const rs = await client.delete<{ data?: { order?: TueOrder } }>(`/orders/${encodeURIComponent(bookingRef)}`, { cancellation_reason: "Cancelado pela agência" });
         const order = rs.data?.order;

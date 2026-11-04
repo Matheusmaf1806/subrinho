@@ -106,7 +106,7 @@ export async function testHotelIntegration(code: string): Promise<{ ok: boolean;
         if (isNotFound(e)) return null;
         throw e;
       });
-      return done(true, `Conectado à GGT (${cfg.environment}) — credenciais aceitas`);
+      return done(true, `Conectado à GGT (${cfg.environment}), credenciais aceitas`);
     }
     if (code === HB_CODE) {
       const cfg = hotelbedsConfig();
@@ -114,13 +114,13 @@ export async function testHotelIntegration(code: string): Promise<{ ok: boolean;
       const cert = inspectCertificate(cfg);
       if (cert.error) return done(false, `Certificado inválido: ${cert.error}`);
       if (!cert.keyMatches) return done(false, "A chave privada (HB_HOTEIS_CLIENT_KEY) não corresponde ao certificado (HB_HOTEIS_CLIENT_CRT)");
-      if ((cert.daysLeft ?? 0) < 0) return done(false, "Certificado vencido — gere um novo no portal developer.hotelbeds.com");
+      if ((cert.daysLeft ?? 0) < 0) return done(false, "Certificado vencido, gere um novo no portal developer.hotelbeds.com");
       const a = createHotelbedsAdapter(cfg);
       // lista de reservas de hoje: exercita mTLS + assinatura, somente leitura
       const today = todayLocal();
       await a.client.booking("GET", `/bookings?start=${today}&end=${addDays(today, 1)}&filterType=CREATION&from=1&to=1`, undefined, 30_000);
       await a.client.content(`/types/languages?fields=all&from=1&to=1`, 20_000);
-      return done(true, `Conectado à Hotelbeds (${cfg.environment}) — mTLS e assinatura aceitos · certificado vence em ${cert.daysLeft} dias`);
+      return done(true, `Conectado à Hotelbeds (${cfg.environment}), mTLS e assinatura aceitos · certificado vence em ${cert.daysLeft} dias`);
     }
     if (code === TUE_CODE) {
       const a = createTueFromEnv();
@@ -140,12 +140,12 @@ export async function testHotelIntegration(code: string): Promise<{ ok: boolean;
         return done(
           false,
           other === "test"
-            ? "Login recusado na produção (live): estas credenciais são do ambiente de TESTE (sandbox) da Tu Experienza. Peça à Tu Experienza o usuário e a senha de produção — com credenciais de teste os ingressos não valem."
+            ? "Login recusado na produção (live): estas credenciais são do ambiente de TESTE (sandbox) da Tu Experienza. Peça à Tu Experienza o usuário e a senha de produção, com credenciais de teste os ingressos não valem."
             : "Login recusado no ambiente de teste: estas credenciais são de PRODUÇÃO. Remova TUEXPERIENCIA_ENVIRONMENT (ou use live) na Vercel.",
         );
       }
       const rs = await a.client.get<{ data?: { total_items?: number } }>("/products", { distributor_id: a.client.cfg.distributorId, items_per_page: 1 }, 30_000);
-      return done(true, `Conectado à Tu Experienza (${a.client.cfg.environment}) — ${rs.data?.total_items ?? "?"} produtos no catálogo do distribuidor`);
+      return done(true, `Conectado à Tu Experienza (${a.client.cfg.environment}), ${rs.data?.total_items ?? "?"} produtos no catálogo do distribuidor`);
     }
     if (code === MAPRO_CODE) {
       const a = createMaproFromEnv();
@@ -153,8 +153,8 @@ export async function testHotelIntegration(code: string): Promise<{ ok: boolean;
       // /v1/whoami: valida o token e diz de qual administradora são as casas (somente leitura)
       const who = await a.client.get<{ integration?: string; customer_id?: string; customer_name?: string }>("/v1/whoami", 20_000);
       if (who.customer_id && MAPRO_DEMO_CUSTOMERS.includes(who.customer_id))
-        return done(process.env.VERCEL_ENV !== "production", `Token da conta DEMO da MAPRO (casas fictícias)${process.env.VERCEL_ENV === "production" ? " — bloqueado em produção; use o token de produção" : " — só para testes"}`);
-      return done(true, `Conectado à MAPRO — administradora: ${who.customer_name ?? "?"} · canal: ${who.integration ?? "?"}`);
+        return done(process.env.VERCEL_ENV !== "production", `Token da conta DEMO da MAPRO (casas fictícias)${process.env.VERCEL_ENV === "production" ? ", bloqueado em produção; use o token de produção" : ", só para testes"}`);
+      return done(true, `Conectado à MAPRO · administradora: ${who.customer_name ?? "?"} · canal: ${who.integration ?? "?"}`);
     }
     return done(false, "Fornecedor sem integração real");
   } catch (e) {

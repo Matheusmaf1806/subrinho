@@ -288,7 +288,7 @@ export function createMaproAdapter(cfg: MaproConfig, opts: { transport?: Transpo
     if (!opts.blockDemo) return;
     const who = await whoami();
     if (who.customer_id && MAPRO_DEMO_CUSTOMERS.includes(who.customer_id))
-      throw new SupplierIntegrationError("MAPRO: o token configurado é o da conta DEMO (casas fictícias) — use o token de produção da administradora", { demo: true });
+      throw new SupplierIntegrationError("MAPRO: o token configurado é o da conta DEMO (casas fictícias), use o token de produção da administradora", { demo: true });
   }
 
   /** Todas as casas disponíveis nas datas, com o preço (segue o cursor). */
@@ -616,7 +616,7 @@ export function createMaproAdapter(cfg: MaproConfig, opts: { transport?: Transpo
       if (!q) throw new SupplierError(unavailableReason(await calendar(p.id), stay.checkIn, stay.checkOut).reason);
       const total = new Decimal(money2(q.summary.grand_total));
       if (item.maxCost) {
-        if ((q.currency ?? "USD").toUpperCase() !== item.maxCost.currency) throw new SupplierError(`A administradora mudou a moeda (${q.currency}) — não reservamos`);
+        if ((q.currency ?? "USD").toUpperCase() !== item.maxCost.currency) throw new SupplierError(`A administradora mudou a moeda (${q.currency}), não reservamos`);
         if (total.gt(new Decimal(item.maxCost.amount).plus("0.01")))
           throw new SupplierError(`A administradora aumentou o preço (${item.maxCost.currency} ${total.toFixed(2)} > vendido ${new Decimal(item.maxCost.amount).toFixed(2)}). A reserva não foi feita.`);
       }
@@ -670,7 +670,7 @@ export function createMaproAdapter(cfg: MaproConfig, opts: { transport?: Transpo
     },
 
     async cancelBooking(bookingRef: string, o: { simulate: boolean; stored?: Record<string, unknown> }): Promise<CancelResult> {
-      if (o.simulate) throw new SupplierError("A MAPRO não simula a multa de cancelamento — confira a política com a administradora antes de cancelar");
+      if (o.simulate) throw new SupplierError("A MAPRO não simula a multa de cancelamento, confira a política com a administradora antes de cancelar");
       const ulid = ulidOf(bookingRef, o.stored);
       try {
         const r = await client.delete<{ msg?: string; reservation_id?: string; reservation_ulid?: string }>(`/v1/reservations/${ulid}`);
@@ -707,7 +707,7 @@ export function createMaproAdapter(cfg: MaproConfig, opts: { transport?: Transpo
 
 function ulidOf(bookingRef: string, stored?: Record<string, unknown>): string {
   const u = typeof stored?.reservationUlid === "string" ? stored.reservationUlid : /^[0-9A-Z]{26}$/.test(bookingRef) ? bookingRef : null;
-  if (!u) throw new SupplierError("Reserva sem o identificador da MAPRO (ULID) — consulte pelo painel da administradora");
+  if (!u) throw new SupplierError("Reserva sem o identificador da MAPRO (ULID), consulte pelo painel da administradora");
   return u;
 }
 

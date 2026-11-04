@@ -5,6 +5,7 @@ import { suppliers, type Category } from "@/server/db/schema";
 import { quoteDisplayPrice, type PricingContext } from "@/server/pricing/cart-pricing";
 import { mediaUrl, mediaUrls } from "@/server/media";
 import { stripSupplierMentions, stripSupplierMentionsList } from "@/lib/supplier-names";
+import { noEmDash } from "@/lib/text";
 import { adaptersFor, getAdapter } from "@/server/suppliers/registry";
 import { SupplierError, type HotelContent, type OfferOption, type ProductDetail, type ProductSummary, type SearchParams } from "@/server/suppliers/types";
 import type { Decimal } from "@/server/pricing/money";
@@ -65,7 +66,7 @@ export async function searchCatalog(
     }
   }
   // fotos pelo domínio da loja (o endereço original revela o fornecedor)
-  return [...grouped.values()].sort((a, b) => a.price.pix.comparedTo(b.price.pix)).map((p) => ({ ...p, imageUrl: mediaUrl(p.imageUrl) }));
+  return [...grouped.values()].sort((a, b) => a.price.pix.comparedTo(b.price.pix)).map((p) => ({ ...p, title: noEmDash(p.title), subtitle: noEmDash(p.subtitle), location: noEmDash(p.location), imageUrl: mediaUrl(p.imageUrl) }));
 }
 
 export async function getProductDetail(
@@ -115,12 +116,20 @@ export async function getProductDetail(
   if (!price && !((detail.category === "LODGING" || detail.category === "HOUSES" || detail.category === "TICKETS") && unavailable)) return null;
   return {
     ...detail,
+    title: noEmDash(detail.title),
+    subtitle: noEmDash(detail.subtitle),
+    location: noEmDash(detail.location),
     description: stripSupplierMentions(detail.description),
+    highlights: detail.highlights.map((h) => noEmDash(h)),
+    info: detail.info.map((i) => ({ ...i, value: noEmDash(i.value) })),
     imageUrl: mediaUrl(detail.imageUrl),
     gallery: detail.gallery ? mediaUrls(detail.gallery) : undefined,
     price,
     options: options.map((o) => ({
       ...o,
+      title: noEmDash(o.title),
+      description: noEmDash(o.description),
+      attributes: o.attributes?.map((a) => ({ ...a, value: noEmDash(a.value) })),
       notes: o.notes ? stripSupplierMentionsList(o.notes) : o.notes,
       room: o.room ? { ...o.room, photos: mediaUrls(o.room.photos), amenities: stripSupplierMentionsList(o.room.amenities) } : o.room,
     })),
@@ -139,7 +148,7 @@ function hotelForStore(h: HotelContent): HotelContent {
     about: h.about.map((a) => ({ ...a, text: stripSupplierMentions(a.text) })).filter((a) => a.text),
     amenities: h.amenities.map((g) => ({ ...g, items: stripSupplierMentionsList(g.items) })).filter((g) => g.items.length),
     roomAmenities: stripSupplierMentionsList(h.roomAmenities),
-    nearby: h.nearby.filter((n) => stripSupplierMentions(n.name)),
+    nearby: h.nearby.filter((n) => stripSupplierMentions(n.name)).map((n) => ({ ...n, name: noEmDash(n.name) })),
     policies: h.policies.map((p) => ({ ...p, items: stripSupplierMentionsList(p.items) })).filter((p) => p.items.length),
     issues: h.issues.map((i) => ({ ...i, text: stripSupplierMentions(i.text) })).filter((i) => i.text),
   };

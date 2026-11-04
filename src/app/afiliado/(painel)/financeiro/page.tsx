@@ -36,7 +36,7 @@ export default async function AfiliadoFinanceiroPage() {
         <Stat tone="dark" label="Recebido" value={brl(ov.receivedTotal)} hint={`${ov.received.length} repasse${ov.received.length === 1 ? "" : "s"} pago${ov.received.length === 1 ? "" : "s"}`} />
         <Stat
           label="Próximo repasse"
-          value={next ? brl(next.amount) : "—"}
+          value={next ? brl(next.amount) : "-"}
           hint={next ? `${next.date ? date(next.date) : "Data a definir"} · ${fortnightLabel(next.periodStart, next.periodEnd)}` : "Nenhum repasse previsto"}
           icon={<CalendarClock className="h-4 w-4" aria-hidden />}
         />
@@ -74,11 +74,11 @@ export default async function AfiliadoFinanceiroPage() {
                       <Td className="text-right tabular">{p.orders}</Td>
                       <Td className="text-right tabular whitespace-nowrap">{brl(p.grossSales)}</Td>
                       <Td className="text-right font-semibold tabular whitespace-nowrap">{brl(p.amount)}</Td>
-                      <Td className="whitespace-nowrap font-semibold">{p.date ? date(p.date) : "—"}</Td>
+                      <Td className="whitespace-nowrap font-semibold">{p.date ? date(p.date) : "-"}</Td>
                       <Td>
                         <Badge tone={p.status === "SCHEDULED" ? "info" : "warning"}>{PAYOUT_STATUS_LABEL[p.status]}</Badge>
                       </Td>
-                      <Td>{p.periodStart ? <ReportLink periodStart={p.periodStart} compact /> : <span className="text-muted">—</span>}</Td>
+                      <Td>{p.periodStart ? <ReportLink periodStart={p.periodStart} compact /> : <span className="text-muted">-</span>}</Td>
                     </Tr>
                   ))}
                 </tbody>
@@ -113,7 +113,7 @@ export default async function AfiliadoFinanceiroPage() {
                       <Td className="text-right font-semibold tabular whitespace-nowrap text-success">{brl(p.amount)}</Td>
                       <Td className="whitespace-nowrap text-muted">{date(p.scheduledDate)}</Td>
                       <Td className="whitespace-nowrap">
-                        {p.paidAt ? dateTime(p.paidAt) : "—"}
+                        {p.paidAt ? dateTime(p.paidAt) : "-"}
                         {p.notes && <span className="block text-xs text-muted">{p.notes}</span>}
                       </Td>
                       <Td>
@@ -168,11 +168,11 @@ export default async function AfiliadoFinanceiroPage() {
               )}
               <dl>
                 <DetailRow label="Favorecido">{affiliate.legalName || affiliate.name}</DetailRow>
-                <DetailRow label="CPF/CNPJ">{affiliate.document || "—"}</DetailRow>
-                <DetailRow label="Chave Pix">{affiliate.pixKey ? <span className="break-all">{affiliate.pixKey}</span> : "—"}</DetailRow>
-                <DetailRow label="Banco">{affiliate.bankName || "—"}</DetailRow>
-                <DetailRow label="Agência">{affiliate.bankAgency || "—"}</DetailRow>
-                <DetailRow label="Conta">{affiliate.bankAccount || "—"}</DetailRow>
+                <DetailRow label="CPF/CNPJ">{affiliate.document || "-"}</DetailRow>
+                <DetailRow label="Chave Pix">{affiliate.pixKey ? <span className="break-all">{affiliate.pixKey}</span> : "-"}</DetailRow>
+                <DetailRow label="Banco">{affiliate.bankName || "-"}</DetailRow>
+                <DetailRow label="Agência">{affiliate.bankAgency || "-"}</DetailRow>
+                <DetailRow label="Conta">{affiliate.bankAccount || "-"}</DetailRow>
               </dl>
               {user.role === "ADMIN" ? (
                 <Link href="/afiliado/loja#dados-bancarios" className="mt-3 inline-flex text-sm font-semibold text-brand-ink hover:text-brand-700">

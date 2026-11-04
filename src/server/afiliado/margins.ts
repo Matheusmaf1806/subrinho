@@ -78,7 +78,7 @@ export async function resolveTicketTarget(tx: Tx, key: string) {
     }
     const o = p.options.find((x) => x.key === key);
     if (o) {
-      return { scope: "PRODUCT_OPTION" as const, supplierCode: p.supplierCode, productId: p.productId, optionId: o.optionId, label: `${p.title} — ${o.title}` };
+      return { scope: "PRODUCT_OPTION" as const, supplierCode: p.supplierCode, productId: p.productId, optionId: o.optionId, label: `${p.title} · ${o.title}` };
     }
   }
   return null;

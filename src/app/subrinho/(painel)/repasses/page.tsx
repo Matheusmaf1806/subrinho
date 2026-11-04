@@ -42,7 +42,7 @@ function BankData({ a }: { a: PayoutListRow["affiliate"] }) {
       )}
       {hasBank && (
         <div>
-          {a.bankName ?? "Banco —"} · Ag. {a.bankAgency ?? "—"} · Conta {a.bankAccount ?? "—"}
+          {a.bankName ?? "Banco -"} · Ag. {a.bankAgency ?? "-"} · Conta {a.bankAccount ?? "-"}
         </div>
       )}
     </div>
@@ -279,7 +279,7 @@ export default async function SubrinhoPayoutsPage({ searchParams }: { searchPara
       {forecastShown.length > 0 && (
         <Card className="mt-6">
           <CardHeader
-            title="Previsão — vendas da quinzena em aberto"
+            title="Previsão: vendas da quinzena em aberto"
             subtitle="Vendas pagas que ainda não entraram em um fechamento. Viram repasse quando a quinzena for fechada."
           />
           <Table>

@@ -167,7 +167,7 @@ export default async function SubrinhoOrdersPage({ searchParams }: { searchParam
                           <PayoutStatusBadge status={payout?.status ?? "OPEN"} />
                         </>
                       ) : (
-                        <span className="text-muted">—</span>
+                        <span className="text-muted">-</span>
                       )}
                     </Td>
                   </Tr>

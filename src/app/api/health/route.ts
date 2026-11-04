@@ -20,7 +20,7 @@ function classify(e: unknown): { detalhe: string; o_que_fazer: string } {
   const code = err?.code ?? "";
   const msg = String(err?.message ?? e).replace(/postgres(ql)?:\/\/[^\s]+/gi, "[url oculta]");
   if (code === "ENOTFOUND" || code === "EAI_AGAIN")
-    return { detalhe: `Servidor do banco não encontrado (${code})`, o_que_fazer: "Confira o host na DATABASE_URL — copie de novo do Neon (botão Connect)." };
+    return { detalhe: `Servidor do banco não encontrado (${code})`, o_que_fazer: "Confira o host na DATABASE_URL, copie de novo do Neon (botão Connect)." };
   if (code === "28P01" || /password authentication/i.test(msg))
     return { detalhe: "Usuário ou senha do banco incorretos", o_que_fazer: "Copie de novo a URL de conexão no Neon (Connect) e atualize DATABASE_URL na Vercel; depois Redeploy." };
   if (code === "3D000") return { detalhe: "O database informado na URL não existe", o_que_fazer: "Use o database mostrado no Neon (normalmente 'neondb')." };
@@ -75,7 +75,7 @@ export async function GET(request: Request) {
               detalhe: `lojas: ${r?.lojas ?? 0}, usuários Subrinho: ${r?.usuarios ?? 0}, fornecedores: ${r?.fornecedores ?? 0}`,
               o_que_fazer: "Rode docs/neon/subrinho-instalar.sql no SQL Editor do Neon para carregar os dados iniciais.",
             }
-          : { ok: true, detalhe: `lojas: ${r.lojas} (${r.slugs ?? "—"}), usuários Subrinho: ${r.usuarios}, fornecedores: ${r.fornecedores}, cotações: ${r.cambio}` };
+          : { ok: true, detalhe: `lojas: ${r.lojas} (${r.slugs ?? "-"}), usuários Subrinho: ${r.usuarios}, fornecedores: ${r.fornecedores}, cotações: ${r.cambio}` };
       }
     } catch (e) {
       checks.conexao = { ok: false, ...classify(e) };
@@ -128,7 +128,7 @@ export async function GET(request: Request) {
       }
     }
     pagamento = {
-      provedor: provider === "paypal" ? "PayPal" : "simulado (sem gateway — pagamentos não valem)",
+      provedor: provider === "paypal" ? "PayPal" : "simulado (sem gateway, pagamentos não valem)",
       ambiente: pp ? `${pp.environment} · ${new URL(pp.baseUrl).host}` : null,
       variaveis_faltando: pp ? undefined : paypalMissing(),
       pix:
@@ -137,7 +137,7 @@ export async function GET(request: Request) {
           : process.env.PIX_KEY?.trim()
             ? "QR Code da chave PIX_KEY · confirmação manual no painel"
             : "desligado (defina PIX_KEY para oferecer Pix)",
-      assinatura_webhook: pp ? (pp.webhookId ? "conferida (PAYPAL_WEBHOOK_ID)" : "sem PAYPAL_WEBHOOK_ID — eventos só disparam nova consulta à API do PayPal") : undefined,
+      assinatura_webhook: pp ? (pp.webhookId ? "conferida (PAYPAL_WEBHOOK_ID)" : "sem PAYPAL_WEBHOOK_ID, eventos só disparam nova consulta à API do PayPal") : undefined,
       teste,
     };
   }
@@ -155,7 +155,7 @@ export async function GET(request: Request) {
         cotacoes: Object.fromEntries(Object.entries(fx).map(([c, r]) => [c, `${r!.rate} (${r!.source}, ${new Date(r!.fetchedAt).toISOString()})`])),
         ...(oldest > 24
           ? {
-              atencao: `Cotação com mais de ${Math.floor(oldest)} h${provider === "manual" ? " (modo manual)" : ""} — os preços em dólar/euro usam esse valor.`,
+              atencao: `Cotação com mais de ${Math.floor(oldest)} h${provider === "manual" ? " (modo manual)" : ""}, os preços em dólar/euro usam esse valor.`,
               o_que_fazer: provider === "manual" ? "Atualize a cotação no Painel Subrinho → Câmbio todo dia, ou defina FX_PROVIDER=awesomeapi (ou poolvo) na Vercel." : "Confira se o provedor de câmbio está respondendo (Painel Subrinho → Câmbio).",
             }
           : {}),

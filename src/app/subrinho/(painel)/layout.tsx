@@ -49,7 +49,7 @@ export default async function SubrinhoPanelLayout({ children }: { children: Reac
   return (
     <PanelShell
       brand={
-        <Link href="/subrinho" aria-label="Painel Subrinho — início">
+        <Link href="/subrinho" aria-label="Painel Subrinho, início">
           <SubrinhoLogo tone="brand" size="sm" />
         </Link>
       }

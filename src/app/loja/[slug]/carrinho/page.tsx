@@ -14,7 +14,7 @@ export default async function CartRedirect({ params }: { params: Promise<{ slug:
       <EmptyState
         icon={<ShoppingCart className="h-12 w-12" />}
         title="Seu carrinho está vazio"
-        description="Escolha ingressos, hotéis, casas, seguro viagem ou chip — tudo vai para o mesmo carrinho."
+        description="Escolha ingressos, hotéis, casas, seguro viagem ou chip: tudo vai para o mesmo carrinho."
         action={<ButtonLink href={`/loja/${store.slug}`} variant="dark" size="lg">Começar a montar a viagem →</ButtonLink>}
       />
     </main>

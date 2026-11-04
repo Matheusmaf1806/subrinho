@@ -33,7 +33,7 @@ export function normalizeHotelPax(pax: Partial<PaxConfig>): PaxConfig {
   if (children > 0) out.childrenAges = ages.slice(0, children);
   for (const r of distributeRooms(out)) {
     if (r.adults + r.childAges.length > MAX_GUESTS_PER_ROOM)
-      throw new SupplierError(`Máximo de ${MAX_GUESTS_PER_ROOM} hóspedes por quarto — adicione mais quartos`);
+      throw new SupplierError(`Máximo de ${MAX_GUESTS_PER_ROOM} hóspedes por quarto, adicione mais quartos`);
   }
   return out;
 }

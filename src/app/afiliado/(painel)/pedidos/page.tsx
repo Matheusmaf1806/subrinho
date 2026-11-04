@@ -136,7 +136,7 @@ export default async function AfiliadoPedidosPage({ searchParams }: { searchPara
                     </Td>
                     <Td className="whitespace-nowrap text-muted">{dateTime(o.cartCreatedAt)}</Td>
                     <Td className="text-right tabular">{o.cartViews}</Td>
-                    <Td className="whitespace-nowrap">{o.paidAt ? dateTime(o.paidAt) : <span className="text-muted">—</span>}</Td>
+                    <Td className="whitespace-nowrap">{o.paidAt ? dateTime(o.paidAt) : <span className="text-muted">-</span>}</Td>
                     <Td className="font-semibold">{o.customerName}</Td>
                     <Td>
                       {o.payerName}
@@ -156,7 +156,7 @@ export default async function AfiliadoPedidosPage({ searchParams }: { searchPara
                           </div>
                         </>
                       ) : (
-                        <span className="text-muted">—</span>
+                        <span className="text-muted">-</span>
                       )}
                     </Td>
                   </Tr>

@@ -62,8 +62,8 @@ function guestsByRoom(pax: PaxConfig, travelers: PersonData[]) {
   let ai = 0;
   let ci = 0;
   return distributeRooms(pax).map((r) => ({
-    adults: Array.from({ length: r.adults }, () => adults[ai++]?.name ?? "—"),
-    children: r.childAges.map((age) => ({ name: kids[ci++]?.name ?? "—", age })),
+    adults: Array.from({ length: r.adults }, () => adults[ai++]?.name ?? "-"),
+    children: r.childAges.map((age) => ({ name: kids[ci++]?.name ?? "-", age })),
   }));
 }
 
@@ -153,16 +153,16 @@ export default async function VoucherPage({ params }: { params: Promise<{ slug: 
           <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">Reserva</h2>
           <dl>
             <Row label="Check-in">
-              {item.serviceDate ? date(item.serviceDate) : "—"}
+              {item.serviceDate ? date(item.serviceDate) : "-"}
               {d.checkinTime ? ` · a partir das ${d.checkinTime}` : ""}
             </Row>
             <Row label="Check-out">
-              {item.serviceEndDate ? date(item.serviceEndDate) : "—"}
+              {item.serviceEndDate ? date(item.serviceEndDate) : "-"}
               {d.checkoutTime ? ` · até ${d.checkoutTime}` : ""}
             </Row>
             {d.nights ? <Row label="Noites">{d.nights}</Row> : null}
-            {!house && <Row label="Quarto">{(d.rooms ?? []).join(" + ") || item.subtitle || "—"}</Row>}
-            {!house && <Row label="Regime">{d.board ?? "—"}</Row>}
+            {!house && <Row label="Quarto">{(d.rooms ?? []).join(" + ") || item.subtitle || "-"}</Row>}
+            {!house && <Row label="Regime">{d.board ?? "-"}</Row>}
             <Row label="Localizador do fornecedor">
               <span className="font-mono">{item.supplierBookingRef}</span>
               {p.goReference ? <span className="text-muted"> · {p.goReference}</span> : null}
@@ -185,7 +185,7 @@ export default async function VoucherPage({ params }: { params: Promise<{ slug: 
             {house ? (
               <Row label="Hóspedes">
                 {[item.pax.adults ? `${item.pax.adults} adulto${item.pax.adults > 1 ? "s" : ""}` : null, item.pax.children ? `${item.pax.children} criança${item.pax.children > 1 ? "s" : ""}` : null].filter(Boolean).join(" e ")}
-                {(order.travelers ?? []).length > 1 ? ` — ${(order.travelers ?? []).map((t) => t.name).filter(Boolean).join(", ")}` : ""}
+                {(order.travelers ?? []).length > 1 ? `, ${(order.travelers ?? []).map((t) => t.name).filter(Boolean).join(", ")}` : ""}
               </Row>
             ) : null}
             {!house && rooms.map((r, i) => (
@@ -234,7 +234,7 @@ export default async function VoucherPage({ params }: { params: Promise<{ slug: 
         <footer className="mt-8 space-y-2 border-t border-line pt-5 text-[12px] text-muted">
           {p.payableThrough && (
             <p className="text-ink/80">
-              Payable through {p.payableThrough}, acting as agent for the service operating company, details of which can be provided upon request. VAT: {p.supplierVatNumber ?? "—"} Reference:{" "}
+              Payable through {p.payableThrough}, acting as agent for the service operating company, details of which can be provided upon request. VAT: {p.supplierVatNumber ?? "-"} Reference:{" "}
               {item.supplierBookingRef}
             </p>
           )}

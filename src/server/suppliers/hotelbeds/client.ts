@@ -184,7 +184,7 @@ export class HotelbedsClient {
       const err = e as NodeJS.ErrnoException;
       const certProblem = /certificate|handshake|alert|ssl|tls/i.test(`${err.code ?? ""} ${err.message}`);
       throw new SupplierIntegrationError(
-        certProblem ? `Hotelbeds ${label}: falha no mTLS (${err.code ?? err.message}) — confira HB_HOTEIS_CLIENT_CRT/KEY/CA_CHAIN e o ambiente` : `Hotelbeds ${label}: falha de conexão (${err.code ?? err.message})`,
+        certProblem ? `Hotelbeds ${label}: falha no mTLS (${err.code ?? err.message}), confira HB_HOTEIS_CLIENT_CRT/KEY/CA_CHAIN e o ambiente` : `Hotelbeds ${label}: falha de conexão (${err.code ?? err.message})`,
         { label, code: err.code, timeout: err.code === "ETIMEDOUT" },
       );
     }
@@ -197,7 +197,7 @@ export class HotelbedsClient {
     const apiErr = (data as { error?: { code?: string; message?: string } } | null)?.error;
     if (res.status >= 400 || apiErr) {
       if (res.status === 401 || res.status === 403) {
-        throw new HotelbedsApiError(res.status, apiErr?.code ?? "", apiErr?.message ?? "acesso negado — confira Api-key/secret, o certificado e se o ambiente (test/produção) corresponde às credenciais", label);
+        throw new HotelbedsApiError(res.status, apiErr?.code ?? "", apiErr?.message ?? "acesso negado, confira Api-key/secret, o certificado e se o ambiente (test/produção) corresponde às credenciais", label);
       }
       throw new HotelbedsApiError(res.status, apiErr?.code ?? "", apiErr?.message ?? (res.body.slice(0, 200) || "erro sem descrição"), label);
     }

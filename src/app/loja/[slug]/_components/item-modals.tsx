@@ -112,20 +112,20 @@ export function MarginModal({ item, action, maxPct }: { item: ItemVM; action: (p
             <div className="space-y-1.5 rounded-2xl bg-ink px-5 py-4 text-sm text-white [&_.text-muted]:text-white/60">
               <div className="flex justify-between">
                 <span className="text-muted">Preço no Pix (antes de cupons)</span>
-                <strong className="tabular">{valid ? fmt(pix) : "—"}</strong>
+                <strong className="tabular">{valid ? fmt(pix) : "-"}</strong>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted">Parcelado (10x sem juros)</span>
-                <strong className="tabular">{valid ? fmt(installment) : "—"}</strong>
+                <strong className="tabular">{valid ? fmt(installment) : "-"}</strong>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted">Sua comissão</span>
-                <strong className="tabular text-emerald-300">{valid ? fmt(commission) : "—"}</strong>
+                <strong className="tabular text-emerald-300">{valid ? fmt(commission) : "-"}</strong>
               </div>
             </div>
             {minPix !== null && (
               <p className="text-xs text-muted">
-                Este hotel tem preço mínimo de venda de <strong className="text-ink">{fmt(minPix)}</strong> (regra do fornecedor) — o preço não fica abaixo disso.
+                Este hotel tem preço mínimo de venda de <strong className="text-ink">{fmt(minPix)}</strong> (regra do fornecedor). O preço não fica abaixo disso.
               </p>
             )}
             <SubmitButton variant="accent" className="w-full" disabled={!valid}>

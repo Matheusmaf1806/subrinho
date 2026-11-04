@@ -152,7 +152,7 @@ export function PaymentFields({
               ))}
             </Select>
           </label>
-          {simulated && <p className="text-xs text-muted sm:col-span-4">Ambiente de testes: qualquer cartão é aprovado, exceto final 0002 (recusado). Pagamento simulado — nenhuma reserva é feita.</p>}
+          {simulated && <p className="text-xs text-muted sm:col-span-4">Ambiente de testes: qualquer cartão é aprovado, exceto final 0002 (recusado). Pagamento simulado: nenhuma reserva é feita.</p>}
         </div>
       )}
     </div>

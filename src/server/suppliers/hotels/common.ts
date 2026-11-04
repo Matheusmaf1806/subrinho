@@ -66,11 +66,12 @@ export function htmlToText(html: string | null | undefined): string {
     .filter((l, i, arr) => l || (i > 0 && arr[i - 1]))
     .join("\n")
     .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ \t]*—[ \t]*/g, " - ")
     .trim();
 }
 
 export function decodeEntities(s: string): string {
-  const named: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", ndash: "–", mdash: "—", hellip: "…", rsquo: "’", lsquo: "‘", ldquo: "“", rdquo: "”", deg: "°", eacute: "é", aacute: "á", oacute: "ó", iacute: "í", uacute: "ú", ccedil: "ç", atilde: "ã", otilde: "õ", ecirc: "ê", acirc: "â", ocirc: "ô" };
+  const named: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", ndash: "–", mdash: "-", hellip: "…", rsquo: "’", lsquo: "‘", ldquo: "“", rdquo: "”", deg: "°", eacute: "é", aacute: "á", oacute: "ó", iacute: "í", uacute: "ú", ccedil: "ç", atilde: "ã", otilde: "õ", ecirc: "ê", acirc: "â", ocirc: "ô" };
   return s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e: string) => {
     if (e[0] === "#") {
       const code = e[1].toLowerCase() === "x" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);

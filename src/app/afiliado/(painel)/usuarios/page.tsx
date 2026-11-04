@@ -67,7 +67,7 @@ export default async function AfiliadoUsuariosPage() {
                       <Badge tone={u.active ? "success" : "danger"}>{u.active ? "Ativo" : "Desativado"}</Badge>
                     </Td>
                     <Td className="whitespace-nowrap text-muted">{date(u.createdAt)}</Td>
-                    <Td>{u.id === user.id ? <span className="text-xs text-muted">—</span> : <ToggleUserForm action={setUserActiveAction} userId={u.id} active={u.active} />}</Td>
+                    <Td>{u.id === user.id ? <span className="text-xs text-muted">-</span> : <ToggleUserForm action={setUserActiveAction} userId={u.id} active={u.active} />}</Td>
                   </Tr>
                 ))}
               </tbody>

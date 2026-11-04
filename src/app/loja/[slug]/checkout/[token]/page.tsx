@@ -78,7 +78,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ slug:
 
       <div className="grid gap-6 lg:grid-cols-[1fr_420px] xl:gap-10">
         <div className="space-y-4">
-          <Step n={1} title="Seus itens" subtitle="Ajuste as quantidades aqui mesmo — o preço é recalculado com o fornecedor.">
+          <Step n={1} title="Seus itens" subtitle="Ajuste as quantidades aqui mesmo: o preço é recalculado com o fornecedor.">
             <div className="space-y-3">
               {adminMode && <Alert tone="info">Modo ADMIN ativo: você pode alterar a margem da agência em cada item (somente neste carrinho, nunca abaixo de 0%).</Alert>}
               {items.map((item) => (
@@ -110,7 +110,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ slug:
                   <div className="rounded-2xl bg-surface p-4 text-[15px]">
                     <p className="font-semibold text-ink">{viewer.customer.name}</p>
                     <p className="text-[14px] text-muted">
-                      {viewer.customer.email} · {viewer.customer.phone ?? "sem telefone"} · CPF {viewer.customer.document ?? "—"}
+                      {viewer.customer.email} · {viewer.customer.phone ?? "sem telefone"} · CPF {viewer.customer.document ?? "-"}
                     </p>
                   </div>
                 ) : (

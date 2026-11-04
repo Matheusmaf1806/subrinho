@@ -657,7 +657,7 @@ export function createGgtAdapter(cfg: GgtConfig, opts: { fetch?: typeof fetch } 
     },
 
     async quote(req: QuoteRequest): Promise<Quote> {
-      if (!/^\d+$/.test(req.productId) || !req.optionId) throw new SupplierError("Quarto inválido — escolha novamente no hotel");
+      if (!/^\d+$/.test(req.productId) || !req.optionId) throw new SupplierError("Quarto inválido, escolha novamente no hotel");
       const pax = normalizeHotelPax(req.pax);
       const stay = validateStay(req.checkIn, req.checkOut);
       const { hotel, offers } = await freshOffers(req.productId, req.optionId, stay, pax);

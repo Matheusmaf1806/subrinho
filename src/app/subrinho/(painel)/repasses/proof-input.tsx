@@ -34,8 +34,8 @@ export function ProofInput({ required, id }: { required?: boolean; id: string })
           const bad = files.find((f) => !OK_EXT.test(f.name));
           const big = files.find((f) => f.size > MAX_FILE);
           if (bad) msg = `${bad.name}: envie PDF, PNG, JPG ou WEBP`;
-          else if (big) msg = `${big.name} tem ${mb(big.size)} — o máximo é 8 MB por arquivo`;
-          else if (total > MAX_TOTAL) msg = `Total de ${mb(total)} — envie no máximo 9,5 MB por vez (anexe em partes)`;
+          else if (big) msg = `${big.name} tem ${mb(big.size)}, o máximo é 8 MB por arquivo`;
+          else if (total > MAX_TOTAL) msg = `Total de ${mb(total)}, envie no máximo 9,5 MB por vez (anexe em partes)`;
           else if (files.length > 10) msg = "Envie no máximo 10 arquivos por vez";
           el.setCustomValidity(msg);
           setInfo(files.length ? { text: msg || `${files.length} arquivo(s) · ${mb(total)}`, error: !!msg } : null);

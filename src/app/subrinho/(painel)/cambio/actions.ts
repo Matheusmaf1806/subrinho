@@ -16,7 +16,7 @@ export async function recordManualFxAction(_prev: ActionState, fd: FormData): Pr
     const rate = requiredDecimal(fd, "rate", "Cotação");
     const n = Number(rate);
     if (!(n > 0)) throw new FormError("A cotação precisa ser maior que zero");
-    if (n > 100) throw new FormError("Cotação fora do esperado (acima de R$ 100) — confira o valor");
+    if (n > 100) throw new FormError("Cotação fora do esperado (acima de R$ 100), confira o valor");
     await recordFxRate(db, { currency, rate, source: "manual", createdBy: user.id });
     revalidatePath("/subrinho/cambio");
     revalidatePath("/subrinho");
@@ -34,7 +34,7 @@ export async function refreshFxAction(_prev: ActionState, _fd: FormData): Promis
       r = await db.transaction((tx) => refreshFxFromProvider(tx));
     } catch (e) {
       return {
-        error: `Não foi possível consultar o provedor de câmbio (${e instanceof Error ? e.message : "erro desconhecido"}). As cotações atuais foram mantidas — registre manualmente se necessário.`,
+        error: `Não foi possível consultar o provedor de câmbio (${e instanceof Error ? e.message : "erro desconhecido"}). As cotações atuais foram mantidas. Registre manualmente se necessário.`,
       };
     }
     if (r.provider === "manual")

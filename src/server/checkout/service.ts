@@ -323,7 +323,7 @@ export async function markOrderPaid(tx: Tx, orderId: string, p: { paidAt: Date; 
     .where(eq(orders.id, orderId))
     .returning();
   if (order.status === "CANCELLED")
-    await tx.insert(orderEvents).values({ orderId, type: "PAID_AFTER_CANCEL", data: { note: "Pagamento recebido após o pedido ter sido substituído — verificar estorno" } });
+    await tx.insert(orderEvents).values({ orderId, type: "PAID_AFTER_CANCEL", data: { note: "Pagamento recebido após o pedido ter sido substituído, verificar estorno" } });
 
   await tx.update(carts).set({ status: "CONVERTED", convertedOrderId: orderId, convertedAt: p.paidAt }).where(eq(carts.id, order.cartId));
 

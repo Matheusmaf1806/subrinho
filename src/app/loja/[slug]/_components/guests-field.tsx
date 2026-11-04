@@ -131,7 +131,7 @@ export function GuestsField({ rooms: r0 = 1, adults: a0 = 2, ages: ages0 = [], c
         <Stepper label="Adultos" hint="18 anos ou mais" value={adults} min={rooms} max={16} onChange={setAdults} />
         <Stepper label="Crianças" hint="0 a 17 anos" value={ages.length} min={0} max={8} onChange={setChildren} />
         <ChildAgesPicker ages={ages} onChange={setAges} error={error} />
-        {error && missing && <p className="mt-2 text-[13px] font-medium text-red-600">Informe a idade de cada criança — o preço do hotel depende dela.</p>}
+        {error && missing && <p className="mt-2 text-[13px] font-medium text-red-600">Informe a idade de cada criança: o preço do hotel depende dela.</p>}
         <button type="button" onClick={() => (missing ? setError(true) : setOpen(false))} className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-full bg-ink text-[15px] font-semibold text-white transition hover:bg-ink-2">
           Pronto
         </button>

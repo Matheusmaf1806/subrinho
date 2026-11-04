@@ -80,7 +80,7 @@ export default async function SubrinhoCouponsPage() {
                     <Td className="text-xs">
                       {c.categories.length === 0 ? "Todas" : c.categories.map((k) => CATEGORY_LABEL[k as keyof typeof CATEGORY_LABEL] ?? k).join(", ")}
                     </Td>
-                    <Td className="text-sm">{c.affiliateId ? (affName.get(c.affiliateId) ?? "—") : "Todas as lojas"}</Td>
+                    <Td className="text-sm">{c.affiliateId ? (affName.get(c.affiliateId) ?? "-") : "Todas as lojas"}</Td>
                     <Td className="whitespace-nowrap text-xs">
                       <div>{c.startsAt ? `de ${dateTime(c.startsAt)}` : "sem início"}</div>
                       <div>{c.endsAt ? `até ${dateTime(c.endsAt)}` : "sem fim"}</div>

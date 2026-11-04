@@ -125,7 +125,7 @@ export default async function LodgingPage({ params, searchParams }: { params: Pr
               {d.destino ? ` em “${d.destino}”` : ""} · {date(d.checkin)} a {date(d.checkout)} · {note}
               {pages > 1 ? ` · página ${page} de ${pages}` : ""}
             </p>
-            {failures.length > 0 && results.length > 0 && <Alert tone="info" className="mb-8">Um dos fornecedores não respondeu agora — mostrando as ofertas dos demais.</Alert>}
+            {failures.length > 0 && results.length > 0 && <Alert tone="info" className="mb-8">Um dos fornecedores não respondeu agora. Mostramos as ofertas dos demais.</Alert>}
             {results.length > 1 && (
               <div className="no-scrollbar -mx-4 mb-8 flex items-center gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
                 <span className="mr-1 shrink-0 text-[13px] font-semibold text-muted">Ordenar</span>

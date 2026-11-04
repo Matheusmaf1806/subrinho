@@ -8,7 +8,7 @@ export function OrderStatusBadge({ status }: { status: string }) {
 }
 
 export function PayoutStatusBadge({ status }: { status: string | null | undefined }) {
-  if (!status) return <span className="text-muted">—</span>;
+  if (!status) return <span className="text-muted">-</span>;
   return <Badge tone={statusTone(status)}>{PAYOUT_STATUS_LABEL[status] ?? status}</Badge>;
 }
 
@@ -23,7 +23,7 @@ export function JsonDetails({ label, value, className }: { label: ReactNode; val
     <details className={cn("group rounded-xl border border-line bg-surface/40", className)}>
       <summary className="cursor-pointer select-none px-3 py-2 text-xs font-semibold text-muted hover:text-ink">{label}</summary>
       <pre className="max-h-80 overflow-auto border-t border-line px-3 py-2 text-[11px] leading-relaxed text-ink">
-        {empty ? "—" : JSON.stringify(value, null, 2)}
+        {empty ? "-" : JSON.stringify(value, null, 2)}
       </pre>
     </details>
   );
@@ -36,7 +36,7 @@ export function InfoList({ items, className }: { items: { label: ReactNode; valu
       {items.map((i, idx) => (
         <div key={idx} className="min-w-0">
           <dt className="text-xs font-semibold uppercase tracking-wide text-muted">{i.label}</dt>
-          <dd className="mt-0.5 break-words font-semibold text-ink">{i.value ?? "—"}</dd>
+          <dd className="mt-0.5 break-words font-semibold text-ink">{i.value ?? "-"}</dd>
         </div>
       ))}
     </dl>
@@ -56,7 +56,7 @@ export function SectionTitle({ children, hint }: { children: ReactNode; hint?: R
 export function ReadOnlyNotice({ children }: { children?: ReactNode }) {
   return (
     <p className="rounded-xl border border-line bg-surface/60 px-3 py-2 text-xs font-semibold text-muted">
-      {children ?? "Somente leitura — seu perfil não permite alterar esta seção."}
+      {children ?? "Somente leitura. Seu perfil não permite alterar esta seção."}
     </p>
   );
 }

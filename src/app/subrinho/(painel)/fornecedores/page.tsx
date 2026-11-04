@@ -56,7 +56,7 @@ export default async function SubrinhoSuppliersPage() {
           <Card key={h.code}>
             <CardHeader
               title={h.name}
-              subtitle={h.live ? `API real · ambiente ${h.environment}` : h.configured ? "Credenciais configuradas — ative removendo SUPPLIERS_MODE=mock" : "Sem credenciais — fora da loja"}
+              subtitle={h.live ? `API real · ambiente ${h.environment}` : h.configured ? "Credenciais configuradas, ative removendo SUPPLIERS_MODE=mock" : "Sem credenciais, fora da loja"}
             />
             <CardBody className="space-y-3 text-sm">
               <div className="flex flex-wrap gap-2">
@@ -120,13 +120,13 @@ export default async function SubrinhoSuppliersPage() {
                   <div className="font-mono text-[11px] text-muted">{s.code}</div>
                   {s.notes && <div className="mt-0.5 max-w-xs text-xs text-muted">{s.notes}</div>}
                 </Td>
-                <Td className="whitespace-nowrap">{s.category ? CATEGORY_LABEL[s.category] : "—"}</Td>
+                <Td className="whitespace-nowrap">{s.category ? CATEGORY_LABEL[s.category] : "-"}</Td>
                 <Td>
-                  <Badge tone={s.currency === "BRL" ? "neutral" : "info"}>{s.currency ?? "—"}</Badge>
+                  <Badge tone={s.currency === "BRL" ? "neutral" : "info"}>{s.currency ?? "-"}</Badge>
                 </Td>
                 <Td>
                   {s.env.length === 0 ? (
-                    <span className="text-xs text-muted">—</span>
+                    <span className="text-xs text-muted">-</span>
                   ) : (
                     <ul className="space-y-1">
                       {s.env.map((e) => (
@@ -169,7 +169,7 @@ export default async function SubrinhoSuppliersPage() {
       </Card>
 
       <Card className="mt-6">
-        <CardHeader title="Em breve" subtitle="Categorias já previstas na plataforma — margens e cupons já podem ser configurados" />
+        <CardHeader title="Em breve" subtitle="Categorias já previstas na plataforma: margens e cupons já podem ser configurados" />
         <CardBody>
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {FUTURE_CATEGORIES.map((c) => (

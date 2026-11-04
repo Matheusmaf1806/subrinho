@@ -45,7 +45,7 @@ export default async function ChipPage({ params, searchParams }: { params: Promi
                   </span>
                   <Smartphone className="h-5 w-5 text-muted" />
                 </div>
-                <p className="mt-8 text-[3.25rem] font-semibold leading-none tracking-[-0.06em]">{p.title.split("— ")[1] ?? p.title}</p>
+                <p className="mt-8 text-[3.25rem] font-semibold leading-none tracking-[-0.06em]">{p.title.split(" · ")[1] ?? p.title}</p>
                 <p className="mt-2 text-[15px] text-muted">{p.subtitle}</p>
                 <div className="mt-6">
                   <PriceTag pix={p.price.pix} plan={p.price.plan} size="sm" note="por chip" />

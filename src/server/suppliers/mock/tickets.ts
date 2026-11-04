@@ -126,7 +126,7 @@ export const NADIO_CATALOG: TicketProduct[] = [
   {
     id: "disney-mk",
     image: "castle",
-    title: "Walt Disney World — Ingresso de 1 parque",
+    title: "Walt Disney World · Ingresso de 1 parque",
     subtitle: "Magic Kingdom, EPCOT, Hollywood Studios ou Animal Kingdom",
     destination: "Orlando",
     location: "Orlando, Flórida",
@@ -137,9 +137,9 @@ export const NADIO_CATALOG: TicketProduct[] = [
     childLabel: "Criança (3 a 9 anos)",
     duration: "1 dia",
     options: [
-      { id: "disney-1d", title: "1 dia — 1 parque", description: "Um parque por dia.", adult: 159, child: 154 },
-      { id: "disney-4d", title: "4 dias — 1 parque por dia", description: "Quatro dias consecutivos.", adult: 529, child: 509 },
-      { id: "disney-4d-hopper", title: "4 dias — Park Hopper", description: "Visite mais de um parque no mesmo dia.", adult: 649, child: 629 },
+      { id: "disney-1d", title: "1 dia · 1 parque", description: "Um parque por dia.", adult: 159, child: 154 },
+      { id: "disney-4d", title: "4 dias · 1 parque por dia", description: "Quatro dias consecutivos.", adult: 529, child: 509 },
+      { id: "disney-4d-hopper", title: "4 dias · Park Hopper", description: "Visite mais de um parque no mesmo dia.", adult: 649, child: 629 },
     ],
   },
   {
@@ -156,14 +156,14 @@ export const NADIO_CATALOG: TicketProduct[] = [
     childLabel: "Criança (3 a 9 anos)",
     duration: "1 dia",
     options: [
-      { id: "universal-1p", title: "1 dia — 1 parque", description: "Um parque.", adult: 139, child: 134 },
-      { id: "universal-p2p", title: "1 dia — Park-to-Park", description: "Universal Studios + Islands of Adventure.", adult: 199, child: 194 },
+      { id: "universal-1p", title: "1 dia · 1 parque", description: "Um parque.", adult: 139, child: 134 },
+      { id: "universal-p2p", title: "1 dia · Park-to-Park", description: "Universal Studios + Islands of Adventure.", adult: 199, child: 194 },
     ],
   },
   {
     id: "empire-state",
     image: "nycSkyline",
-    title: "Empire State Building — Observatório",
+    title: "Empire State Building · Observatório",
     subtitle: "86º andar",
     destination: "Nova York",
     location: "Nova York, EUA",

@@ -61,14 +61,14 @@ export default async function SubrinhoFxPage() {
           return (
             <Card key={c} className="p-5">
               <p className="text-sm font-semibold text-muted">{CURRENCY_LABEL[c]} → BRL</p>
-              <p className="mt-2 text-4xl font-semibold tabular text-ink">{r ? `R$ ${fxRate(r.rate)}` : "—"}</p>
+              <p className="mt-2 text-4xl font-semibold tabular text-ink">{r ? `R$ ${fxRate(r.rate)}` : "-"}</p>
               <p className="mt-1 text-xs text-muted">
                 {r ? (
                   <>
                     Fonte <strong className="text-ink">{r.source}</strong> · {dateTime(r.fetchedAt)}
                   </>
                 ) : (
-                  "Sem cotação — itens nesta moeda não podem ser vendidos"
+                  "Sem cotação: itens nesta moeda não podem ser vendidos"
                 )}
               </p>
             </Card>
@@ -136,12 +136,12 @@ export default async function SubrinhoFxPage() {
                       <Td className="font-semibold">{h.currency}</Td>
                       <Td className="text-right font-semibold tabular">{fxRate(h.rate)}</Td>
                       <Td className={`text-right text-xs font-semibold tabular ${delta === null ? "text-muted" : delta > 0 ? "text-red-700" : delta < 0 ? "text-emerald-700" : "text-muted"}`}>
-                        {delta === null ? "—" : `${delta > 0 ? "+" : ""}${delta.toFixed(2).replace(".", ",")}%`}
+                        {delta === null ? "-" : `${delta > 0 ? "+" : ""}${delta.toFixed(2).replace(".", ",")}%`}
                       </Td>
                       <Td>
                         <Badge tone={h.source === "manual" ? "neutral" : "info"}>{h.source}</Badge>
                       </Td>
-                      <Td className="text-sm">{h.createdBy ? (creatorName.get(h.createdBy) ?? "—") : h.source === "manual" ? "—" : "Automático"}</Td>
+                      <Td className="text-sm">{h.createdBy ? (creatorName.get(h.createdBy) ?? "-") : h.source === "manual" ? "-" : "Automático"}</Td>
                     </Tr>
                   );
                 })}

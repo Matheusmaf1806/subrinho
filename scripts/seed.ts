@@ -115,9 +115,9 @@ await updateBranding(db, ana.id, {
 await updateBranding(db, rota.id, {
   brandColor: "#0F766E", darkColor: "#0B2B26", fontFamily: "manrope",
   logoUrl: null, logoOnDarkUrl: null, faviconUrl: null,
-  heroTitle: "O mundo\ncomeça aqui.", heroSubtitle: "Pacotes, hotéis e ingressos com o cuidado da Rota Brasil — atendimento de segunda a sábado.",
+  heroTitle: "O mundo\ncomeça aqui.", heroSubtitle: "Pacotes, hotéis e ingressos com o cuidado da Rota Brasil, atendimento de segunda a sábado.",
   heroImageUrl: photo("travelerHiker", 1200, 1500), heroImage2Url: photo("lisbon", 900, 1000),
-  tagline: "Rota Brasil Turismo — viajando com você desde 2009.", instagram: "rotabrasil", showPoweredBy: true,
+  tagline: "Rota Brasil Turismo, viajando com você desde 2009.", instagram: "rotabrasil", showPoweredBy: true,
 });
 const solemar = await createAffiliate(
   db,
@@ -129,7 +129,7 @@ await updateBranding(db, solemar.id, {
   logoUrl: await publicAsset("scripts/seed-assets/sol-e-mar-logo.png", "sol-e-mar-logo.png"),
   logoOnDarkUrl: await publicAsset("scripts/seed-assets/sol-e-mar-logo-dark.png", "sol-e-mar-logo-dark.png"),
   faviconUrl: null,
-  heroTitle: "O verão\nnunca acaba.", heroSubtitle: "Resorts, casas com piscina e ingressos para curtir o ano inteiro — no Pix ou em 10x.",
+  heroTitle: "O verão\nnunca acaba.", heroSubtitle: "Resorts, casas com piscina e ingressos para curtir o ano inteiro, no Pix ou em 10x.",
   heroImageUrl: photo("infinityPool", 1200, 1500), heroImage2Url: photo("tropicalResort", 900, 1000),
   tagline: "Praia, sol e viagens sem preocupação.", instagram: "solemarviagens", showPoweredBy: false,
 });

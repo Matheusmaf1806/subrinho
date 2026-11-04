@@ -85,7 +85,7 @@ export function createInsuranceMock(cfg: { code: string; name: string; currency:
       const pax: PaxConfig = { adults: params.pax?.adults ?? 1, children: 0, seniors: params.pax?.seniors ?? 0 };
       const option: OfferOption = {
         optionId: region,
-        title: `${p.name} — ${region}`,
+        title: `${p.name} · ${region}`,
         currency: cfg.currency,
         lines: lines(p, days, pax),
         attributes: [
@@ -161,7 +161,7 @@ export function createEsimMock(cfg: { code: string; name: string; currency: Curr
     supplierName: cfg.name,
     category: "CHIP",
     productId: p.id,
-    title: `eSIM ${p.region} — ${p.data}`,
+    title: `eSIM ${p.region} · ${p.data}`,
     subtitle: `${p.days} dias · ${p.countries.join(", ")}`,
     location: p.region,
     destination: p.region,
@@ -200,7 +200,7 @@ export function createEsimMock(cfg: { code: string; name: string; currency: Curr
         category: "CHIP",
         productId: p.id,
         optionId: p.id,
-        title: `eSIM ${p.region} — ${p.data}`,
+        title: `eSIM ${p.region} · ${p.data}`,
         subtitle: `${p.days} dias · ${units} chip(s)`,
         location: p.region,
         imageUrl: photo("phone", 900),

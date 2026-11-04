@@ -104,7 +104,7 @@ describe("PayPal — cliente HTTP", () => {
 
   it("credenciais recusadas: mensagem diz o que conferir", async () => {
     const c = new PaypalClient(cfg, async () => ({ status: 401, body: JSON.stringify({ error: "invalid_client", error_description: "Client Authentication failed" }) }));
-    await expect(c.accessToken()).rejects.toThrow(/Client Authentication failed — confira PAYPAL_CLIENT_ID\/PAYPAL_CLIENT_SECRET/);
+    await expect(c.accessToken()).rejects.toThrow(/Client Authentication failed, confira PAYPAL_CLIENT_ID\/PAYPAL_CLIENT_SECRET/);
   });
 
   it("webhook: sem PAYPAL_WEBHOOK_ID não confere assinatura; com ele, pergunta ao PayPal", async () => {

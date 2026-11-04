@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const brand = storeBrand(store);
   return {
     title: { default: store.name, template: `%s · ${store.name}` },
-    description: `${store.name} — ${brand.tagline}`,
+    description: `${store.name} · ${brand.tagline}`,
     icons: { icon: brand.favicon, apple: brand.favicon },
     openGraph: { title: store.name, description: brand.tagline, images: [brand.heroImage] },
   };

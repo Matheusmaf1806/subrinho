@@ -179,7 +179,7 @@ export default async function HotelDetail({
                   Ver {p.options.length} opç{p.options.length > 1 ? "ões" : "ão"} a partir de {fromNote}
                 </a>
               ) : (
-                <p className="text-[14px] text-muted">Sem quartos para estas datas — altere a busca abaixo.</p>
+                <p className="text-[14px] text-muted">Sem quartos para estas datas. Altere a busca abaixo.</p>
               )
             }
           />

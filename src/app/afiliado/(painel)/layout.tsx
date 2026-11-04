@@ -41,7 +41,7 @@ export default async function PainelAfiliadoLayout({ children }: { children: Rea
     <div style={themeStyle(affiliate)} className="font-sans">
     <PanelShell
       brand={
-        <Link href="/afiliado" aria-label={`${affiliate.name} — início`} className="flex min-w-0 items-center gap-3">
+        <Link href="/afiliado" aria-label={`${affiliate.name}, início`} className="flex min-w-0 items-center gap-3">
           {affiliate.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={affiliate.logoUrl} alt={affiliate.name} className="h-9 w-auto max-w-[170px] object-contain" />

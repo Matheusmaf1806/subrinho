@@ -261,7 +261,7 @@ export function minSellPriceFor(o: Pick<HbOption, "rates" | "currency">): { curr
 }
 
 const PROMO_PT: [RegExp, string][] = [
-  [/non-?refundable/i, "Tarifa não reembolsável — não permite alterações"],
+  [/non-?refundable/i, "Tarifa não reembolsável, não permite alterações"],
   [/early booking/i, "Desconto de compra antecipada"],
   [/long stay/i, "Desconto de estadia longa"],
   [/last minute/i, "Oferta de última hora"],
@@ -627,7 +627,7 @@ export function createHotelbedsAdapter(cfg: HotelbedsConfig, opts: { transport?:
     },
 
     async quote(req: QuoteRequest): Promise<Quote> {
-      if (!/^\d+$/.test(req.productId) || !req.optionId) throw new SupplierError("Quarto inválido — escolha novamente no hotel");
+      if (!/^\d+$/.test(req.productId) || !req.optionId) throw new SupplierError("Quarto inválido, escolha novamente no hotel");
       const pax = normalizeHotelPax(req.pax);
       const groups = occupancyGroups(pax);
       const stay = validateStay(req.checkIn, req.checkOut);
@@ -731,7 +731,7 @@ export function createHotelbedsAdapter(cfg: HotelbedsConfig, opts: { transport?:
         rateKeys = fin.option.rates.map((r) => r.rateKey);
         expected = fin.option.total;
       }
-      if (paymentDataRequired) throw new SupplierError("Esta tarifa exige pagamento com cartão diretamente na Hotelbeds — emita pelo extranet da Hotelbeds");
+      if (paymentDataRequired) throw new SupplierError("Esta tarifa exige pagamento com cartão diretamente na Hotelbeds, emita pelo extranet da Hotelbeds");
 
       const holderName = splitName(ctx.holder?.name || ctx.travelers.find((t) => t.type !== "CHILD")?.name || "");
       const body = {

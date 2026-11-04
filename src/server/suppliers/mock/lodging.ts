@@ -244,7 +244,7 @@ export function createHotelsMock(cfg: { code: string; name: string; currency: Cu
           }
           options.push({
             optionId: `${room.id}-${board.id}`,
-            title: `${room.name} — ${board.name}`,
+            title: `${room.name} · ${board.name}`,
             description: `${room.beds} · até ${room.maxGuests} pessoas`,
             room: { photos: [photo(hash(room.id) % 2 ? "hotelRoomWarm" : "hotelRoomModern", 1200)], amenities: [room.beds, "Ar-condicionado", "TV de tela plana", "Wi-Fi grátis", "Cofre", "Secador de cabelo"], maxPax: room.maxGuests },
             currency: cfg.currency,
@@ -331,7 +331,7 @@ export const HOUSES_MVH: House[] = [
   {
     id: "windsor-hills-5",
     image: "villaPool",
-    name: "Casa 5 quartos com piscina — Windsor Hills",
+    name: "Casa 5 quartos com piscina · Windsor Hills",
     destination: "Orlando",
     location: "Windsor Hills, Kissimmee",
     bedrooms: 5,
@@ -347,7 +347,7 @@ export const HOUSES_MVH: House[] = [
   {
     id: "solterra-7",
     image: "modernHouse",
-    name: "Casa 7 quartos — Solterra Resort",
+    name: "Casa 7 quartos · Solterra Resort",
     destination: "Orlando",
     location: "Solterra Resort, Davenport",
     bedrooms: 7,
@@ -366,7 +366,7 @@ export const HOUSES_MAPRO: House[] = [
   {
     id: "storey-lake-4",
     image: "whiteHouse",
-    name: "Townhouse 4 quartos — Storey Lake",
+    name: "Townhouse 4 quartos · Storey Lake",
     destination: "Orlando",
     location: "Storey Lake, Kissimmee",
     bedrooms: 4,
@@ -382,7 +382,7 @@ export const HOUSES_MAPRO: House[] = [
   {
     id: "champions-gate-6",
     image: "housePool",
-    name: "Casa 6 quartos — ChampionsGate",
+    name: "Casa 6 quartos · ChampionsGate",
     destination: "Orlando",
     location: "ChampionsGate, Davenport",
     bedrooms: 6,

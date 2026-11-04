@@ -226,8 +226,8 @@ export function BrandingEditor({
         <fieldset disabled={readOnly} className="space-y-4">
           <Section icon={<ImagePlus />} title="Logo e ícone" hint="PNG, JPG ou WEBP. Sem logo, a loja usa as iniciais da agência na cor principal. Fotos grandes: envie uma de cada vez.">
             <div className="grid gap-6 lg:grid-cols-2">
-              <ImageField key={`logo-${fileKey}`} field="logoUrl" label="Logo (fundo claro)" hint="Topo da loja — até 1 MB" current={initial.logoUrl} onPreview={setLogo} disabled={readOnly} />
-              <ImageField key={`logoDark-${fileKey}`} field="logoOnDarkUrl" label="Logo (fundo escuro)" hint="Rodapé e painel — até 1 MB" current={initial.logoOnDarkUrl} onPreview={setLogoDark} disabled={readOnly} dark />
+              <ImageField key={`logo-${fileKey}`} field="logoUrl" label="Logo (fundo claro)" hint="Topo da loja · até 1 MB" current={initial.logoUrl} onPreview={setLogo} disabled={readOnly} />
+              <ImageField key={`logoDark-${fileKey}`} field="logoOnDarkUrl" label="Logo (fundo escuro)" hint="Rodapé e painel · até 1 MB" current={initial.logoOnDarkUrl} onPreview={setLogoDark} disabled={readOnly} dark />
               <ImageField key={`fav-${fileKey}`} field="faviconUrl" label="Ícone da aba (favicon)" hint="Quadrado, até 500 KB" current={initial.faviconUrl} onPreview={() => {}} disabled={readOnly} />
             </div>
           </Section>
@@ -270,10 +270,10 @@ export function BrandingEditor({
               </label>
               <label className="block">
                 <span className={lab}>Subtítulo (opcional)</span>
-                <textarea name="heroSubtitle" rows={2} value={heroSubtitle} onChange={(e) => setHeroSubtitle(e.target.value)} maxLength={220} placeholder="Opcional — descrição da loja no Google e no link compartilhado" className={cn(inputClass, "h-auto py-3")} />
+                <textarea name="heroSubtitle" rows={2} value={heroSubtitle} onChange={(e) => setHeroSubtitle(e.target.value)} maxLength={220} placeholder="Opcional: descrição da loja no Google e no link compartilhado" className={cn(inputClass, "h-auto py-3")} />
               </label>
               <div className="max-w-md">
-                <ImageField key={`h1-${fileKey}`} field="heroImageUrl" label="Foto da loja" hint="Vertical — até 3 MB · tela de entrar e link compartilhado" current={initial.heroImageUrl} presets={presets} preset={presetOf(initial.heroImageUrl)} onPreview={setHero1} disabled={readOnly} />
+                <ImageField key={`h1-${fileKey}`} field="heroImageUrl" label="Foto da loja" hint="Vertical · até 3 MB · tela de entrar e link compartilhado" current={initial.heroImageUrl} presets={presets} preset={presetOf(initial.heroImageUrl)} onPreview={setHero1} disabled={readOnly} />
               </div>
             </div>
           </Section>

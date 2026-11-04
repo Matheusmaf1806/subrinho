@@ -59,12 +59,12 @@ function parseBrMoney(raw: string): number {
 }
 const fmt = (v: string) => {
   const n = parseBrMoney(v);
-  return Number.isFinite(n) ? brlFmt.format(n) : "R$ —";
+  return Number.isFinite(n) ? brlFmt.format(n) : "R$ -";
 };
 
 function preview(v: CouponFormValues, labels: Record<string, string>) {
   let main: string;
-  if (v.discountType === "PERCENT") main = `${v.percentOff ? v.percentOff.replace(".", ",") : "—"}% de desconto`;
+  if (v.discountType === "PERCENT") main = `${v.percentOff ? v.percentOff.replace(".", ",") : "-"}% de desconto`;
   else if (v.discountType === "FIXED") main = `${fmt(v.amountOff)} de desconto`;
   else main = `${fmt(v.amountOff)} a cada ${fmt(v.stepAmount)} em compras`;
   const parts = [main];

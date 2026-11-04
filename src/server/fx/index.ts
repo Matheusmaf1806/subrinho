@@ -119,7 +119,7 @@ export async function ensureFreshFx(tx: Tx): Promise<void> {
         new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), REFRESH_TIMEOUT_MS)),
       ]);
     } catch (e) {
-      console.warn(`[câmbio] não foi possível atualizar via ${provider.name}: ${String(e)} — usando a última cotação gravada`);
+      console.warn(`[câmbio] não foi possível atualizar via ${provider.name}: ${String(e)}, usando a última cotação gravada`);
     } finally {
       inflight = null;
     }
