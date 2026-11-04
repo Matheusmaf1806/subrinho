@@ -10,6 +10,7 @@ import { parseSearch, supplierParams, toQuery } from "../../_components/search-p
 import { BookingPanel, ProductHero } from "../../_components/product-hero";
 import { TicketBooking } from "../../_components/ticket-booking";
 import { RelatedProducts } from "../../_components/related";
+import { CompleteTrip } from "../../_components/complete-trip";
 import { quickContext } from "../../_lib/quick";
 import { addToCartAction } from "../../actions";
 
@@ -33,6 +34,7 @@ export default async function TicketDetail({
   const { d, minDate } = parseSearch(await searchParams);
   const p = await getProductDetail(db, ctx, supplier, productId, supplierParams(d, "tickets"), { reveal }).catch(() => null);
   if (!p || p.category !== "TICKETS") notFound();
+  const quick = await quickContext(store, d, minDate);
 
   const adapter = getAdapter(supplier);
   const childRule = p.paxRules.find((r) => r.type === "CHILD");
@@ -71,6 +73,7 @@ export default async function TicketDetail({
           <TicketBooking
             action={addToCartAction.bind(null, slug)}
             productRef={productRef(supplier, productId)}
+            destination={p.destination || d.destino}
             options={options}
             childLabel={childRule?.label ?? "Criança"}
             defaultDate={d.data}
@@ -82,7 +85,7 @@ export default async function TicketDetail({
       </div>
       <div className="mt-16">
         <RelatedProducts
-          quick={await quickContext(store, d, minDate)}
+          quick={quick}
           ctx={ctx}
           reveal={reveal}
           category="TICKETS"
@@ -93,6 +96,9 @@ export default async function TicketDetail({
           title={`Mais experiências em ${p.destination || "destino"}`}
           note="adulto"
         />
+      </div>
+      <div className="mt-16">
+        <CompleteTrip slug={slug} from="ticket" destination={p.destination || d.destino} d={d} minDate={minDate} ctx={ctx} reveal={reveal} quick={quick} />
       </div>
     </main>
   );

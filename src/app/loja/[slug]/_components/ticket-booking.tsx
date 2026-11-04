@@ -4,7 +4,7 @@ import { DateInput } from "@/components/date-picker";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ActionForm, SubmitButton, type ActionState } from "@/components/ui-client";
-import { openCartDrawer } from "./cart-drawer";
+import { openCartDrawer } from "./cart-events";
 import { cn, Input } from "@/components/ui";
 import { PaxStepper } from "./pax-stepper";
 
@@ -27,6 +27,7 @@ const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", curren
 export function TicketBooking({
   action,
   productRef,
+  destination,
   options,
   childLabel,
   defaultDate,
@@ -37,6 +38,8 @@ export function TicketBooking({
   action: (prev: ActionState, fd: FormData) => Promise<ActionState>;
   /** Referência neutra do produto (sem o nome do fornecedor). */
   productRef: string;
+  /** Cidade do ingresso: o carrinho usa para sugerir hotéis no mesmo destino. */
+  destination?: string;
   options: Opt[];
   childLabel: string;
   defaultDate: string;
@@ -55,6 +58,7 @@ export function TicketBooking({
   return (
     <ActionForm action={action} className="space-y-4" onSuccess={() => openCartDrawer({ added: true })}>
       <input type="hidden" name="ref" value={productRef} />
+      {destination && <input type="hidden" name="destino" value={destination} />}
       <div>
         <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Data da visita</span>
         <DateInput

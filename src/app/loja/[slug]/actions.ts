@@ -36,6 +36,7 @@ import { isValidCpfOrCnpj, onlyDigits } from "@/lib/br";
 import { date, paxSummary } from "@/lib/format";
 import { loadCartView } from "@/server/cart/service";
 import { storeInsight } from "./_lib/insight";
+import { crossSellFor, type CrossSell } from "./_lib/cross-sell";
 import { toItemVMs, totalsVM } from "./_components/cart-vm";
 import { categoryLabel } from "./_components/category";
 import { actorOf, currentCartToken, getStore, getStorePricing, safeNext, setCurrentCartToken, storePath, viewerFor } from "./_lib/store";
@@ -105,7 +106,7 @@ export async function addToCartAction(slug: string, _prev: ActionState, fd: Form
     });
     const cart = await db.transaction(async (tx) => {
       const c = await getOrCreateOpenCart(tx, store.id, await currentCartToken(store), actorOf(viewer));
-      await addQuoteToCart(tx, c, quote);
+      await addQuoteToCart(tx, c, quote, { destination: str(fd.get("destino")) });
       return c;
     });
     await setCurrentCartToken(store, cart.token);
@@ -545,6 +546,15 @@ export async function simulatePixPaymentAction(slug: string, orderId: string) {
 }
 
 // ───────────── Adicionar rápido (cards da vitrine) ─────────────
+
+/** Sugestões do carrinho ("Complete sua viagem"): o que combina com o item mais recente. */
+export async function crossSellAction(slug: string): Promise<CrossSell | null> {
+  const store = await getStore(slug);
+  return crossSellFor(store).catch((e) => {
+    console.error("[sugestões] falhou:", e instanceof Error ? e.message : e);
+    return null;
+  });
+}
 
 export type QuickInput = { date?: string; checkin?: string; checkout?: string; adults: number; children: number; ages?: number[]; rooms?: number };
 export type QuickOption = {

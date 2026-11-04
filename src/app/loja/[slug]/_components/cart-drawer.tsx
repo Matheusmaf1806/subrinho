@@ -11,15 +11,14 @@ import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { CalendarDays, CircleCheck, Loader2, ShoppingBag, Trash2, Users, X } from "lucide-react";
 import { cn } from "@/components/ui";
-import { miniCartAction, removeMiniCartItemAction, type MiniCart } from "../actions";
+import { crossSellAction, miniCartAction, removeMiniCartItemAction, type MiniCart } from "../actions";
+import type { CrossSell } from "../_lib/cross-sell";
+import { OPEN_CART_EVENT, openCartDrawer } from "./cart-events";
+import { CrossSellBlock, CrossSellSkeleton } from "./cross-sell";
 
-const EVENT = "store:open-cart";
 const fmt = (v: string | number) => Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-/** Abre o carrinho flutuante (ex.: depois de adicionar um item). */
-export function openCartDrawer(detail: { added?: boolean } = {}) {
-  window.dispatchEvent(new CustomEvent(EVENT, { detail }));
-}
+export { openCartDrawer };
 
 export function CartDrawer({
   slug,
@@ -40,6 +39,10 @@ export function CartDrawer({
   const [cart, setCart] = useState<MiniCart | null | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
+  // sugestões chegam depois dos itens (a busca no fornecedor pode levar uns segundos)
+  const [cross, setCross] = useState<CrossSell | null>(null);
+  const [crossLoading, setCrossLoading] = useState(false);
+  const crossSeq = useRef(0);
   const [, start] = useTransition();
   const closeRef = useRef<HTMLButtonElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -48,7 +51,21 @@ export function CartDrawer({
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  const loadCross = useCallback(async () => {
+    const seq = ++crossSeq.current;
+    setCrossLoading(true);
+    try {
+      const x = await crossSellAction(slug);
+      if (seq === crossSeq.current) setCross(x);
+    } catch {
+      if (seq === crossSeq.current) setCross(null);
+    } finally {
+      if (seq === crossSeq.current) setCrossLoading(false);
+    }
+  }, [slug]);
+
   const load = useCallback(async () => {
+    void loadCross();
     setLoading(true);
     try {
       setCart(await miniCartAction(slug));
@@ -57,11 +74,13 @@ export function CartDrawer({
     } finally {
       setLoading(false);
     }
-  }, [slug]);
+  }, [slug, loadCross]);
 
   const show = useCallback(
     (justAdded = false) => {
       setAdded(justAdded);
+      // item novo muda o que sugerir: não mostra as sugestões antigas enquanto carrega
+      if (justAdded) setCross(null);
       setOpen(true);
       void load();
     },
@@ -70,14 +89,15 @@ export function CartDrawer({
 
   useEffect(() => {
     const onOpen = (e: Event) => show(!!(e as CustomEvent<{ added?: boolean }>).detail?.added);
-    window.addEventListener(EVENT, onOpen);
-    return () => window.removeEventListener(EVENT, onOpen);
+    window.addEventListener(OPEN_CART_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_CART_EVENT, onOpen);
   }, [show]);
 
   // Esc fecha, a página atrás não rola, o foco vai para a gaveta e volta ao botão ao fechar
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    // com o "Adicionar" aberto por cima, o Esc fecha só ele
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && !document.querySelector("[data-quick-dialog]") && setOpen(false);
     document.addEventListener("keydown", onKey);
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -95,6 +115,7 @@ export function CartDrawer({
     try {
       setCart(await removeMiniCartItemAction(slug, id));
       setAdded(false);
+      void loadCross();
       start(() => router.refresh());
     } finally {
       setRemoving(null);
@@ -230,6 +251,7 @@ export function CartDrawer({
                 ))}
               </ul>
             )}
+            {cart && items.length > 0 && (cross ? <CrossSellBlock slug={slug} data={cross} pixAvailable={pixAvailable} onNavigate={() => setOpen(false)} /> : crossLoading ? <CrossSellSkeleton /> : null)}
           </div>
 
           {cart && items.length > 0 && (

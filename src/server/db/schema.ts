@@ -367,6 +367,8 @@ export const cartItems = pgTable(
     subtitle: text("subtitle"),
     imageUrl: text("image_url"),
     location: text("location"),
+    /** Cidade/destino da vitrine (ex.: "Paris"): usado para sugerir o que combina com a viagem. */
+    destination: text("destination"),
     serviceDate: date("service_date"),
     serviceEndDate: date("service_end_date"),
     /** Momento a partir do qual o item não pode mais ser vendido. */

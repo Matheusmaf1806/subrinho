@@ -1,6 +1,6 @@
 /**
  * "Você também pode gostar": produtos parecidos do mesmo destino (preço e estrelas mais próximos do
- * atual). Carrega em paralelo (Suspense): a página do produto aparece antes, sem esperar a busca.
+ * atual). Com `order="best"`, outra categoria no mesmo destino ("Complete sua viagem"). Carrega em paralelo (Suspense): a página do produto aparece antes, sem esperar a busca.
  * Respeita o que o visitante pode ver (fornecedor / comissão) via `reveal`.
  */
 import { Suspense } from "react";
@@ -10,6 +10,7 @@ import type { PricingContext } from "@/server/pricing/cart-pricing";
 import type { Category } from "@/server/db/schema";
 import type { SearchParams } from "@/server/suppliers/types";
 import { productRef } from "@/server/suppliers/refs";
+import { rankCrossSell } from "../_lib/cross-sell";
 import { ProductCard } from "./product-card";
 import type { QuickCtx } from "./quick-add";
 
@@ -26,29 +27,33 @@ type Props = {
   note?: string;
   nights?: number;
   quick?: QuickCtx;
+  /** Texto pequeno acima do título. */
+  eyebrow?: string;
+  /** "similar": mais parecidos com o atual (padrão); "best": de outra categoria, os mais indicados. */
+  order?: "similar" | "best";
 };
 
 export function RelatedProducts(props: Props) {
   return (
-    <Suspense fallback={<RelatedSkeleton title={props.title} />}>
+    <Suspense fallback={<RelatedSkeleton title={props.title} eyebrow={props.eyebrow} />}>
       <RelatedList {...props} />
     </Suspense>
   );
 }
 
-function Shell({ title, children }: { title: string; children: React.ReactNode }) {
+function Shell({ title, eyebrow = "Você também pode gostar", children }: { title: string; eyebrow?: string; children: React.ReactNode }) {
   return (
     <section className="border-t border-line pt-12">
-      <p className="mb-2 text-[12px] font-semibold uppercase tracking-[0.16em] text-accent-ink">Você também pode gostar</p>
+      <p className="mb-2 text-[12px] font-semibold uppercase tracking-[0.16em] text-accent-ink">{eyebrow}</p>
       <h2 className="mb-6 text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-none tracking-[-0.045em] text-ink">{title}</h2>
       {children}
     </section>
   );
 }
 
-function RelatedSkeleton({ title }: { title: string }) {
+function RelatedSkeleton({ title, eyebrow }: { title: string; eyebrow?: string }) {
   return (
-    <Shell title={title}>
+    <Shell title={title} eyebrow={eyebrow}>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-hidden>
         {[0, 1, 2, 3].map((i) => (
           <div key={i} className={i > 1 ? "hidden lg:block" : ""}>
@@ -62,7 +67,7 @@ function RelatedSkeleton({ title }: { title: string }) {
   );
 }
 
-async function RelatedList({ ctx, reveal, category, params, current, hrefBase, query, title, note, nights, quick }: Props) {
+async function RelatedList({ ctx, reveal, category, params, current, hrefBase, query, title, note, nights, quick, eyebrow, order = "similar" }: Props) {
   if (!params.destination) return null;
   const list = await searchCatalog(db, ctx, category, params, { reveal }).catch(() => []);
   const others = list.filter((x) => !(x.supplierCode === current.supplierCode && x.productId === current.productId) && !(current.groupKey && x.groupKey === current.groupKey));
@@ -70,9 +75,12 @@ async function RelatedList({ ctx, reveal, category, params, current, hrefBase, q
   // mais parecido primeiro: diferença de preço (escala log) e de estrelas
   const score = (x: (typeof others)[number]) =>
     (current.pix ? Math.abs(Math.log(Number(x.price.pix.toString()) / current.pix)) : 0) + (current.stars && x.stars ? Math.abs(x.stars - current.stars) * 0.35 : 0);
-  const top = [...others].sort((a, b) => score(a) - score(b)).slice(0, 4);
+  const top =
+    order === "best" && (category === "TICKETS" || category === "LODGING" || category === "HOUSES")
+      ? rankCrossSell(others, category, 4)
+      : [...others].sort((a, b) => score(a) - score(b)).slice(0, 4);
   return (
-    <Shell title={title}>
+    <Shell title={title} eyebrow={eyebrow}>
       <div className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
         {top.map((p) => (
           <ProductCard key={`${p.supplierCode}-${p.productId}`} p={p} href={`${hrefBase}/${productRef(p.supplierCode, p.productId)}${query ? `?${query}` : ""}`} note={note} nights={nights} quick={quick} />

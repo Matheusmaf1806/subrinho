@@ -77,7 +77,14 @@ function assertOpen(cart: Cart) {
   if (cart.status !== "OPEN") throw new CartError("Este carrinho já foi pago e não pode mais ser alterado");
 }
 
-export async function addQuoteToCart(tx: Tx, cart: Cart, q: Quote): Promise<CartItem> {
+/** Texto livre vindo do formulário: só letras, espaços e pontuação simples, no máximo 80 caracteres. */
+export function cleanDestination(v: string | null | undefined): string | null {
+  const t = (v ?? "").replace(/[^\p{L}\p{N} ,.'()-]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 80);
+  return t || null;
+}
+
+/** `destination`: a cidade da vitrine (ex.: "Paris"), só para sugerir o que combina com a viagem. */
+export async function addQuoteToCart(tx: Tx, cart: Cart, q: Quote, extra: { destination?: string | null } = {}): Promise<CartItem> {
   assertOpen(cart);
   if (q.expiresAt && q.expiresAt <= new Date()) throw new CartError("A data deste serviço já passou");
   // tarifa zerada no fornecedor (produto sem preço para a data): não entra no carrinho
@@ -95,6 +102,7 @@ export async function addQuoteToCart(tx: Tx, cart: Cart, q: Quote): Promise<Cart
       subtitle: noEmDash(q.subtitle),
       imageUrl: q.imageUrl,
       location: q.location,
+      destination: cleanDestination(extra.destination),
       serviceDate: q.serviceDate,
       serviceEndDate: q.serviceEndDate,
       expiresAt: q.expiresAt,

@@ -13,6 +13,7 @@ import { getStore, getStorePricing } from "../../_lib/store";
 import { storeInsight } from "../../_lib/insight";
 import { SupplierTag } from "../../_components/reveal";
 import { RelatedProducts } from "../../_components/related";
+import { CompleteTrip } from "../../_components/complete-trip";
 import { quickContext } from "../../_lib/quick";
 import { lodgingQuery, parseSearch, supplierParams } from "../../_components/search-params";
 import { LodgingSearch } from "../../_components/search-forms";
@@ -51,6 +52,7 @@ export default async function HotelDetail({
     return null;
   });
   if (!p || p.category !== "LODGING") notFound();
+  const quick = await quickContext(store, d, minDate);
   const nights = daysBetween(d.checkin, d.checkout);
   const add = addToCartAction.bind(null, slug);
   const base = `/loja/${slug}/hospedagem`;
@@ -288,6 +290,7 @@ export default async function HotelDetail({
                               adults: Math.max(1, d.adultos),
                               children: d.criancas,
                               childrenAges: ages.join(","),
+                              destino: p.destination || d.destino,
                             }}
                           />
                         )}
@@ -325,8 +328,11 @@ export default async function HotelDetail({
       </div>
 
       <div className="mt-16">
+        <CompleteTrip slug={slug} from="stay" destination={p.destination || d.destino} d={d} minDate={minDate} ctx={ctx} reveal={reveal} quick={quick} />
+      </div>
+      <div className="mt-16">
         <RelatedProducts
-          quick={await quickContext(store, d, minDate)}
+          quick={quick}
           ctx={ctx}
           reveal={reveal}
           category="LODGING"

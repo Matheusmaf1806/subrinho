@@ -4,7 +4,7 @@ import { useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
 import { ActionForm, SubmitButton, type ActionState } from "@/components/ui-client";
-import { openCartDrawer } from "./cart-drawer";
+import { openCartDrawer } from "./cart-events";
 
 /** Recarrega preços e disponibilidade da página (sem perder a busca). */
 function RefreshOptions() {

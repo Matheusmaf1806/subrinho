@@ -13,6 +13,7 @@ import { SupplierTag } from "../../_components/reveal";
 import { parseSearch, supplierParams, toQuery } from "../../_components/search-params";
 import { BookingPanel, ProductHero } from "../../_components/product-hero";
 import { RelatedProducts } from "../../_components/related";
+import { CompleteTrip } from "../../_components/complete-trip";
 import { quickContext } from "../../_lib/quick";
 import { AddToCartForm } from "../../_components/add-to-cart";
 import { PaxStepper } from "../../_components/pax-stepper";
@@ -44,6 +45,7 @@ export default async function HouseDetail({
     return null;
   });
   if (!p || p.category !== "HOUSES") notFound();
+  const quick = await quickContext(store, d, parsed.minDate);
   const o = p.options[0];
   const nights = daysBetween(d.checkin, d.checkout);
   const adultRule = p.paxRules.find((r) => r.type === "ADULT");
@@ -122,7 +124,7 @@ export default async function HouseDetail({
           )}
 
           {o && (available || tooMany) && (
-            <AddToCartForm action={addToCartAction.bind(null, slug)} label="Reservar casa" hidden={{ ref: productRef(supplier, productId), optionId: o.optionId, checkIn: d.checkin, checkOut: d.checkout }}>
+            <AddToCartForm action={addToCartAction.bind(null, slug)} label="Reservar casa" hidden={{ ref: productRef(supplier, productId), optionId: o.optionId, checkIn: d.checkin, checkOut: d.checkout, destino: p.destination || d.destino }}>
               <div className="rounded-2xl bg-surface px-4 py-1 [&_button]:bg-white">
                 <PaxStepper name="adults" label="Adultos" min={1} max={adultRule?.max ?? 12} defaultValue={Math.min(Math.max(1, d.adultos), adultRule?.max ?? 12)} />
                 <PaxStepper name="children" label="Crianças" hint={childRule?.hint} min={0} max={childRule?.max ?? 10} defaultValue={Math.min(d.criancas, childRule?.max ?? 10)} />
@@ -135,8 +137,11 @@ export default async function HouseDetail({
       </BookingPanel>
       </div>
       <div className="mt-16">
+        <CompleteTrip slug={slug} from="stay" destination={p.destination || d.destino} d={d} minDate={parsed.minDate} ctx={ctx} reveal={reveal} quick={quick} />
+      </div>
+      <div className="mt-16">
         <RelatedProducts
-          quick={await quickContext(store, d, parsed.minDate)}
+          quick={quick}
           ctx={ctx}
           reveal={reveal}
           category="HOUSES"

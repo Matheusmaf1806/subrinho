@@ -11,11 +11,11 @@ import { BadgeCheck, Loader2, ShoppingBag, X } from "lucide-react";
 import { DateInput, DateRange } from "@/components/date-picker";
 import type { ActionState } from "@/components/ui-client";
 import { cn } from "@/components/ui";
-import type { QuickDefaults } from "../_lib/quick";
+import type { QuickDefaults } from "../_lib/quick-defaults";
 import type { QuickInput, QuickOption } from "../actions";
 import { PaxStepper } from "./pax-stepper";
 import { GuestsField } from "./guests-field";
-import { openCartDrawer } from "./cart-drawer";
+import { openCartDrawer } from "./cart-events";
 
 export type QuickCtx = {
   add: (prev: ActionState, fd: FormData) => Promise<ActionState>;
@@ -26,19 +26,42 @@ export type QuickCtx = {
 
 const fmt = (v: string | number) => Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-export function QuickAdd({ ctx, productRef, category, title, className }: { ctx: QuickCtx; productRef: string; category: "TICKETS" | "LODGING" | "HOUSES"; title: string; className?: string }) {
+export function QuickAdd({
+  ctx,
+  productRef,
+  category,
+  title,
+  destination,
+  size = "md",
+  className,
+}: {
+  ctx: QuickCtx;
+  productRef: string;
+  category: "TICKETS" | "LODGING" | "HOUSES";
+  title: string;
+  /** Cidade do produto: vai junto para o carrinho sugerir o que combina com a viagem. */
+  destination?: string;
+  /** "sm": botão compacto (sugestões do carrinho). */
+  size?: "md" | "sm";
+  className?: string;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className={cn("inline-flex h-10 items-center justify-center gap-1.5 rounded-full bg-ink px-4 text-[13px] font-semibold text-white transition hover:bg-ink-2", className)}>
-        <ShoppingBag className="h-4 w-4" aria-hidden /> Adicionar
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label={`Adicionar ${title}`}
+        className={cn("inline-flex items-center justify-center gap-1.5 rounded-full bg-ink font-semibold text-white transition hover:bg-ink-2", size === "sm" ? "h-8 px-3 text-[12px]" : "h-10 px-4 text-[13px]", className)}
+      >
+        <ShoppingBag className={size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"} aria-hidden /> Adicionar
       </button>
-      {open && <QuickDialog ctx={ctx} productRef={productRef} category={category} title={title} onClose={() => setOpen(false)} />}
+      {open && <QuickDialog ctx={ctx} productRef={productRef} category={category} title={title} destination={destination} onClose={() => setOpen(false)} />}
     </>
   );
 }
 
-function QuickDialog({ ctx, productRef, category, title, onClose }: { ctx: QuickCtx; productRef: string; category: "TICKETS" | "LODGING" | "HOUSES"; title: string; onClose: () => void }) {
+function QuickDialog({ ctx, productRef, category, title, destination, onClose }: { ctx: QuickCtx; productRef: string; category: "TICKETS" | "LODGING" | "HOUSES"; title: string; destination?: string; onClose: () => void }) {
   const d = ctx.defaults;
   const form = useRef<HTMLFormElement>(null);
   const [step, setStep] = useState<"ask" | "pick">("ask");
@@ -112,6 +135,7 @@ function QuickDialog({ ctx, productRef, category, title, onClose }: { ctx: Quick
     const fd = new FormData();
     fd.set("ref", o.ref);
     fd.set("optionId", o.optionId);
+    if (destination) fd.set("destino", destination);
     if (category === "TICKETS") fd.set("date", input.date!);
     else {
       fd.set("checkIn", input.checkin!);
@@ -139,7 +163,7 @@ function QuickDialog({ ctx, productRef, category, title, onClose }: { ctx: Quick
 
   const picked = options.find((o) => o.optionId === chosen);
   return createPortal(
-    <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-6" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div data-quick-dialog className="fixed inset-0 z-[90] flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-6" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div role="dialog" aria-modal="true" aria-label={`Adicionar ${title}`} className="max-h-[92vh] w-full overflow-y-auto rounded-t-[1.75rem] bg-white p-5 shadow-2xl sm:max-w-lg sm:rounded-[1.75rem] sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
