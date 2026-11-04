@@ -204,7 +204,9 @@ export function unitCost(t: TueType, basis: "resale" | "sales", slot?: TueSlot |
 export function typeLabel(t: TueType, kind: Kind): string {
   const from = t.product_type_age_from;
   const to = t.product_type_age_to;
-  const ages = from != null && to != null ? ` (${from} a ${to} anos)` : from != null && kind === "ADULT" ? ` (${from}+ anos)` : "";
+  // faixa "0 a 99" = qualquer idade: não diz nada ao cliente
+  const anyAge = (from ?? 0) <= 0 && (to == null || to >= 99);
+  const ages = anyAge ? "" : from != null && to != null && to < 99 ? ` (${from} a ${to} anos)` : from != null ? ` (${from}+ anos)` : to != null ? ` (até ${to} anos)` : "";
   return `${KIND_LABEL[kind]}${ages}`;
 }
 
@@ -215,7 +217,8 @@ export function cancellationOf(p: Pick<TueProduct, "product_cancellation_allowed
   // o texto livre da política vem no idioma do fornecedor (às vezes espanhol): montamos em português
   // a partir dos campos estruturados, sempre pelo lado seguro (prazo maior, 1 dia de folga pelo fuso)
   if (policies.some((x) => x.cancellation_type === "BOOKING_DATE")) return { text: "Cancelamento com multa, conforme a política do ingresso", until: null };
-  const charged = policies.filter((x) => Number(x.cancellation_fee_percentage ?? 0) > 0 || Number(x.cancellation_fee_amount ?? 0) > 0);
+  // percentual/valor ausentes = multa não informada (só um 0 explícito é grátis): conta como multa, pelo lado seguro
+  const charged = policies.filter((x) => (x.cancellation_fee_percentage == null && x.cancellation_fee_amount == null) || Number(x.cancellation_fee_percentage ?? 0) > 0 || Number(x.cancellation_fee_amount ?? 0) > 0);
   const maxMinutes = Math.max(0, ...policies.map((x) => Number(x.cancellation_fee_threshold) || 0));
   const days = Math.ceil(maxMinutes / 1440) + 1;
   const pct = Math.max(0, ...charged.map((x) => Number(x.cancellation_fee_percentage ?? 0)));
@@ -637,7 +640,9 @@ export function createTueAdapter(cfg: TueConfig, opts: { transport?: Transport }
       const open_ = slot?.availability_spots?.availability_spots_open;
       if (typeof open_ === "number" && open_ < units) throw new SupplierError(open_ > 0 ? `Restam só ${open_} vagas neste horário` : "Este horário esgotou. Escolha outro.");
       const canc = cancellationOf(p, date);
-      const when = slot ? slotTime(slot.availability_from_date_time) : "";
+      // ingresso válido no dia inteiro (TIME_DATE) não tem horário: o "00:00" do fornecedor não vai para a tela
+      const timed = !!slot && (p.product_admission_type ?? "TIME_POINT") !== "TIME_DATE" && p.product_admission_type !== "TIME_OPEN";
+      const when = timed ? slotTime(slot!.availability_from_date_time) : "";
       return {
         supplierCode: TUE_CODE,
         category: "TICKETS",
@@ -658,6 +663,7 @@ export function createTueAdapter(cfg: TueConfig, opts: { transport?: Transport }
           productTypes: picked.map((x) => ({ kind: x.kind, type: x.type.product_type, id: x.type.product_type_id, count: x.count })),
           availabilityId: slot?.availability_id ?? null,
           slotFrom: slot?.availability_from_date_time ?? null,
+          startTime: when || null,
           travelDate: open ? null : date,
           admissionType: p.product_admission_type ?? null,
           costBasis: basis,

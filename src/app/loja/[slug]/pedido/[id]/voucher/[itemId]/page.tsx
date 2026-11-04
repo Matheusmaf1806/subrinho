@@ -260,12 +260,13 @@ type TicketPayload = {
 /** Voucher dos ingressos: um código (QR) por pessoa, data/horário e titular — sem marca do fornecedor. */
 async function TicketVoucher({ slug, order, item, store }: { slug: string; order: typeof orders.$inferSelect; item: typeof orderItems.$inferSelect; store: Store }) {
   const p = (item.supplierPayload ?? {}) as TicketPayload;
-  const d = (item.details ?? {}) as { slotFrom?: string | null; cancellation?: string; notes?: string[] };
+  const d = (item.details ?? {}) as { slotFrom?: string | null; startTime?: string | null; admissionType?: string | null; cancellation?: string; notes?: string[] };
   const codes = p.voucher?.tickets?.codes ?? p.codes ?? [];
   const format = p.voucher?.tickets?.codeFormat ?? p.codeFormat ?? "QR_CODE";
   const textOnly = /^(NONE|LINK|PDF|IMAGE|OTHER)$/.test(format ?? "");
   const qrs = textOnly ? [] : await Promise.all(codes.map((c) => QRCode.toString(c.code, { type: "svg", margin: 1, width: 180 })));
-  const time = (d.slotFrom ?? "").match(/T(\d{2}:\d{2})/)?.[1] ?? null;
+  // ingresso do dia inteiro não tem horário (o fornecedor manda 00:00)
+  const time = "startTime" in d ? (d.startTime ?? null) : d.admissionType === "TIME_DATE" || d.admissionType === "TIME_OPEN" ? null : ((d.slotFrom ?? "").match(/T(\d{2}:\d{2})/)?.[1] ?? null);
   const holder = (order.travelers ?? []).find((t) => t.type !== "CHILD" && t.name?.trim())?.name ?? order.customerData.name;
   const notes = stripSupplierMentionsList(d.notes);
   return (

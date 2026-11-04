@@ -3,7 +3,7 @@
  * com transporte falso no formato da especificação (OAuth2 → produtos → horários → reserva → pedido).
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { cancellationOf, costBasisOf, durationPt, createTueAdapter, matchesTicketDestination, seasonFor, slotTime, ticketCodes, typeFor, unitCost, type TueProduct, type TueType } from "@/server/suppliers/tue/adapter";
+import { cancellationOf, costBasisOf, durationPt, createTueAdapter, matchesTicketDestination, seasonFor, slotTime, ticketCodes, typeFor, typeLabel, unitCost, type TueProduct, type TueType } from "@/server/suppliers/tue/adapter";
 import { TueApiError, tueConfig, type Transport } from "@/server/suppliers/tue/client";
 import { clearMemoryCache } from "@/server/suppliers/hotels/cache";
 import { todayLocal } from "@/lib/tz";
@@ -82,7 +82,7 @@ const ORDER = {
   ],
 };
 
-type Opts = { existing?: boolean; checkoutRequired?: boolean; serverTotal?: string; orderTimeout?: boolean; token401Once?: boolean; basicRefused?: boolean; bodyRefused?: boolean };
+type Opts = { existing?: boolean; checkoutRequired?: boolean; serverTotal?: string; orderTimeout?: boolean; token401Once?: boolean; basicRefused?: boolean; bodyRefused?: boolean; admission?: string };
 
 function fake(o: Opts = {}) {
   const calls: { method: string; path: string; body?: unknown; headers: Record<string, string> }[] = [];
@@ -111,7 +111,7 @@ function fake(o: Opts = {}) {
       return json({ api_version: "2.0.0", data: { kind: "product", page_index: page, total_pages: 2, items: page === 1 ? [COLOSSEUM, COMBI] : [PICKUP, PARIS] } });
     }
     if (path === "/products/destinations") return json({ data: { items: [] } });
-    if (path === "/products/P-COL") return json({ data: { kind: "product", product: COLOSSEUM } });
+    if (path === "/products/P-COL") return json({ data: { kind: "product", product: { ...COLOSSEUM, ...(o.admission ? { product_admission_type: o.admission } : {}) } } });
     if (path === "/availability") return json({ data: { kind: "availability", total_items: SLOTS.length, items: SLOTS } });
     if (path === "/orders" && req.method === "GET") return json({ data: { items: o.existing || created ? [ORDER] : [] } });
     if (path === "/reservations" && req.method === "POST")
@@ -198,6 +198,11 @@ describe("Tu Experienza — preço, temporada e destino", () => {
     expect(cancellationOf(tiers, todayLocal()).text).toBe("Cancelamento com multa de até 100% para esta data");
     expect(cancellationOf({ product_cancellation_policies: [{ cancellation_type: "TRAVEL_DATE", cancellation_fee_threshold: 1440, cancellation_fee_percentage: 0 }] }, DAY)).toEqual({ text: "Cancelamento grátis até 16/12/2026", until: "2026-12-16" });
     expect(cancellationOf({ product_cancellation_policies: [{ cancellation_type: "BOOKING_DATE", cancellation_fee_threshold: 60, cancellation_fee_percentage: 100 }] }, DAY).until).toBeNull();
+    // multa não informada (sem percentual nem valor) conta como multa
+    expect(cancellationOf({ product_cancellation_policies: [{ cancellation_description: "Cancelación ¡GRATIS! con al menos 24 horas", cancellation_type: "TRAVEL_DATE", cancellation_fee_threshold: 1440 }] }, DAY).text).toBe("Cancelamento grátis até 16/12/2026; depois, com multa");
+    expect(typeLabel({ ...ADULT, product_type_age_from: 0, product_type_age_to: 99 }, "ADULT")).toBe("Adulto");
+    expect(typeLabel({ ...ADULT, product_type_age_from: 65, product_type_age_to: 99 }, "SENIOR")).toBe("Sênior (65+ anos)");
+    expect(typeLabel(CHILD, "CHILD")).toBe("Criança (4 a 17 anos)");
     expect(durationPt("1 day")).toBe("1 dia");
     expect(durationPt("1.5 hour")).toBe("1,5 h");
     expect(durationPt("2-3 hours")).toBe("2 a 3 h");
@@ -313,6 +318,12 @@ describe("Tu Experienza — fluxo do adaptador", () => {
       { type: "CHILD", label: "Criança (4 a 17 anos)", unitCost: "7.20", quantity: 1 },
     ]);
     expect(q).toMatchObject({ currency: "EUR", serviceDate: DAY, subtitle: "18/12/2026 · 11:00", details: { availabilityId: "S-1100", costBasis: "resale", expectedSalesTotal: "51.00" } });
+    // ingresso do dia inteiro: sem o horário 00:00 do fornecedor no carrinho e no voucher
+    const allDay = createTueAdapter(cfg, { transport: fake({ admission: "TIME_DATE" }).transport });
+    clearMemoryCache();
+    const qd = await allDay.quote({ productId: "P-COL", optionId: "S-1100", date: DAY, pax: { adults: 1, children: 0 } });
+    expect(qd.subtitle).toBe("18/12/2026");
+    expect(qd.details).toMatchObject({ startTime: null, admissionType: "TIME_DATE" });
     await expect(a.quote({ productId: "P-COL", optionId: "S-0930", date: DAY, pax: { adults: 4, children: 0 } })).rejects.toThrow("Restam só 3 vagas neste horário");
     await expect(a.quote({ productId: "P-COL", optionId: "S-CLOSED", date: DAY, pax: { adults: 1, children: 0 } })).rejects.toThrow(/não está mais disponível/);
     await expect(a.quote({ productId: "P-COL", optionId: "S-1100", date: "2026-10-01", pax: { adults: 1, children: 0 } })).rejects.toThrow(/já passou/);
