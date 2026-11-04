@@ -32,6 +32,10 @@ import { getAdapter } from "@/server/suppliers/registry";
 import { SupplierError, SupplierIntegrationError } from "@/server/suppliers/types";
 import type { ActionState } from "@/components/ui-client";
 import { isValidCpfOrCnpj, onlyDigits } from "@/lib/br";
+import { date, paxSummary } from "@/lib/format";
+import { loadCartView } from "@/server/cart/service";
+import { toItemVMs, totalsVM } from "./_components/cart-vm";
+import { categoryLabel } from "./_components/category";
 import { actorOf, currentCartToken, getStore, safeNext, setCurrentCartToken, storePath, viewerFor } from "./_lib/store";
 
 /** Mensagem para o cliente. Falha técnica de fornecedor (credencial, rede) nunca aparece crua. */
@@ -102,14 +106,70 @@ export async function addToCartAction(slug: string, _prev: ActionState, fd: Form
       return c;
     });
     await setCurrentCartToken(store, cart.token);
-    token = cart.token;
   } catch (e) {
     const msg = userError(e) ?? (e instanceof Error && e.message.startsWith("Fornecedor desconhecido") ? "Produto indisponível" : null);
     if (msg) return { error: msg };
     throw e;
   }
+  // fica na página: o carrinho flutuante abre com o item (o selo do topo atualiza junto)
   revalidatePath(`/loja/${slug}`, "layout");
-  redirect(storePath(store, `/carrinho/${token}?adicionado=1`));
+  return { ok: true };
+}
+
+// ───────────── Carrinho flutuante ─────────────
+
+export type MiniCartItem = {
+  id: string;
+  category: string;
+  title: string;
+  subtitle: string | null;
+  imageUrl: string | null;
+  when: string | null;
+  pax: string;
+  pix: string;
+  installment: string;
+};
+export type MiniCart = { token: string; items: MiniCartItem[]; pix: string; installment: string; planCount: number; planInstallment: string; discount: string; removed: number };
+
+/** Itens e totais do carrinho atual (mesmos preços da página do carrinho, sem dados internos). */
+export async function miniCartAction(slug: string): Promise<MiniCart | null> {
+  const store = await getStore(slug);
+  const token = await currentCartToken(store);
+  if (!token) return null;
+  const view = await loadCartView(db, token, store.id);
+  if (!view || view.cart.status !== "OPEN") return null;
+  const t = totalsVM(view);
+  return {
+    token,
+    items: toItemVMs(view, { adminMode: false }).map((i) => ({
+      id: i.id,
+      category: categoryLabel(i.category),
+      title: i.title,
+      subtitle: i.subtitle,
+      imageUrl: i.imageUrl,
+      when: i.serviceDate ? `${date(i.serviceDate)}${i.serviceEndDate ? ` a ${date(i.serviceEndDate)}` : ""}` : null,
+      pax: paxSummary(i.pax),
+      pix: i.pix,
+      installment: i.installment,
+    })),
+    pix: t.pix,
+    installment: t.installment,
+    planCount: t.plan.count,
+    planInstallment: t.plan.installment,
+    discount: t.discount,
+    removed: view.removedNotices.length,
+  };
+}
+
+/** Remove um item pelo carrinho flutuante (só do carrinho atual desta loja). */
+export async function removeMiniCartItemAction(slug: string, itemId: string): Promise<MiniCart | null> {
+  const store = await getStore(slug);
+  const token = await currentCartToken(store);
+  if (!token || !/^[0-9a-f-]{36}$/i.test(itemId)) return null;
+  const { cart } = await loadCart(slug, token);
+  await removeItem(db, cart, itemId);
+  refreshCart(slug, token);
+  return miniCartAction(slug);
 }
 
 export async function removeCartItemAction(slug: string, token: string, itemId: string) {

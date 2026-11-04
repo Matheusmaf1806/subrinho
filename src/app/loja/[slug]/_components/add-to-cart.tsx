@@ -4,6 +4,7 @@ import { useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
 import { ActionForm, SubmitButton, type ActionState } from "@/components/ui-client";
+import { openCartDrawer } from "./cart-drawer";
 
 /** Recarrega preços e disponibilidade da página (sem perder a busca). */
 function RefreshOptions() {
@@ -16,7 +17,7 @@ function RefreshOptions() {
   );
 }
 
-/** Formulário "adicionar ao carrinho": cota no fornecedor (preço certo) e leva ao carrinho. */
+/** Formulário "adicionar ao carrinho": cota no fornecedor (preço certo) e abre o carrinho flutuante. */
 export function AddToCartForm({
   action,
   hidden,
@@ -33,7 +34,7 @@ export function AddToCartForm({
   buttonClassName?: string;
 }) {
   return (
-    <ActionForm action={action} className={className} errorExtra={<RefreshOptions />}>
+    <ActionForm action={action} className={className} errorExtra={<RefreshOptions />} onSuccess={() => openCartDrawer({ added: true })}>
       {Object.entries(hidden).map(([k, v]) => (v === null || v === undefined ? null : <input key={k} type="hidden" name={k} value={String(v)} />))}
       {children}
       <SubmitButton variant="accent" size="lg" pendingText="Consultando o fornecedor…" className={buttonClassName ?? "mt-4 w-full"}>

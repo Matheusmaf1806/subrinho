@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ActionForm, SubmitButton, type ActionState } from "@/components/ui-client";
+import { openCartDrawer } from "./cart-drawer";
 import { cn, Input } from "@/components/ui";
 import { PaxStepper } from "./pax-stepper";
 
@@ -38,7 +39,7 @@ export function TicketBooking({
   const total = current ? adults * current.adultPix + children * (current.childPix ?? 0) : 0;
 
   return (
-    <ActionForm action={action} className="space-y-4">
+    <ActionForm action={action} className="space-y-4" onSuccess={() => openCartDrawer({ added: true })}>
       <input type="hidden" name="ref" value={productRef} />
       <label className="block">
         <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Data da visita</span>

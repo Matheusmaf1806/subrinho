@@ -6,6 +6,7 @@ import { themeStyle } from "@/lib/theme";
 import { StoreMark } from "./_components/store-mark";
 import { StoreHeader } from "./_components/store-header";
 import { storeCategories } from "./_lib/categories";
+import { paymentProvider } from "@/server/payments/provider";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const store = await getStore((await params).slug);
@@ -31,7 +32,7 @@ export default async function StoreLayout({ children, params }: { children: Reac
   const brand = storeBrand(store);
   return (
     <div style={themeStyle(store)} className="flex min-h-screen flex-col bg-white font-sans text-ink">
-      <StoreHeader store={store} viewer={viewer} cartCount={count} cartHref={token ? `${base}/carrinho/${token}` : `${base}/carrinho`} categories={cats.live} />
+      <StoreHeader store={store} viewer={viewer} cartCount={count} cartHref={token ? `${base}/carrinho/${token}` : `${base}/carrinho`} categories={cats.live} pixAvailable={paymentProvider().pixAvailable} />
       <div className="flex-1">{children}</div>
       <footer className="mt-24 px-3 pb-3 sm:px-4 sm:pb-4">
         <div className="overflow-hidden rounded-[2rem] bg-ink text-white sm:rounded-[2.5rem]">

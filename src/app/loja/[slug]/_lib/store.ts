@@ -68,7 +68,7 @@ import { photo } from "@/lib/images";
 export function storeBrand(store: Store) {
   return {
     heroLines: (store.heroTitle?.trim() || DEFAULT_HERO_TITLE).split(/\r?\n/).filter(Boolean),
-    heroSubtitle: store.heroSubtitle?.trim() || `Ingressos, hotéis, casas, seguro viagem e chip no mesmo carrinho — com o atendimento da ${store.name}.`,
+    heroSubtitle: store.heroSubtitle?.trim() || `Tudo para a sua viagem no mesmo carrinho — com o atendimento da ${store.name}.`,
     heroImage: store.heroImageUrl || photo("heroWoman", 900, 1200),
     heroImage2: store.heroImage2Url || photo("travelerCity", 700, 800),
     tagline: store.tagline?.trim() || DEFAULT_TAGLINE,

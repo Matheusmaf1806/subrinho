@@ -268,11 +268,11 @@ export function BrandingEditor({
               </label>
               <label className="block">
                 <span className={lab}>Subtítulo</span>
-                <textarea name="heroSubtitle" rows={2} value={heroSubtitle} onChange={(e) => setHeroSubtitle(e.target.value)} maxLength={220} placeholder={`Ingressos, hotéis, casas, seguro viagem e chip no mesmo carrinho — com o atendimento da ${initial.name}.`} className={cn(inputClass, "h-auto py-3")} />
+                <textarea name="heroSubtitle" rows={2} value={heroSubtitle} onChange={(e) => setHeroSubtitle(e.target.value)} maxLength={220} placeholder={`Em branco, a loja lista o que vende: “Ingressos, hotéis e casas de temporada no mesmo carrinho… com o atendimento da ${initial.name}.”`} className={cn(inputClass, "h-auto py-3")} />
               </label>
               <div className="grid gap-6 lg:grid-cols-2">
-                <ImageField key={`h1-${fileKey}`} field="heroImageUrl" label="Foto principal" hint="Vertical — até 3 MB" current={initial.heroImageUrl} presets={presets} preset={presetOf(initial.heroImageUrl)} onPreview={setHero1} disabled={readOnly} />
-                <ImageField key={`h2-${fileKey}`} field="heroImage2Url" label="Foto secundária" hint="Até 3 MB" current={initial.heroImage2Url} presets={presets} preset={presetOf(initial.heroImage2Url)} onPreview={setHero2} disabled={readOnly} />
+                <ImageField key={`h1-${fileKey}`} field="heroImageUrl" label="Foto principal" hint="Quadrada ou vertical — até 3 MB" current={initial.heroImageUrl} presets={presets} preset={presetOf(initial.heroImageUrl)} onPreview={setHero1} disabled={readOnly} />
+                <ImageField key={`h2-${fileKey}`} field="heroImage2Url" label="Foto secundária" hint="Vertical (4:5) — até 3 MB" current={initial.heroImage2Url} presets={presets} preset={presetOf(initial.heroImage2Url)} onPreview={setHero2} disabled={readOnly} />
               </div>
             </div>
           </Section>
@@ -325,26 +325,35 @@ export function BrandingEditor({
             </div>
             <span className="rounded-full bg-ink px-3 py-1.5 text-[11px] font-semibold text-white">Carrinho</span>
           </div>
-          <div className="mx-2 grid grid-cols-[1.25fr_1fr] gap-2 rounded-[1.25rem] bg-brand p-4 text-brand-fg">
-            <div>
-              <p className="display text-[1.9rem]">
-                {lines.map((l, i) => (
-                  <span key={i} className="block">
-                    {l}
-                  </span>
-                ))}
-              </p>
-              <span className="mt-4 inline-flex rounded-full bg-ink px-3 py-1.5 text-[11px] font-semibold text-white">Buscar →</span>
+          <div className="bg-gradient-to-b from-brand-50 to-white px-4 pb-4 pt-3">
+            <div className="grid grid-cols-[1.1fr_1fr] items-center gap-3">
+              <div>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2 py-0.5 text-[9px] font-semibold ring-1 ring-black/[0.05]">
+                  <span className="h-1.5 w-1.5 rounded-full bg-brand" /> {initial.name}
+                </span>
+                <p className="display mt-2 text-[1.55rem]">
+                  {lines.map((l, i) => (
+                    <span key={i} className={cn("block", lines.length > 1 && i === lines.length - 1 && "text-brand-ink")}>
+                      {l}
+                    </span>
+                  ))}
+                </p>
+                <p className="mt-2 line-clamp-2 text-[10px] leading-snug text-muted">{heroSubtitle.trim() || "Ingressos, hotéis e casas no mesmo carrinho…"}</p>
+              </div>
+              <div className="relative h-32">
+                <div className="absolute inset-y-0 left-[18%] right-0 overflow-hidden rounded-xl bg-black/10">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {hero1 && <img src={hero1} alt="" className="h-full w-full object-cover" />}
+                </div>
+                <div className="absolute bottom-2 left-0 aspect-[4/5] w-[38%] overflow-hidden rounded-lg bg-black/10 ring-2 ring-white">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {hero2 && <img src={hero2} alt="" className="h-full w-full object-cover" />}
+                </div>
+              </div>
             </div>
-            <div className="grid grid-rows-2 gap-2">
-              <div className="overflow-hidden rounded-xl bg-black/10">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                {hero1 && <img src={hero1} alt="" className="h-full w-full object-cover" />}
-              </div>
-              <div className="overflow-hidden rounded-xl bg-black/10">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                {hero2 && <img src={hero2} alt="" className="h-full w-full object-cover" />}
-              </div>
+            <div className="mt-3 flex items-center gap-1.5 rounded-2xl bg-white p-1.5 shadow-[0_10px_30px_-18px_rgba(0,0,0,0.45)] ring-1 ring-black/[0.06]">
+              <span className="flex-1 px-2 text-[10px] text-muted">Destino · Data · Pessoas</span>
+              <span className="rounded-full bg-ink px-3 py-1.5 text-[10px] font-semibold text-white">Buscar</span>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 p-2">

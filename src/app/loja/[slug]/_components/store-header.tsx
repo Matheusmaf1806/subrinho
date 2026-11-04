@@ -1,12 +1,27 @@
 import Link from "next/link";
-import { LogOut, ShieldCheck, ShoppingBag, User } from "lucide-react";
+import { LogOut, ShieldCheck, User } from "lucide-react";
 import type { StoreViewer } from "@/server/auth/session";
 import type { Store } from "../_lib/store";
 import { logoutAction, toggleAdminModeAction } from "../actions";
 import type { StoreCategory } from "../_lib/categories";
 import { StoreMark } from "./store-mark";
+import { CartDrawer } from "./cart-drawer";
 
-export function StoreHeader({ store, viewer, cartCount, cartHref, categories }: { store: Store; viewer: StoreViewer | null; cartCount: number; cartHref: string; categories: StoreCategory[] }) {
+export function StoreHeader({
+  store,
+  viewer,
+  cartCount,
+  cartHref,
+  categories,
+  pixAvailable,
+}: {
+  store: Store;
+  viewer: StoreViewer | null;
+  cartCount: number;
+  cartHref: string;
+  categories: StoreCategory[];
+  pixAvailable: boolean;
+}) {
   const base = `/loja/${store.slug}`;
   return (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl">
@@ -70,11 +85,7 @@ export function StoreHeader({ store, viewer, cartCount, cartHref, categories }: 
               <User className="h-4 w-4" /> <span className="hidden sm:inline">Entrar</span>
             </Link>
           )}
-          <Link href={cartHref} className="relative inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-white hover:bg-ink-2">
-            <ShoppingBag className="h-4 w-4" />
-            <span className="hidden sm:inline">Carrinho</span>
-            {cartCount > 0 && <span className="grid h-6 min-w-6 place-items-center rounded-full bg-accent px-1.5 text-xs font-semibold text-accent-fg">{cartCount}</span>}
-          </Link>
+          <CartDrawer slug={store.slug} count={cartCount} cartHref={cartHref} pixAvailable={pixAvailable} categories={categories.map((c) => ({ slug: c.slug, short: c.short }))} />
         </div>
       </div>
       <nav className="no-scrollbar flex gap-1.5 overflow-x-auto px-4 pb-3 lg:hidden">

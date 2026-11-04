@@ -4,14 +4,17 @@ import { productRef } from "@/server/suppliers/refs";
 import { searchCatalog } from "@/server/catalog";
 import { adaptersFor } from "@/server/suppliers/registry";
 import { INSURANCE_REGIONS } from "@/server/suppliers/mock/single-page";
-import { FlightPath } from "@/components/brand";
 import { ArrowChip, ButtonLink, cn } from "@/components/ui";
 import { photo, type PhotoKey } from "@/lib/images";
 import { getStore, getStorePricing, storeBrand } from "./_lib/store";
 import { COMING_SOON } from "./_components/category";
 import { storeCategories } from "./_lib/categories";
 import { ChipSearch, InsuranceSearch, LodgingSearch, TicketsSearch } from "./_components/search-forms";
-import { SearchTabs } from "./_components/search-tabs";
+import { StoreHero } from "./_components/store-hero";
+import { paymentProvider } from "@/server/payments/provider";
+import { getSettings } from "@/server/settings";
+import { BadgeCheck } from "lucide-react";
+import type { Category } from "@/server/db/schema";
 import { parseSearch, supplierParams, toQuery } from "./_components/search-params";
 import { ProductCard } from "./_components/product-card";
 
@@ -31,6 +34,21 @@ const DESTINATIONS: { name: string; image: PhotoKey; country: string }[] = [
   { name: "Nova York", image: "nycSkyline", country: "Estados Unidos" },
   { name: "Florença", image: "florence", country: "Itália" },
 ];
+
+const OFFER: Partial<Record<Category, string>> = {
+  TICKETS: "ingressos",
+  LODGING: "hotéis",
+  HOUSES: "casas de temporada",
+  INSURANCE: "seguro viagem",
+  CHIP: "chip internacional",
+};
+
+/** "Ingressos, hotéis e casas de temporada no mesmo carrinho…" — só o que a loja vende de verdade. */
+function defaultSubtitle(name: string, live: Category[]) {
+  const items = live.map((c) => OFFER[c]).filter((x): x is string => !!x);
+  const list = items.length > 1 ? `${items.slice(0, -1).join(", ")} e ${items.at(-1)}` : (items[0] ?? "Sua viagem");
+  return `${list.charAt(0).toUpperCase()}${list.slice(1)} no mesmo carrinho, com preço confirmado na hora e o atendimento da ${name}.`;
+}
 
 function SectionTitle({ title, href, cta = "Ver todos" }: { title: string; href?: string; cta?: string }) {
   return (
@@ -61,6 +79,11 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
     live.has("LODGING") ? searchCatalog(db, ctx, "LODGING", supplierParams(d, "lodging")) : Promise.resolve([]),
   ]);
 
+  const pixAvailable = paymentProvider().pixAvailable;
+  const settings = await getSettings(db);
+  // destinos populares levam à busca de ingressos (ou de hotéis, se a loja não vende ingressos)
+  const popularSlug = live.has("TICKETS") ? "ingressos" : live.has("LODGING") ? "hospedagem" : null;
+
   const tabs = cats.live.map((c) => {
     const Icon = c.icon;
     const action = `${base}/${c.slug}`;
@@ -81,52 +104,19 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
 
   return (
     <main>
-      {/* ───────── Hero ───────── */}
-      <section className="px-3 pt-3 sm:px-4">
-        <div className="relative mx-auto max-w-[1440px] overflow-hidden rounded-[2rem] bg-accent text-accent-fg sm:rounded-[2.5rem]">
-          <FlightPath className="pointer-events-none absolute left-[38%] top-10 hidden h-28 w-56 text-accent-fg/40 lg:block" />
-          <div className="grid gap-8 px-6 pb-44 pt-12 sm:px-12 sm:pt-16 lg:grid-cols-[1.15fr_1fr] lg:pb-48">
-            <div className="flex flex-col justify-between">
-              <div>
-                <span className="inline-flex items-center gap-2 rounded-full bg-accent-fg/15 px-3.5 py-1.5 text-[13px] font-semibold backdrop-blur">
-                  <span className="h-1.5 w-1.5 rounded-full bg-accent-fg" /> {store.name}
-                </span>
-                <h1 className="display mt-6 text-[clamp(3.4rem,7.2vw,7.5rem)]">
-                  {brand.heroLines.map((l, i) => (
-                    <span key={i} className="block">
-                      {l}
-                    </span>
-                  ))}
-                </h1>
-                <p className="mt-6 max-w-md text-[17px] leading-relaxed text-accent-fg/85">{brand.heroSubtitle}</p>
-              </div>
-            </div>
-            <div className="hidden grid-cols-[1.15fr_1fr] gap-3 lg:grid">
-              <div className="relative overflow-hidden rounded-[2rem]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={brand.heroImage} alt="" className="h-full w-full object-cover" />
-                <span className="absolute bottom-4 left-4 rounded-full bg-white px-4 py-2 text-sm font-semibold text-ink">10x sem juros em tudo</span>
-              </div>
-              <div className="grid grid-rows-[1fr_1.25fr] gap-3">
-                <div className="flex flex-col justify-between rounded-[2rem] bg-ink p-6 text-white">
-                  <p className="text-[13px] font-medium text-white/60">Melhor preço</p>
-                  <p className="text-6xl font-semibold leading-none tracking-[-0.06em]">Pix</p>
-                  <p className="text-[13px] text-white/60">aprovação na hora</p>
-                </div>
-                <div className="overflow-hidden rounded-[2rem]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={brand.heroImage2} alt="" className="h-full w-full object-cover" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        {tabs.length > 0 && (
-          <div className="relative mx-auto -mt-36 max-w-[1440px] px-3 sm:px-8">
-            <SearchTabs tabs={tabs} />
-          </div>
-        )}
-      </section>
+      {/* ───────── Topo ───────── */}
+      <StoreHero
+        name={store.name}
+        lines={brand.heroLines}
+        subtitle={store.heroSubtitle?.trim() || defaultSubtitle(store.name, cats.live.map((c) => c.category))}
+        image={brand.heroImage}
+        image2={brand.heroImage2}
+        tabs={tabs}
+        pixAvailable={pixAvailable}
+        maxInstallments={settings.maxInstallments}
+        whatsapp={store.whatsapp}
+        popular={popularSlug ? DESTINATIONS.map((x) => ({ name: x.name, href: `${base}/${popularSlug}?${toQuery({ destino: x.name })}` })) : []}
+      />
 
       {/* ───────── Categorias (bento) ───────── */}
       <section className="mx-auto mt-24 max-w-[1440px] px-4 sm:px-8">
@@ -190,14 +180,25 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
             <p className="mt-3 text-[15px] text-white/75">Atendimento {store.name}</p>
           </div>
         </div>
-        <div className="flex min-h-[380px] flex-col justify-between rounded-[2rem] bg-surface p-8 sm:rounded-[2.5rem] sm:p-10">
-          <p className="text-[15px] text-muted">No Pix</p>
-          <p className="text-[clamp(5rem,10vw,8.5rem)] font-semibold leading-[0.8] tracking-[-0.07em] text-accent-ink">Pix</p>
-          <div>
-            <p className="text-2xl font-semibold leading-tight tracking-[-0.03em]">Melhor preço e aprovação na hora.</p>
-            <p className="mt-2 text-[15px] text-muted">E ainda dá para usar cupom de desconto no carrinho.</p>
+        {pixAvailable ? (
+          <div className="flex min-h-[380px] flex-col justify-between rounded-[2rem] bg-surface p-8 sm:rounded-[2.5rem] sm:p-10">
+            <p className="text-[15px] text-muted">No Pix</p>
+            <p className="text-[clamp(5rem,10vw,8.5rem)] font-semibold leading-[0.8] tracking-[-0.07em] text-accent-ink">Pix</p>
+            <div>
+              <p className="text-2xl font-semibold leading-tight tracking-[-0.03em]">O melhor preço da loja.</p>
+              <p className="mt-2 text-[15px] text-muted">E ainda dá para usar cupom de desconto no carrinho.</p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex min-h-[380px] flex-col justify-between rounded-[2rem] bg-surface p-8 sm:rounded-[2.5rem] sm:p-10">
+            <p className="text-[15px] text-muted">Antes de você pagar</p>
+            <BadgeCheck className="h-24 w-24 text-accent-ink" strokeWidth={1.5} aria-hidden />
+            <div>
+              <p className="text-2xl font-semibold leading-tight tracking-[-0.03em]">Preço e disponibilidade confirmados.</p>
+              <p className="mt-2 text-[15px] text-muted">Conferimos tudo com cada fornecedor — e dá para usar cupom de desconto no carrinho.</p>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* ───────── Hotéis (com API real, a vitrine precisa de destino: a seção some) ───────── */}
