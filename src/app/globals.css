@@ -466,29 +466,32 @@ dialog::backdrop {
   box-shadow: 0 12px 34px -24px rgba(10, 10, 20, 0.45);
 }
 
-/* ───────── Papel quadriculado (grade fina a cada 32px, grade forte a cada 128px) ───────── */
+/* ───────── Papel quadriculado: linhas finas e claras que somem em degradê ───────── */
 .grid-paper {
-  --g: color-mix(in oklab, var(--color-brand) 11%, transparent);
-  --G: color-mix(in oklab, var(--color-brand) 20%, transparent);
+  --g: color-mix(in oklab, var(--color-brand) 6%, transparent);
+  --G: color-mix(in oklab, var(--color-brand) 10%, transparent);
   background-image:
     linear-gradient(var(--G) 1px, transparent 1px),
     linear-gradient(90deg, var(--G) 1px, transparent 1px),
     linear-gradient(var(--g) 1px, transparent 1px),
     linear-gradient(90deg, var(--g) 1px, transparent 1px);
   background-size:
-    128px 128px,
-    128px 128px,
-    32px 32px,
-    32px 32px;
+    160px 160px,
+    160px 160px,
+    40px 40px,
+    40px 40px;
   background-position: -1px -1px;
+  /* some nas bordas (degradê radial); --fade-at muda o centro */
+  -webkit-mask-image: radial-gradient(ellipse 70% 75% at var(--fade-at, 50% 35%), black 10%, transparent 72%);
+  mask-image: radial-gradient(ellipse 70% 75% at var(--fade-at, 50% 35%), black 10%, transparent 72%);
 }
 .grid-paper-light {
-  --g: rgba(255, 255, 255, 0.1);
-  --G: rgba(255, 255, 255, 0.18);
+  --g: rgba(255, 255, 255, 0.045);
+  --G: rgba(255, 255, 255, 0.08);
 }
 .grid-paper-ink {
-  --g: rgba(10, 10, 11, 0.05);
-  --G: rgba(10, 10, 11, 0.09);
+  --g: rgba(10, 10, 11, 0.035);
+  --G: rgba(10, 10, 11, 0.06);
 }
 /* sombra "dura" deslocada (blocos sobrepostos) */
 .hard-shadow {

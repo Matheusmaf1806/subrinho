@@ -8,7 +8,7 @@ function Paper() {
   return (
     <>
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-brand-50 via-brand-50/60 to-white" />
-      <div aria-hidden className="grid-paper pointer-events-none absolute inset-0 -z-10 [mask-image:linear-gradient(to_bottom,black_55%,transparent)]" />
+      <div aria-hidden className="grid-paper pointer-events-none absolute inset-0 -z-10 [--fade-at:20%_10%]" />
     </>
   );
 }

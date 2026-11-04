@@ -1,16 +1,30 @@
 /**
- * Topo da página inicial — a busca é a protagonista, sobre papel quadriculado na cor da agência.
- * Ao lado, as fotos em blocos retangulares sobrepostos (bloco de cor deslocado, foto secundária
- * quadrada, etiquetas retangulares com sombra dura), alinhados à grade de 32px.
- * Abaixo, uma faixa de destinos correndo. Tudo nas cores, fotos e título de cada agência.
+ * Topo da página inicial: título + cartão de busca à esquerda e, à direita, um mosaico de
+ * quadrados alinhados (grade 4×4): fotos da agência e de destinos, atalhos para as categorias e
+ * blocos com as garantias reais da compra. Fundo com quadriculado fino que some em degradê.
+ * Tudo nas cores, fotos e título de cada agência.
  */
 import Link from "next/link";
-import { ArrowUpRight, BadgeCheck, MessageCircle, Plane } from "lucide-react";
+import { ArrowUpRight, BadgeCheck, MessageCircle, ShieldCheck, type LucideIcon } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
+import { cn } from "@/components/ui";
+import { photo, type PhotoKey } from "@/lib/images";
 import { SearchTabs } from "./search-tabs";
 
 type Tab = { key: string; label: string; icon: ReactNode; content: ReactNode };
+type Shortcut = { href: string; label: string; icon: LucideIcon };
 const d = (ms: number) => ({ "--d": `${ms}ms` }) as CSSProperties;
+
+/** Foto quadrada do mosaico, com etiqueta opcional (nome do destino). */
+function PhotoTile({ src, label, className, delay, priority }: { src: string; label?: string; className?: string; delay: number; priority?: boolean }) {
+  return (
+    <div data-drop style={d(delay)} className={cn("group relative overflow-hidden rounded-2xl bg-surface", className)}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt="" className="h-full w-full object-cover transition duration-[1.2s] ease-out group-hover:scale-105" fetchPriority={priority ? "high" : undefined} loading={priority ? "eager" : "lazy"} />
+      {label && <span className="absolute bottom-3 left-3 rounded-lg bg-white/90 px-2.5 py-1 text-[12px] font-semibold text-ink backdrop-blur">{label}</span>}
+    </div>
+  );
+}
 
 export function StoreHero({
   name,
@@ -22,11 +36,12 @@ export function StoreHero({
   pixAvailable,
   maxInstallments,
   whatsapp,
+  shortcuts,
   destinations,
 }: {
   name: string;
   lines: string[];
-  /** Só quando a agência escreveu um subtítulo (no celular fica escondido para a busca subir). */
+  /** Só quando a agência escreveu um subtítulo. */
   subtitle: string | null;
   image: string;
   image2: string;
@@ -34,6 +49,8 @@ export function StoreHero({
   pixAvailable: boolean;
   maxInstallments: number;
   whatsapp: string | null;
+  /** Atalhos para as categorias que a loja vende (até 3). */
+  shortcuts: Shortcut[];
   /** Faixa de destinos correndo (link para a busca). */
   destinations: { name: string; href: string }[];
 }) {
@@ -41,103 +58,121 @@ export function StoreHero({
   const note = [`Até ${maxInstallments}x sem juros`, pixAvailable ? "desconto no Pix" : null, "preço e disponibilidade confirmados antes de pagar"].filter(Boolean).join(" · ");
   const head = lines.slice(0, -1);
   const last = lines.at(-1) ?? "";
+  const dest = (key: PhotoKey, w = 600, h = 600) => photo(key, w, h);
+  const [s1, s2, s3] = shortcuts;
+
+  /** Atalho de categoria (quadrado na cor da marca / escuro / claro). */
+  const shortcut = (s: Shortcut | undefined, tone: "brand" | "ink" | "light", className: string, delay: number) => {
+    if (!s)
+      return (
+        <div data-drop style={d(delay)} className={cn("flex flex-col justify-between rounded-2xl bg-brand-50 p-4 text-accent-ink ring-1 ring-inset ring-brand-100", className)}>
+          <ShieldCheck className="h-6 w-6" aria-hidden />
+          <span className="text-[14px] font-semibold leading-tight">Compra segura</span>
+        </div>
+      );
+    const t = tone === "brand" ? "bg-accent text-accent-fg" : tone === "ink" ? "bg-ink text-white" : "bg-white text-ink ring-1 ring-inset ring-ink/10";
+    return (
+      <Link data-drop style={d(delay)} href={s.href} className={cn("group flex flex-col justify-between rounded-2xl p-4 transition duration-300 hover:-translate-y-1", t, className)}>
+        <span className="flex items-start justify-between">
+          <s.icon className="h-6 w-6" aria-hidden />
+          <ArrowUpRight className="h-4 w-4 opacity-60 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:opacity-100" aria-hidden />
+        </span>
+        <span className="text-[15px] font-semibold leading-tight tracking-[-0.02em]">{s.label}</span>
+      </Link>
+    );
+  };
 
   return (
     <>
       <section className="relative isolate overflow-x-clip">
-        {/* ── fundos ── */}
-        {/* celular: foto da agência com grade por cima, atrás do cartão */}
-        <div aria-hidden className="absolute inset-x-0 top-0 -z-10 h-[310px] lg:hidden">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={image} alt="" className="h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-black/35 to-black/15" />
-          <div className="grid-paper grid-paper-light absolute inset-0" />
-        </div>
-        {/* desktop: papel quadriculado na cor da agência */}
-        <div aria-hidden className="pointer-events-none absolute inset-0 -z-20 hidden bg-gradient-to-b from-brand-50 via-brand-50/60 to-white lg:block" />
-        <div aria-hidden className="grid-paper pointer-events-none absolute inset-0 -z-20 hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent)] lg:block" />
+        {/* fundo: tom da marca + quadriculado fino que some em degradê + brilho suave atrás do mosaico */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 -z-20 bg-gradient-to-b from-brand-50/80 via-white to-white" />
+        <div aria-hidden className="grid-paper pointer-events-none absolute inset-0 -z-20 [--fade-at:70%_30%]" />
+        <div aria-hidden className="pointer-events-none absolute right-[8%] top-[10%] -z-20 hidden h-[520px] w-[520px] rounded-full bg-brand-100 opacity-60 blur-[90px] lg:block" />
 
-        <div className="mx-auto grid max-w-[1440px] items-center gap-10 px-4 pb-4 pt-8 sm:px-8 lg:grid-cols-[minmax(0,700px)_minmax(0,1fr)] lg:gap-12 lg:pb-12 lg:pt-14">
+        <div className="mx-auto grid max-w-[1440px] items-center gap-10 px-4 pb-6 pt-8 sm:px-8 lg:grid-cols-[minmax(0,640px)_minmax(0,1fr)] lg:gap-14 lg:pb-14 lg:pt-14">
           {/* ── título + busca ── */}
           <div>
-            <h1 data-enter className="max-w-[18ch] text-[clamp(2.1rem,4.4vw,4.1rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-white drop-shadow-sm lg:max-w-none lg:text-ink lg:drop-shadow-none">
+            <p data-enter className="mb-5 inline-flex items-center gap-2 rounded-md bg-white px-2.5 py-1.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-accent-ink ring-1 ring-inset ring-brand-100">
+              <span className="h-2 w-2 bg-accent" aria-hidden /> {name}
+            </p>
+            <h1 data-enter style={d(60)} className="text-[clamp(2.4rem,4.6vw,4.4rem)] font-semibold leading-[0.98] tracking-[-0.05em] text-ink">
               {head.map((l, i) => (
-                <span key={i}>{l} </span>
+                <span key={i} className="block">
+                  {l}
+                </span>
               ))}
-              {/* marca-texto: no celular bloco na cor da marca (texto branco sobre a foto); no computador, tom claro */}
-              <span className="marker whitespace-nowrap [--marker:var(--color-accent)] lg:text-accent-ink lg:[--marker:var(--color-brand-100)]">{last}</span>
+              <span className="block text-accent-ink">{last}</span>
             </h1>
-            {subtitle && <p className="mt-5 hidden max-w-xl text-[16px] leading-relaxed text-muted lg:block">{subtitle}</p>}
+            {subtitle && (
+              <p data-enter style={d(100)} className="mt-5 max-w-xl text-[16px] leading-relaxed text-muted">
+                {subtitle}
+              </p>
+            )}
 
-            <div className="relative mt-8" data-enter style={d(140)}>
-              <div className="relative rounded-[1.25rem] bg-white p-4 shadow-[0_30px_60px_-35px_rgba(0,0,0,0.45)] ring-1 ring-ink/10 sm:p-6 lg:shadow-[10px_10px_0_0_var(--color-brand-200)]">
-                {tabs.length > 0 ? (
-                  <SearchTabs tabs={tabs} variant="underline" />
-                ) : (
-                  <p className="py-6 text-center text-[15px] text-muted">Em breve, produtos para a sua viagem.</p>
-                )}
-                <p className="mt-5 flex items-start gap-2 border-t border-line pt-4 text-[13px] text-muted sm:justify-center sm:text-center">
-                  <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-accent-ink" aria-hidden />
-                  <span>{note}</span>
-                </p>
-              </div>
+            <div data-enter style={d(160)} className="mt-8 rounded-[1.5rem] bg-white p-4 shadow-[0_40px_90px_-45px_rgba(10,10,11,0.45)] ring-1 ring-ink/[0.08] sm:p-6">
+              {tabs.length > 0 ? (
+                <SearchTabs tabs={tabs} variant="underline" />
+              ) : (
+                <p className="py-6 text-center text-[15px] text-muted">Em breve, produtos para a sua viagem.</p>
+              )}
+              <p className="mt-5 flex items-start gap-2 border-t border-line pt-4 text-[13px] text-muted sm:justify-center sm:text-center">
+                <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-accent-ink" aria-hidden />
+                <span>{note}</span>
+              </p>
             </div>
           </div>
 
-          {/* ── blocos sobrepostos (desktop): palco proporcional 600×580 ── */}
-          <div className="relative ml-auto hidden aspect-[600/580] w-full max-w-[640px] lg:block">
-            {/* bloco de cor deslocado atrás da foto principal */}
-            <div data-enter style={d(60)} className="absolute right-0 top-[8%] h-[80%] w-[60%] rounded-[1.25rem] bg-accent">
-              <div className="grid-paper grid-paper-light absolute inset-0 rounded-[1.25rem]" aria-hidden />
-            </div>
-            {/* quadrado de cor (alinhado à grade) */}
-            <div aria-hidden className="absolute left-[12%] top-[6%] h-[20%] w-[20%] rounded-[1rem] bg-brand-200/70" />
-
-            {/* foto principal */}
-            <div data-enter style={d(120)} className="absolute right-[7%] top-0 h-[82%] w-[60%] overflow-hidden rounded-[1.25rem] bg-surface ring-1 ring-black/5 shadow-[0_40px_80px_-40px_rgba(0,0,0,0.55)]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={image} alt="" className="h-full w-full object-cover" fetchPriority="high" />
-            </div>
-
-            {/* foto secundária quadrada, com moldura e sombra dura */}
-            <div data-drop style={d(360)} className="absolute bottom-[3%] left-[4%] aspect-square w-[36%] overflow-hidden rounded-[1rem] bg-white p-2 [--hs:var(--color-ink)] hard-shadow">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={image2} alt="" className="h-full w-full rounded-[0.6rem] object-cover" />
-            </div>
-
-            {/* bloco pequeno na cor da marca com o avião */}
-            <span data-drop style={d(520)} className="absolute left-[33%] top-[16%] grid h-14 w-14 place-items-center rounded-xl bg-white text-ink ring-1 ring-ink/10 [--hs:var(--color-accent)] [--hx:5px] [--hy:5px] hard-shadow" aria-hidden>
-              <Plane className="h-6 w-6" />
-            </span>
-
-            {/* etiqueta retangular */}
-            <span data-drop style={d(620)} className="absolute right-[-2%] top-[10%] rounded-xl bg-ink px-5 py-3.5 text-white [--hs:var(--color-accent)] [--hx:6px] [--hy:6px] hard-shadow">
-              <span className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-white/55">Pague em até</span>
-              <span className="block text-[21px] font-semibold leading-tight tracking-[-0.02em]">
+          {/* ── mosaico 4×4 (desktop) ── */}
+          <div className="ml-auto hidden aspect-square w-full max-w-[600px] grid-cols-4 grid-rows-4 gap-3 lg:grid">
+            <PhotoTile src={image} className="col-span-2 row-span-2" delay={80} priority />
+            {shortcut(s1, "brand", "", 200)}
+            <PhotoTile src={dest("colosseum", 400, 820)} label="Roma" className="row-span-2" delay={260} />
+            {shortcut(s2, "light", "", 320)}
+            <PhotoTile src={image2} className="row-span-2" delay={380} />
+            <div data-drop style={d(440)} className="col-span-2 flex flex-col justify-between rounded-2xl bg-ink p-5 text-white">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/50">Pague em até</span>
+              <span className="text-[clamp(1.6rem,2.4vw,2.25rem)] font-semibold leading-none tracking-[-0.04em]">
                 {maxInstallments}x <span className="text-accent">sem juros</span>
               </span>
-            </span>
-
-            {wa && (
+            </div>
+            {shortcut(s3, "ink", "", 500)}
+            <PhotoTile src={dest("eiffel", 400, 400)} label="Paris" delay={560} />
+            {wa ? (
               <a
+                data-drop
+                style={d(620)}
                 href={wa}
                 target="_blank"
                 rel="noreferrer"
-                data-drop
-                style={d(760)}
-                className="group absolute bottom-[8%] right-[1%] z-10 flex items-center gap-3 rounded-xl bg-white py-3 pl-3 pr-4 ring-1 ring-ink/10 [--hs:var(--color-ink)] [--hx:5px] [--hy:5px] hard-shadow transition hover:translate-x-[2px] hover:translate-y-[2px] hover:[--hx:3px] hover:[--hy:3px]"
+                className="group col-span-2 flex items-center gap-3 rounded-2xl bg-white p-4 ring-1 ring-inset ring-ink/10 transition duration-300 hover:-translate-y-1"
               >
-                <span className="grid h-10 w-10 place-items-center rounded-lg bg-accent text-accent-fg">
-                  <MessageCircle className="h-5 w-5" aria-hidden />
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-accent text-accent-fg">
+                  <MessageCircle className="h-6 w-6" aria-hidden />
                 </span>
-                <span className="leading-tight">
+                <span className="min-w-0 leading-tight">
                   <span className="block text-[12px] text-muted">Dúvidas sobre a viagem?</span>
-                  <span className="flex items-center gap-1 text-[14px] font-semibold text-ink">
-                    Fale com a {name} <ArrowUpRight className="h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden />
+                  <span className="flex items-center gap-1 text-[15px] font-semibold text-ink">
+                    <span className="truncate">Fale com a {name}</span> <ArrowUpRight className="h-4 w-4 shrink-0 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden />
                   </span>
                 </span>
               </a>
+            ) : (
+              <PhotoTile src={dest("lisbon", 820, 400)} label="Lisboa" className="col-span-2" delay={620} />
             )}
+          </div>
+        </div>
+
+        {/* celular: mosaico compacto abaixo da busca */}
+        <div className="mx-auto grid max-w-[1440px] grid-cols-4 gap-2 px-4 pb-2 sm:px-8 lg:hidden">
+          <PhotoTile src={image} className="col-span-2 row-span-2 aspect-square" delay={200} />
+          {shortcut(s1, "brand", "aspect-square p-3 [&_span:last-child]:text-[13px]", 260)}
+          {shortcut(s2, "light", "aspect-square p-3 [&_span:last-child]:text-[13px]", 320)}
+          <div className="col-span-2 flex flex-col justify-center rounded-2xl bg-ink px-3 text-white">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/50">Pague em até</span>
+            <span className="text-[1.2rem] font-semibold leading-tight tracking-[-0.03em]">
+              {maxInstallments}x <span className="text-accent">sem juros</span>
+            </span>
           </div>
         </div>
       </section>
@@ -145,7 +180,7 @@ export function StoreHero({
       {/* ── faixa de destinos correndo ── */}
       {destinations.length > 0 && (
         <div className="relative mt-8 overflow-x-clip lg:mt-2">
-          <div className="border-y-2 border-ink bg-ink py-3.5 text-white">
+          <div className="bg-ink py-3.5 text-white">
             <div className="marquee flex w-max items-center">
               {[0, 1].map((copy) => (
                 <ul key={copy} className="flex shrink-0 items-center" aria-hidden={copy === 1}>
@@ -154,7 +189,7 @@ export function StoreHero({
                       <Link href={x.href} tabIndex={copy === 1 ? -1 : undefined} className="px-6 text-[clamp(1.25rem,2.2vw,1.9rem)] font-semibold tracking-[-0.03em] transition hover:text-accent">
                         {x.name}
                       </Link>
-                      <span className="inline-block h-2.5 w-2.5 bg-accent" aria-hidden />
+                      <span className="inline-block h-2.5 w-2.5 rounded-[3px] bg-accent" aria-hidden />
                     </li>
                   ))}
                 </ul>

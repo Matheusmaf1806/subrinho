@@ -38,7 +38,7 @@ export default async function StoreLayout({ children, params }: { children: Reac
       <ScrollState />
       <footer className="mt-24 px-3 pb-3 sm:px-4 sm:pb-4">
         <div className="relative isolate overflow-hidden rounded-[2rem] bg-ink text-white sm:rounded-[2.5rem]">
-          <div className="grid-paper grid-paper-light pointer-events-none absolute inset-0 -z-10 [mask-image:linear-gradient(to_bottom,black,transparent_85%)]" aria-hidden />
+          <div className="grid-paper grid-paper-light pointer-events-none absolute inset-0 -z-10 [--fade-at:15%_0%]" aria-hidden />
           <div className="pointer-events-none absolute right-10 top-10 -z-10 hidden h-32 w-32 rotate-6 rounded-[1.25rem] bg-accent opacity-90 lg:block" aria-hidden />
           <div className="mx-auto grid max-w-[1440px] gap-10 px-6 pt-14 sm:grid-cols-[1.4fr_1fr_1fr] sm:px-12">
             <div>

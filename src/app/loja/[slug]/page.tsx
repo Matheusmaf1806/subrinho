@@ -35,6 +35,8 @@ const DESTINATIONS: { name: string; image: PhotoKey; country: string }[] = [
   { name: "Florença", image: "florence", country: "Itália" },
 ];
 
+const SHORTCUT_LABEL: Record<string, string> = { TICKETS: "Ingressos", LODGING: "Hotéis", HOUSES: "Casas", INSURANCE: "Seguro viagem", CHIP: "Chip" };
+
 /** Como a compra funciona (o que de fato acontece). */
 function STEPS(max: number, pix: boolean) {
   return [
@@ -98,6 +100,7 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
         pixAvailable={pixAvailable}
         maxInstallments={settings.maxInstallments}
         whatsapp={store.whatsapp}
+        shortcuts={cats.live.slice(0, 3).map((c) => ({ href: `${base}/${c.slug}`, label: SHORTCUT_LABEL[c.category] ?? c.short, icon: c.icon }))}
         destinations={
           marqueeSlug ? [...DESTINATIONS.map((x) => x.name), "Milão", "Veneza", "Barcelona", "Londres"].map((n) => ({ name: n, href: `${base}/${marqueeSlug}?${toQuery({ destino: n })}` })) : []
         }
@@ -168,7 +171,7 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
 
       {/* ───────── Como funciona ───────── */}
       <section className="relative mt-28 overflow-x-clip py-14">
-        <div aria-hidden className="grid-paper grid-paper-ink pointer-events-none absolute inset-0 -z-10 [mask-image:linear-gradient(to_bottom,transparent,black_20%,black_80%,transparent)]" />
+        <div aria-hidden className="grid-paper grid-paper-ink pointer-events-none absolute inset-0 -z-10 [--fade-at:50%_45%]" />
         <div className="mx-auto max-w-[1440px] px-4 sm:px-8">
           <SectionTitle eyebrow="Simples assim" title="Sua viagem em 4 passos." mark="4 passos." />
           <ol className="relative grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -306,9 +309,23 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
       {store.whatsapp && (
         <section className="mx-auto mt-24 max-w-[1440px] px-4 sm:px-8">
           <div data-reveal className="relative overflow-hidden rounded-[2.5rem] bg-ink px-8 py-12 text-white sm:px-14 sm:py-16">
-            <div className="grid-paper grid-paper-light pointer-events-none absolute inset-0" aria-hidden />
-            <div className="pointer-events-none absolute -right-10 top-10 hidden h-40 w-40 rotate-6 rounded-[1.25rem] bg-accent lg:block" aria-hidden />
-            <div className="pointer-events-none absolute right-28 top-32 hidden h-24 w-24 -rotate-3 rounded-xl bg-white/10 ring-1 ring-white/20 lg:block" aria-hidden />
+            <div className="grid-paper grid-paper-light pointer-events-none absolute inset-0 [--fade-at:80%_40%]" aria-hidden />
+            <div className="pointer-events-none absolute -right-20 -top-20 h-80 w-80 rounded-full bg-accent opacity-25 blur-[90px]" aria-hidden />
+            {/* fotos quadradas sobrepostas em leque */}
+            <div className="pointer-events-none absolute right-12 top-1/2 hidden h-64 w-[380px] -translate-y-1/2 lg:block xl:right-20" aria-hidden>
+              {(["vernazza", "colosseum", "eiffel"] as const).map((k, i) => (
+                <div
+                  key={k}
+                  className={cn(
+                    "absolute top-1/2 h-44 w-44 -translate-y-1/2 overflow-hidden rounded-2xl bg-white p-1.5 shadow-[0_30px_60px_-25px_rgba(0,0,0,0.8)] transition duration-500",
+                    ["left-0 -rotate-[8deg]", "left-[100px] z-10 rotate-[2deg] scale-110", "left-[205px] rotate-[9deg]"][i],
+                  )}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={photo(k, 360, 360)} alt="" className="h-full w-full rounded-xl object-cover" loading="lazy" />
+                </div>
+              ))}
+            </div>
             <div className="relative max-w-2xl">
               <p className="text-[13px] font-semibold uppercase tracking-[0.16em] text-white/50">Atendimento {store.name}</p>
               <p className="mt-4 text-[clamp(2rem,4.2vw,3.5rem)] font-semibold leading-[1.02] tracking-[-0.045em]">
