@@ -306,17 +306,34 @@ const CITY_COUNTRY: Record<string, string> = {
 
 export type ResolvedArea = { code: string; name: string; type: "COUNTRY" | "REGION" };
 
-/** Texto da busca (país, região ou cidade, em português ou inglês) → área da eSIMX. */
+/** Todos os países (ISO 3166-1): o nome em português sai do próprio Node, sem depender da lista da API. */
+const ISO_COUNTRIES = (
+  "AD AE AF AG AI AL AM AO AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ " +
+  "DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GT GU GW GY HK HN HR HT HU ID IE IL IM IN IQ IR IS IT JE JM JO JP " +
+  "KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ " +
+  "OM PA PE PF PG PH PK PL PM PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SI SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TG TH TJ TL TM TN TO TR TT TV TW TZ UA UG US UY UZ " +
+  "VA VC VE VG VI VN VU WF WS XK YE YT ZA ZM ZW"
+)
+  .split(" ")
+  .map((code) => ({ code, name: code, type: "COUNTRY" as const }));
+
+/**
+ * Texto da busca (país, região ou cidade, em português ou inglês) → área da eSIMX. A lista da API
+ * só acrescenta nomes em inglês: país e região conhecidos resolvem mesmo se ela vier incompleta
+ * (se a eSIMX não tiver plano para a área, a busca volta vazia e a loja diz que ainda não tem).
+ */
 export function resolveArea(text: string | null | undefined, areas: EsimxArea[]): ResolvedArea | null {
   const raw = (text ?? "").split(",")[0];
   const q = fold(raw);
   if (!q) return null;
-  const country = (code: string): ResolvedArea | null => (areas.some((a) => a.code === code) || !areas.length ? { code, name: countryName(code), type: "COUNTRY" } : null);
-  const region = (code: string): ResolvedArea | null => (areas.some((a) => a.code === code) || !areas.length ? { code, name: REGION_NAME[code] ?? code, type: "REGION" } : null);
+  const country = (code: string): ResolvedArea => ({ code, name: countryName(code), type: "COUNTRY" });
+  const region = (code: string): ResolvedArea => ({ code, name: REGION_NAME[code] ?? code, type: "REGION" });
   if (REGION_ALIAS[q]) return region(REGION_ALIAS[q]);
   if (COUNTRY_ALIAS[q]) return country(COUNTRY_ALIAS[q]);
   if (CITY_COUNTRY[q]) return country(CITY_COUNTRY[q]);
-  const named = areas.map((a) => ({ a, pt: fold(a.type === "REGION" ? (REGION_NAME[a.code] ?? a.name) : countryName(a.code)), en: fold(a.name) }));
+  const known = new Set(areas.map((a) => a.code));
+  const all: EsimxArea[] = [...areas, ...ISO_COUNTRIES.filter((c) => !known.has(c.code)), ...Object.keys(REGION_NAME).filter((r) => !known.has(r)).map((r) => ({ code: r, name: r, type: "REGION" }))];
+  const named = all.map((a) => ({ a, pt: fold(a.type === "REGION" ? (REGION_NAME[a.code] ?? a.name) : countryName(a.code)), en: fold(a.name) }));
   const exact = named.find((n) => n.pt === q || n.en === q || n.a.code.toLowerCase() === q);
   const hit = exact ?? (q.length >= 4 ? named.find((n) => n.pt.startsWith(q) || n.en.startsWith(q)) : undefined);
   if (!hit) return null;

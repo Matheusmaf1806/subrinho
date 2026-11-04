@@ -64,6 +64,19 @@ describe("catálogo", () => {
     expect(resolveArea("", AREAS)).toBeNull();
   });
 
+  it("resolve mesmo com a lista de áreas da API vazia ou incompleta", () => {
+    const partial = AREAS.filter((a) => a.code === "IT" || a.code === "FR");
+    for (const list of [[], partial]) {
+      expect(resolveArea("Estados Unidos", list)?.code).toBe("US");
+      expect(resolveArea("eua", list)?.code).toBe("US");
+      expect(resolveArea("Espanha", list)?.code).toBe("ES");
+      expect(resolveArea("Japão", list)?.code).toBe("JP");
+      expect(resolveArea("Reino Unido", list)?.code).toBe("GB");
+      expect(resolveArea("Europa", list)).toEqual({ code: "europe", name: "Europa", type: "REGION" });
+      expect(resolveArea("Toquio", list)?.code).toBe("JP");
+    }
+  });
+
   it("textos do card sem o nome interno do pacote", () => {
     const eu = slimPackage(EU("eu", 10240, 7, 548));
     expect(dataLabel(eu)).toBe("10 GB");
@@ -102,8 +115,8 @@ describe("cliente", () => {
   });
 
   it("aceita a chave colada com aspas ou espaços", () => {
-    expect(esimxConfig({ ESIMX_API_KEY: ' "abc123" ' } as NodeJS.ProcessEnv)?.apiKey).toBe("abc123");
-    expect(esimxConfig({ ESIMX_API_KEY: "  " } as NodeJS.ProcessEnv)).toBeNull();
+    expect(esimxConfig({ ESIMX_API_KEY: ' "abc123" ' } as unknown as NodeJS.ProcessEnv)?.apiKey).toBe("abc123");
+    expect(esimxConfig({ ESIMX_API_KEY: "  " } as unknown as NodeJS.ProcessEnv)).toBeNull();
   });
 });
 
@@ -144,6 +157,18 @@ describe("adaptador", () => {
     // o que o cliente vê não cita o fornecedor nem o nome interno do pacote
     const visible = r.map(({ title, subtitle, location, destination, tags, chip, lines }) => ({ title, subtitle, location, destination, tags, chip, labels: lines.map((l) => l.label) }));
     expect(JSON.stringify(visible)).not.toMatch(/esimx|Series/i);
+  });
+
+  it("lista vazia não fica no cache: a próxima busca consulta de novo", async () => {
+    let calls = 0;
+    const api = fakeApi((c) => {
+      if (c.path === "/area/list") return { data: AREAS };
+      if (c.path.startsWith("/package/list?area_code=US")) return { data: { total_page: 1, list: ++calls === 1 ? [] : [pkg({ code: "us-1-7", name: "United States 1GB 7Days", data: 1024, validity: 7, amount: 171, coverages: [{ code: "US", network: "5G" }] })] } };
+      if (c.path.startsWith("/package/list")) return { data: { total_page: 1, total: 0, list: [] } };
+    });
+    const a = createEsimxAdapter(cfg, { transport: api.transport });
+    expect(await a.search({ destination: "Estados Unidos" })).toHaveLength(0);
+    expect(await a.search({ destination: "Estados Unidos" })).toHaveLength(1);
   });
 
   it("cotação: preço atual × quantidade de chips", async () => {

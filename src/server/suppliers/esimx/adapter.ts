@@ -18,6 +18,7 @@
  * fornecedor não vai para o cliente).
  */
 import { Decimal } from "decimal.js";
+import { after } from "next/server";
 import { photo } from "@/lib/images";
 import { cached, cachedStale } from "../hotels/cache";
 import { SupplierError, SupplierIntegrationError, type BookContext, type BookItem, type BookingResult, type CancelResult, type OfferOption, type PaxRule, type ProductDetail, type ProductSummary, type Quote, type QuoteRequest, type SearchParams, type SupplierAdapter } from "../types";
@@ -187,7 +188,17 @@ export function createEsimxAdapter(cfg: EsimxConfig, opts: { transport?: Transpo
   }
 
   /** Pacotes de um país/região (cache: 30 min fresco, até 12 h servindo o anterior). */
-  const plansFor = (areaCode: string) => cachedStale(`esimx:plans:${areaCode}`, 30 * 60, 12 * 3600, () => pages({ area_code: areaCode }));
+  // lista vazia não vai para o cache longo: um soluço da API não pode deixar o destino "sem eSIM" por horas
+  class NoPlans extends Error {}
+  const plansFor = (areaCode: string) =>
+    cachedStale(`esimx:plans:${areaCode}`, 30 * 60, 12 * 3600, async () => {
+      const list = await pages({ area_code: areaCode });
+      if (!list.length) throw new NoPlans();
+      return list;
+    }).catch((e) => {
+      if (e instanceof NoPlans) return [] as Plan[];
+      throw e;
+    });
 
   /** Catálogo inteiro (para a lista de destinos com cobertura). */
   const allPlans = () => cachedStale(`esimx:plans:*`, 3600, 24 * 3600, () => pages({}));
@@ -215,8 +226,13 @@ export function createEsimxAdapter(cfg: EsimxConfig, opts: { transport?: Transpo
   const regionsWithPlans = () =>
     cached(`esimx:regions`, 24 * 3600, async () => {
       const regions = (await areas()).filter((a) => a.type === "REGION");
-      const totals = await Promise.all(regions.map((r) => client.get<Paged<EsimxPackage>>("/package/list", { area_code: r.code, page_size: 1 }, 30_000).then((d) => (d?.total ?? 0) > 0, () => false)));
-      return regions.filter((_, i) => totals[i]).map((r) => r.code);
+      // uma chamada por vez (sem rajada contra o servidor do fornecedor)
+      const out: string[] = [];
+      for (const r of regions) {
+        const ok = await client.get<Paged<EsimxPackage>>("/package/list", { area_code: r.code, page_size: 1 }, 30_000).then((d) => (d?.total ?? 0) > 0, () => false);
+        if (ok) out.push(r.code);
+      }
+      return out;
     });
 
   // destinos com cobertura (para as sugestões do campo "Destino"); a lista enche no primeiro uso
@@ -224,7 +240,20 @@ export function createEsimxAdapter(cfg: EsimxConfig, opts: { transport?: Transpo
   let warming: Promise<void> | null = null;
   function warm() {
     if (known || warming) return;
-    warming = Promise.all([areas(), allPlans(), regionsWithPlans()])
+    // depois de responder ao cliente (Vercel mantém a função viva); fora de requisição, roda solto
+    const job = () => {
+      if (known || warming) return warming ?? undefined;
+      warming = load();
+      return warming;
+    };
+    try {
+      after(job);
+    } catch {
+      void job();
+    }
+  }
+  function load(): Promise<void> {
+    return Promise.all([areas(), allPlans(), regionsWithPlans()])
       .then(([as, ps, regions]) => {
         const covered = new Set(ps.filter(sellablePlan).flatMap((p) => p.countries.map((c) => c.code)));
         const countries = as.filter((a) => a.type === "COUNTRY" && covered.has(a.code)).map((a) => countryName(a.code));
@@ -338,6 +367,7 @@ export function createEsimxAdapter(cfg: EsimxConfig, opts: { transport?: Transpo
       const area = await resolve(params.destination);
       if (!area) return [];
       const plans = curatePlans(await plansFor(area.code), area.type === "COUNTRY" ? area.code : null);
+      if (!plans.length) console.warn(`[eSIMX] nenhum plano para ${area.code} (${params.destination})`);
       return plans.map((p) => summaryOf(p, area));
     },
 
