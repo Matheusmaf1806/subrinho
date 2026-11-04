@@ -54,24 +54,24 @@ export default async function SubrinhoPanelLayout({ children }: { children: Reac
         </Link>
       }
       badge={
-        <span className="inline-flex rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-white">
+        <span className="inline-flex rounded-full bg-white/60 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink/60 ring-1 ring-white/70">
           Painel Subrinho
         </span>
       }
       nav={NAV}
       user={
         <div className="flex items-center gap-3">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-surface text-sm font-semibold text-brand-ink" aria-hidden>
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand text-sm font-semibold text-brand-fg shadow-[0_6px_14px_-6px_var(--color-brand)]" aria-hidden>
             {initials || "S"}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate font-semibold text-white">{user.name}</p>
-            <p className="truncate text-xs text-white/75">{ROLE_LABEL[user.role]}</p>
+            <p className="truncate font-semibold text-ink">{user.name}</p>
+            <p className="truncate text-xs text-ink/55">{ROLE_LABEL[user.role]}</p>
           </div>
           <form action={logoutSubrinho}>
             <button
               type="submit"
-              className="grid h-9 w-9 place-items-center rounded-lg text-white/85 transition hover:bg-white/15 hover:text-white"
+              className="grid h-9 w-9 place-items-center rounded-xl text-ink/60 transition hover:bg-white hover:text-ink"
               title="Sair"
               aria-label="Sair do painel"
             >

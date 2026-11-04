@@ -1,4 +1,5 @@
 import { and, desc, eq } from "drizzle-orm";
+import { Marked } from "../_components/journal";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { db } from "@/server/db";
@@ -22,7 +23,9 @@ export default async function AccountPage({ params }: { params: Promise<{ slug: 
     .orderBy(desc(orders.createdAt));
   return (
     <main className="mx-auto max-w-[1100px] px-4 py-10 sm:px-8">
-      <h1 className="display text-[clamp(3rem,7vw,6rem)] text-ink">Olá, {viewer.customer.name.split(" ")[0]}.</h1>
+      <h1 data-enter className="display text-[clamp(3rem,7vw,6rem)] text-ink">
+        <Marked text={`Olá, ${viewer.customer.name.split(" ")[0]}.`} mark={`${viewer.customer.name.split(" ")[0]}.`} />
+      </h1>
       <p className="mt-3 text-[15px] text-muted">{viewer.customer.email}</p>
       <Card className="mt-10">
         <CardHeader title="Meus pedidos" />

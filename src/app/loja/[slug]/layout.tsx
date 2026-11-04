@@ -5,6 +5,8 @@ import { cartBadgeCount, currentCartToken, getStore, storeBrand, viewerFor } fro
 import { themeStyle } from "@/lib/theme";
 import { StoreMark } from "./_components/store-mark";
 import { StoreHeader } from "./_components/store-header";
+import { ScrollState } from "./_components/scroll-state";
+import { Postmark } from "./_components/journal";
 import { storeCategories } from "./_lib/categories";
 import { paymentProvider } from "@/server/payments/provider";
 
@@ -34,8 +36,12 @@ export default async function StoreLayout({ children, params }: { children: Reac
     <div style={themeStyle(store)} className="flex min-h-screen flex-col bg-white font-sans text-ink">
       <StoreHeader store={store} viewer={viewer} cartCount={count} cartHref={token ? `${base}/carrinho/${token}` : `${base}/carrinho`} categories={cats.live} pixAvailable={paymentProvider().pixAvailable} />
       <div className="flex-1">{children}</div>
+      <ScrollState />
       <footer className="mt-24 px-3 pb-3 sm:px-4 sm:pb-4">
-        <div className="overflow-hidden rounded-[2rem] bg-ink text-white sm:rounded-[2.5rem]">
+        <div className="relative isolate overflow-hidden rounded-[2rem] bg-ink text-white sm:rounded-[2.5rem]">
+          <div className="grain pointer-events-none absolute inset-0 -z-10 opacity-25 mix-blend-overlay" aria-hidden />
+          <div className="pointer-events-none absolute -left-24 -top-32 -z-10 h-96 w-96 rounded-full bg-accent opacity-20 blur-3xl" aria-hidden />
+          <Postmark ring={`${store.name.toUpperCase()} • BOA VIAGEM • `} center={String(new Date().getFullYear())} sub="BRASIL" className="pointer-events-none absolute right-10 top-10 -z-10 hidden w-[260px] rotate-6 text-white/10 lg:block" />
           <div className="mx-auto grid max-w-[1440px] gap-10 px-6 pt-14 sm:grid-cols-[1.4fr_1fr_1fr] sm:px-12">
             <div>
               <StoreMark store={store} onDark className={store.logoOnDarkUrl ? "mb-8 h-12" : "mb-8"} />

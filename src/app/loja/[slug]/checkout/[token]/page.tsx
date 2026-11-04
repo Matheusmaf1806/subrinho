@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { Marked } from "../../_components/journal";
 import { Lock, ShieldCheck } from "lucide-react";
 import { db } from "@/server/db";
 import { loadCartView } from "@/server/cart/service";
@@ -67,7 +68,9 @@ export default async function CheckoutPage({ params }: { params: Promise<{ slug:
     <main className="mx-auto max-w-[1440px] px-4 py-10 sm:px-8">
       <TrackView action={trackCartViewAction.bind(null, slug, token, "checkout")} />
       <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
-        <h1 className="display text-[clamp(3rem,7vw,6rem)] text-ink">Finalizar compra</h1>
+        <h1 data-enter className="display text-[clamp(3rem,7vw,6rem)] text-ink">
+          <Marked text="Finalizar compra" mark="compra" />
+        </h1>
         <span className="inline-flex h-9 items-center gap-1.5 rounded-full bg-surface px-4 text-[13px] font-semibold text-ink">
           <Lock className="h-4 w-4" /> Ambiente seguro
         </span>

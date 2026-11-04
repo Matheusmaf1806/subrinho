@@ -116,7 +116,11 @@ export function CartDrawer({
       >
         <ShoppingBag className="h-4 w-4" aria-hidden />
         <span className="hidden sm:inline">Carrinho</span>
-        {count > 0 && <span className="grid h-6 min-w-6 place-items-center rounded-full bg-accent px-1.5 text-xs font-semibold text-accent-fg">{count}</span>}
+        {count > 0 && (
+          <span key={count} className="pop grid h-6 min-w-6 place-items-center rounded-full bg-accent px-1.5 text-xs font-semibold text-accent-fg">
+            {count}
+          </span>
+        )}
         <span className="sr-only">{count === 1 ? "1 item" : `${count} itens`}</span>
       </button>
 

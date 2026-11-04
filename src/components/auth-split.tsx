@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { FlightPath, SubrinhoLogo, SubrinhoSymbol } from "./brand";
 import { cn } from "./ui";
+import { MeshBackground } from "./mesh-background";
 
 /** Tela de login dos painéis: formulário à esquerda, bloco de marca (cor chapada + foto) à direita. */
 export function AuthSplit({
@@ -23,18 +24,19 @@ export function AuthSplit({
   blockTitle: ReactNode;
 }) {
   return (
-    <div className="grid min-h-screen gap-3 bg-white p-3 lg:grid-cols-[1fr_1.05fr]">
-      <section className="flex flex-col justify-between px-4 py-6 sm:px-10 lg:px-16 lg:py-10">
+    <div className="glass-ui relative grid min-h-screen gap-3 p-3 lg:grid-cols-[1fr_1.05fr]">
+      <MeshBackground />
+      <section className="glass glass-edge flex flex-col justify-between rounded-[2.5rem] px-6 py-6 sm:px-10 lg:px-16 lg:py-10">
         <SubrinhoLogo size="md" />
-        <div className="my-14 w-full max-w-md">
-          <span className="inline-flex rounded-full bg-surface px-3.5 py-1.5 text-[12px] font-semibold uppercase tracking-[0.12em] text-muted">{label}</span>
+        <div className="my-14 w-full max-w-md" data-enter>
+          <span className="inline-flex rounded-full bg-white/70 px-3.5 py-1.5 text-[12px] font-semibold uppercase tracking-[0.12em] text-muted ring-1 ring-white/80">{label}</span>
           <h1 className="display mt-6 text-[clamp(2.75rem,5vw,4.5rem)] text-ink">{title}</h1>
           <p className="mt-4 text-[17px] text-muted">{description}</p>
           <div className="mt-10">{children}</div>
         </div>
         <p className="text-[13px] text-muted">{footnote}</p>
       </section>
-      <section className={cn("relative hidden overflow-hidden rounded-[2.5rem] lg:block", tone === "dark" ? "bg-ink" : "bg-brand")}>
+      <section className={cn("relative hidden overflow-hidden rounded-[2.5rem] lg:block", tone === "dark" ? "glass-dark" : "bg-brand")}>
         {image && (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}

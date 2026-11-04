@@ -6,6 +6,7 @@
  */
 import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
+import { CountUp } from "./count-up";
 
 export function cn(...c: (string | false | null | undefined)[]) {
   return c.filter(Boolean).join(" ");
@@ -61,7 +62,7 @@ export function ArrowChip({ className, tone = "dark" }: { className?: string; to
 
 export function Card({ className, children, ...p }: ComponentProps<"div">) {
   return (
-    <div {...p} className={cn("rounded-3xl bg-white ring-1 ring-inset ring-black/[0.06]", className)}>
+    <div {...p} className={cn("ui-card rounded-3xl bg-white ring-1 ring-inset ring-black/[0.06]", className)}>
       {children}
     </div>
   );
@@ -135,7 +136,10 @@ export function statusTone(status: string): Tone {
 }
 
 export function Stat({ label, value, hint, tone = "default", icon, className }: { label: string; value: ReactNode; hint?: ReactNode; tone?: "default" | "brand" | "dark"; icon?: ReactNode; className?: string }) {
-  const styles = tone === "brand" ? "bg-brand text-brand-fg" : tone === "dark" ? "bg-ink text-white" : "bg-white text-ink ring-1 ring-inset ring-black/[0.06]";
+  const styles = cn(
+    "ui-stat",
+    tone === "brand" ? "ui-stat-brand bg-brand text-brand-fg" : tone === "dark" ? "ui-stat-dark bg-ink text-white" : "ui-stat-default bg-white text-ink ring-1 ring-inset ring-black/[0.06]",
+  );
   const sub = tone === "default" ? "text-muted" : tone === "brand" ? "text-brand-fg/70" : "text-white/70";
   return (
     <div className={cn("flex min-h-[9.5rem] flex-col justify-between rounded-3xl p-6", styles, className)}>
@@ -144,7 +148,9 @@ export function Stat({ label, value, hint, tone = "default", icon, className }: 
         {icon && <span className="opacity-80 [&>svg]:h-4 [&>svg]:w-4">{icon}</span>}
       </div>
       <div>
-        <div className="mt-4 min-w-0 text-[1.75rem] font-semibold leading-none tracking-[-0.04em] tabular [overflow-wrap:anywhere] sm:text-[2rem]">{value}</div>
+        <div className="mt-4 min-w-0 text-[1.75rem] font-semibold leading-none tracking-[-0.04em] tabular [overflow-wrap:anywhere] sm:text-[2rem]">
+          {typeof value === "string" || typeof value === "number" ? <CountUp text={String(value)} /> : value}
+        </div>
         {hint && <div className={cn("mt-2 text-xs", sub)}>{hint}</div>}
       </div>
     </div>
@@ -199,7 +205,7 @@ export function Tr({ children, className, ...p }: ComponentProps<"tr">) {
 // ───────── Formulários ─────────
 
 export const inputClass =
-  "block w-full h-12 rounded-2xl border-0 bg-surface px-4 text-[15px] text-ink placeholder:text-muted/70 outline-none ring-1 ring-inset ring-transparent transition focus:bg-white focus:ring-2 focus:ring-ink disabled:opacity-60";
+  "ui-input block w-full h-12 rounded-2xl border-0 bg-surface px-4 text-[15px] text-ink placeholder:text-muted/70 outline-none ring-1 ring-inset ring-transparent transition focus:bg-white focus:ring-2 focus:ring-ink disabled:opacity-60";
 
 export function Label({ children, htmlFor, className }: { children: ReactNode; htmlFor?: string; className?: string }) {
   return (
@@ -250,7 +256,7 @@ export function Alert({ tone = "info", title, children, className }: { tone?: "i
   }[tone];
   const dot = { info: "bg-ink", warning: "bg-amber-500", danger: "bg-red-600", success: "bg-emerald-600" }[tone];
   return (
-    <div className={cn("flex gap-3 rounded-2xl px-4 py-3.5 text-sm", t, className)} role={tone === "danger" ? "alert" : "status"}>
+    <div className={cn("ui-alert flex gap-3 rounded-2xl px-4 py-3.5 text-sm", `ui-alert-${tone}`, t, className)} role={tone === "danger" ? "alert" : "status"}>
       <span className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", dot)} aria-hidden />
       <div className="min-w-0 flex-1">
         {title && <p className="font-semibold">{title}</p>}

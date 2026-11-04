@@ -14,13 +14,13 @@ export function ProductCard({ p, href, note, nights }: { p: PricedSummary; href:
   const perNight = nights && nights > 1 ? Number(p.price.pix.div(nights).toFixed(0)) : null;
   const stars = p.stars ? `${"★".repeat(Math.floor(p.stars))}${p.stars % 1 ? "½" : ""}` : null;
   return (
-    <Link href={href} className="group flex flex-col">
+    <Link href={href} className="group flex flex-col transition duration-300 ease-out hover:-translate-y-1.5">
       <Cover
         title={p.title}
         location={p.destination}
         category={p.category}
         imageUrl={p.imageUrl}
-        className="aspect-[4/3]"
+        className="aspect-[4/3] shadow-[0_20px_40px_-32px_rgba(0,0,0,0.55)] transition-shadow duration-300 group-hover:shadow-[0_34px_60px_-30px_rgba(0,0,0,0.55)]"
         overlay={
           p.rating ? (
             <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-ink/80 px-2.5 py-1.5 text-xs font-semibold text-white backdrop-blur">
@@ -71,7 +71,7 @@ export function ProductCard({ p, href, note, nights }: { p: PricedSummary; href:
             </p>
             {perNight !== null && <p className="text-xs text-muted tabular">≈ {brl(perNight)} por noite</p>}
           </div>
-          <span className="mb-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface text-ink transition group-hover:bg-ink group-hover:text-white" aria-hidden>
+          <span className="mb-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface text-ink transition duration-300 group-hover:-rotate-45 group-hover:bg-accent group-hover:text-accent-fg" aria-hidden>
             →
           </span>
         </div>

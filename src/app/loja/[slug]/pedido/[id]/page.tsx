@@ -17,6 +17,7 @@ import { getStore, viewerFor } from "../../_lib/store";
 import { AutoRefresh } from "../../_components/auto-refresh";
 import { categoryLabel } from "../../_components/category";
 import { PaypalButtons } from "../../_components/paypal-buttons";
+import { Postmark } from "../../_components/journal";
 import { simulatePixPaymentAction } from "../../actions";
 
 export const metadata = { title: "Pedido" };
@@ -58,11 +59,18 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
       <div className="flex flex-wrap items-end justify-between gap-4 pb-4">
         <div>
           <p className="text-[13px] font-semibold text-muted">Pedido {orderNumber(order.number)}</p>
-          <h1 className="display mt-3 max-w-3xl text-[clamp(2.75rem,6vw,5.25rem)] text-ink">
+          <h1 data-enter className="display mt-3 max-w-3xl text-[clamp(2.75rem,6vw,5.25rem)] text-ink">
             {order.status === "PAID" ? "Pagamento confirmado!" : pending ? "Falta pouco: conclua o pagamento" : ORDER_STATUS_LABEL[order.status]}
           </h1>
         </div>
-        <Badge tone={statusTone(order.status)}>{ORDER_STATUS_LABEL[order.status]}</Badge>
+        <div className="flex items-center gap-4">
+          {order.status === "PAID" && (
+            <div data-drop style={{ "--d": "350ms" } as React.CSSProperties} className="hidden -rotate-12 sm:block">
+              <Postmark ring="PAGAMENTO CONFIRMADO • BOA VIAGEM • " center="PAGO" sub={orderNumber(order.number)} waves={false} className="h-28 w-28 text-success opacity-80 mix-blend-multiply" />
+            </div>
+          )}
+          <Badge tone={statusTone(order.status)}>{ORDER_STATUS_LABEL[order.status]}</Badge>
+        </div>
       </div>
 
       {order.status === "PAID" && (

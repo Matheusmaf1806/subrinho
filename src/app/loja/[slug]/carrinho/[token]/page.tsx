@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Marked } from "../../_components/journal";
 import { Share2, ShoppingCart } from "lucide-react";
 import { db } from "@/server/db";
 import { loadCartView } from "@/server/cart/service";
@@ -50,7 +51,9 @@ export default async function CartPage({ params, searchParams }: { params: Promi
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-[13px] text-muted">Criado em {dateTime(view.cart.createdAt)} · este carrinho não expira</p>
-          <h1 className="display mt-3 text-[clamp(3rem,7vw,6rem)] text-ink">Seu carrinho</h1>
+          <h1 data-enter className="display mt-3 text-[clamp(3rem,7vw,6rem)] text-ink">
+            <Marked text="Seu carrinho" mark="carrinho" />
+          </h1>
         </div>
         {items.length > 0 && <p className="text-[15px] text-muted">{items.length} {items.length === 1 ? "item" : "itens"}</p>}
       </div>

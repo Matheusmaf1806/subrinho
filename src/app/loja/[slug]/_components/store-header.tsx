@@ -24,7 +24,7 @@ export function StoreHeader({
 }) {
   const base = `/loja/${store.slug}`;
   return (
-    <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl">
+    <header className="store-header sticky top-0 z-40 bg-white/90 backdrop-blur-xl backdrop-saturate-150">
       {viewer?.kind === "AFFILIATE" && (
         <div className="bg-ink text-white">
           <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-2 px-4 py-2 text-[13px] sm:px-8">
