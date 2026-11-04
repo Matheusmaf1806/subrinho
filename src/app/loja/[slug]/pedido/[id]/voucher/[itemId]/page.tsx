@@ -16,6 +16,9 @@ import { stripSupplierMentions, stripSupplierMentionsList } from "@/lib/supplier
 import { PrintButton } from "./print-button";
 import QRCode from "qrcode";
 import { type Store } from "../../../../_lib/store";
+import { CopyButton } from "@/components/ui-client";
+import { getAdapter } from "@/server/suppliers/registry";
+import type { DeliveredEsim, EsimxAdapter } from "@/server/suppliers/esimx/adapter";
 
 export const metadata = { title: "Voucher" };
 
@@ -86,8 +89,9 @@ export default async function VoucherPage({ params }: { params: Promise<{ slug: 
   if (!order || (viewer.kind === "CUSTOMER" && order.customerId !== viewer.customer.id)) notFound();
   const all = await db.select({ id: orderItems.id }).from(orderItems).where(eq(orderItems.orderId, id)).orderBy(orderItems.id);
   const [item] = await db.select().from(orderItems).where(and(eq(orderItems.id, itemId), eq(orderItems.orderId, id)));
-  if (!item || !["LODGING", "HOUSES", "TICKETS"].includes(item.category) || item.supplierStatus !== "CONFIRMED" || !item.supplierBookingRef) notFound();
+  if (!item || !["LODGING", "HOUSES", "TICKETS", "CHIP"].includes(item.category) || item.supplierStatus !== "CONFIRMED" || !item.supplierBookingRef) notFound();
   if (item.category === "TICKETS") return <TicketVoucher slug={slug} order={order} item={item} store={store} />;
+  if (item.category === "CHIP") return <EsimVoucher slug={slug} order={order} item={item} store={store} />;
   const house = item.category === "HOUSES";
 
   const d = (item.details ?? {}) as Details;
@@ -338,6 +342,148 @@ async function TicketVoucher({ slug, order, item, store }: { slug: string; order
         )}
         <footer className="mt-8 border-t border-line pt-5 text-[12px] text-muted">
           <p>Apresente os códigos na entrada (no celular ou impressos) e tenha um documento com foto. Cada código vale para uma pessoa.</p>
+        </footer>
+      </article>
+    </main>
+  );
+}
+
+const ESIM_STATUS: Record<string, { label: string; tone: string }> = {
+  QUEUED: { label: "Pronto para instalar", tone: "bg-sky-100 text-sky-900" },
+  INSTALLED: { label: "Instalado, ainda não usado", tone: "bg-emerald-100 text-emerald-800" },
+  ACTIVE: { label: "Ativo", tone: "bg-emerald-100 text-emerald-800" },
+  SUSPENDED: { label: "Suspenso", tone: "bg-amber-100 text-amber-900" },
+  DELETED: { label: "Removido do celular", tone: "bg-amber-100 text-amber-900" },
+  REVOKED: { label: "Desativado", tone: "bg-red-100 text-red-800" },
+  CANCELED: { label: "Cancelado", tone: "bg-red-100 text-red-800" },
+  ARCHIVED: { label: "Encerrado", tone: "bg-surface text-muted" },
+};
+
+const mbLabel = (mb: number) => (mb >= 1024 ? `${(mb / 1024).toFixed(mb % 1024 ? 1 : 0).replace(".", ",")} GB` : `${Math.round(mb)} MB`);
+
+/**
+ * Voucher do eSIM: um QR Code por chip (gerado aqui a partir do código de ativação), instalação com
+ * um toque no iPhone, dados para instalar à mão no Android e o uso de dados atualizado. Sem marca
+ * nem links do fornecedor.
+ */
+async function EsimVoucher({ slug, order, item, store }: { slug: string; order: typeof orders.$inferSelect; item: typeof orderItems.$inferSelect; store: Store }) {
+  const p = (item.supplierPayload ?? {}) as { esims?: DeliveredEsim[]; voucher?: { esims?: DeliveredEsim[] } };
+  let esims: DeliveredEsim[] = p.voucher?.esims?.length ? p.voucher.esims : (p.esims ?? []);
+  // status e uso de dados atualizados (rápido; se o fornecedor demorar, mostra o que foi gravado)
+  try {
+    const a = getAdapter(item.supplierCode) as Partial<EsimxAdapter>;
+    if (a.liveEsims) {
+      const live = await Promise.race([a.liveEsims(item.supplierBookingRef!), new Promise<null>((r) => setTimeout(() => r(null), 4_000))]);
+      if (live?.length) esims = live;
+    }
+  } catch {
+    /* mantém os dados gravados */
+  }
+  const qrs = await Promise.all(esims.map((e) => (e.lpa ? QRCode.toString(e.lpa, { type: "svg", margin: 1, width: 200 }) : Promise.resolve(null))));
+  const holder = (order.travelers ?? []).find((t) => t.type !== "CHILD" && t.name?.trim())?.name ?? order.customerData.name;
+  return (
+    <main className="mx-auto max-w-[860px] px-4 py-10 sm:px-8 print:max-w-none print:p-0">
+      <div className="mb-6 flex items-center justify-between gap-3 print:hidden">
+        <a href={`/loja/${slug}/pedido/${order.id}`} className="inline-flex h-9 items-center rounded-full bg-surface px-4 text-[13px] font-semibold text-ink hover:bg-surface-2">
+          ← Voltar ao pedido
+        </a>
+        <PrintButton />
+      </div>
+      <article className="rounded-[2rem] bg-white p-6 ring-1 ring-inset ring-black/[0.08] sm:p-10 print:rounded-none print:p-0 print:ring-0">
+        <header className="flex flex-wrap items-start justify-between gap-4 border-b border-line pb-6">
+          <div className="flex items-center gap-3">
+            <StoreMark store={store} />
+            <div>
+              <p className="text-[15px] font-semibold text-ink">{store.name}</p>
+              <p className="text-[12px] text-muted">eSIM de viagem</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Localizador</p>
+            <p className="font-mono text-lg font-semibold text-ink">{item.supplierBookingRef}</p>
+            <p className="mt-1 inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-800">eSIM emitido</p>
+          </div>
+        </header>
+        <section className="mt-6">
+          <h1 className="text-[1.75rem] font-semibold leading-tight tracking-[-0.03em] text-ink">{item.title}</h1>
+          {item.subtitle && <p className="mt-1 text-[15px] text-muted">{item.subtitle}</p>}
+          <dl className="mt-4">
+            <Row label="Titular">{holder}</Row>
+            <Row label="Chips">{esims.length || item.pax.units || 1}</Row>
+            <Row label="Pedido">{orderNumber(order.number)}</Row>
+          </dl>
+        </section>
+
+        <section className="mt-6 rounded-2xl bg-surface p-5 text-[14px] text-ink print:bg-white print:p-0">
+          <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">Como instalar</h2>
+          <ol className="list-decimal space-y-1 pl-5">
+            <li>Instale antes de viajar, conectado a um Wi-Fi. Cada QR Code instala um chip uma única vez: não apague o eSIM depois.</li>
+            <li>iPhone: toque em “Instalar no iPhone” ou vá em Ajustes › Celular › Adicionar eSIM › Usar QR Code. Android: Configurações › Conexões › Gerenciador de SIM › Adicionar eSIM.</li>
+            <li>No destino, escolha o eSIM para dados móveis e ligue o roaming de dados. A validade começa na primeira conexão.</li>
+          </ol>
+        </section>
+
+        <section className="mt-6 space-y-4">
+          {esims.length === 0 ? (
+            <p className="rounded-2xl bg-amber-50 px-4 py-3 text-[14px] text-amber-950">Seu eSIM está sendo preparado. Volte a esta página em instantes.</p>
+          ) : (
+            esims.map((e, i) => {
+              const st = ESIM_STATUS[e.status ?? ""];
+              const apple = e.appleLink ?? (e.lpa ? `https://esimsetup.apple.com/esim_qrcode_provisioning?carddata=${encodeURIComponent(e.lpa)}` : null);
+              const pct = e.totalMb && e.usedMb !== null ? Math.min(100, Math.round((e.usedMb / e.totalMb) * 100)) : null;
+              return (
+                <div key={e.esimId} className="grid gap-5 rounded-2xl border border-line p-5 sm:grid-cols-[200px_1fr] print:break-inside-avoid">
+                  <div>
+                    {qrs[i] ? <div className="h-[200px] w-[200px] [&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: qrs[i]! }} /> : <div className="grid h-[200px] w-[200px] place-items-center rounded-xl bg-surface text-[13px] text-muted">QR Code indisponível</div>}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-[16px] font-semibold text-ink">Chip {i + 1}</p>
+                      {st && <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${st.tone}`}>{st.label}</span>}
+                    </div>
+                    {apple && (
+                      <a href={apple} className="mt-3 inline-flex h-10 items-center rounded-full bg-ink px-4 text-[13px] font-semibold text-white hover:bg-ink-2 print:hidden">
+                        Instalar no iPhone
+                      </a>
+                    )}
+                    <dl className="mt-3">
+                      {e.smdp && (
+                        <Row label="Endereço SM-DP+">
+                          <span className="break-all font-mono text-[13px]">{e.smdp}</span> <CopyButton text={e.smdp} className="ml-1 text-[12px] font-semibold text-accent-ink underline print:hidden" />
+                        </Row>
+                      )}
+                      {e.activationCode && (
+                        <Row label="Código de ativação">
+                          <span className="break-all font-mono text-[13px]">{e.activationCode}</span> <CopyButton text={e.activationCode} className="ml-1 text-[12px] font-semibold text-accent-ink underline print:hidden" />
+                        </Row>
+                      )}
+                      {e.apn && <Row label="APN">{e.apn}</Row>}
+                      {e.iccid && (
+                        <Row label="ICCID">
+                          <span className="font-mono text-[13px]">{e.iccid}</span>
+                        </Row>
+                      )}
+                      {e.expireAt && <Row label="Válido até">{date(e.expireAt.slice(0, 10))}</Row>}
+                    </dl>
+                    {pct !== null && e.totalMb ? (
+                      <div className="mt-3">
+                        <p className="text-[12px] text-muted">
+                          Usado {mbLabel(e.usedMb ?? 0)} de {mbLabel(e.totalMb)}
+                          {e.daily ? " hoje" : ""}
+                        </p>
+                        <div className="mt-1 h-2 overflow-hidden rounded-full bg-surface">
+                          <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </section>
+        <footer className="mt-8 border-t border-line pt-5 text-[12px] text-muted">
+          <p>O celular precisa aceitar eSIM e estar desbloqueado. O seu número do Brasil continua no chip físico; use o eSIM só para dados no destino.</p>
         </footer>
       </article>
     </main>

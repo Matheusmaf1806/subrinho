@@ -259,6 +259,24 @@ cobradas pela administradora aparecem como “Caução (reembolsável pela admin
 bloqueado em produção. **Master Vacation Home:** aguardando a documentação da API (o token sozinho não diz o endereço
 nem as rotas) — até lá fica fora da vitrine sempre que a MAPRO estiver ativa.
 
+## Chip eSIM com API real — eSIMX (Wholesale API)
+
+`src/server/suppliers/esimx/` (documentação no console da eSIMX, página “API docs”). Base
+`https://enterprise.esimx.com/api/api/v1` (dois segmentos `api`, como diz a documentação), chave no header
+`x-api-key` (`ESIMX_API_KEY`, página “API Key” do console). Valores em centavos de dólar.
+
+| Etapa | Chamada |
+|---|---|
+| Destinos | `GET /area/list` + catálogo inteiro (`GET /package/list`, ~330 pacotes) para sugerir só países com cobertura; cidades conhecidas viram o país (“Paris” → França) |
+| Busca | `GET /package/list?area_code=` — para um país vêm também os planos regionais que o cobrem; a loja mostra um plano por franquia × dias (o mais barato entre as “séries”); fica de fora o que exige verificação de identidade ou conta a validade desde a compra |
+| Cotação (carrinho e checkout) | `GET /package/{code}` — preço atual × quantidade de chips |
+| Emissão | `POST /order/purchase` com `customer_order_id` = a nossa referência (`SUB<pedido>-<posição>`): repetir a mesma referência não cobra de novo. Preço conferido antes (nunca compra acima do vendido); pago com o **saldo pré-pago** da conta |
+| eSIM | `GET /order/{id}` + `GET /esim/list?order_id=` — o QR Code é gerado pela loja a partir do código LPA, com instalação de um toque no iPhone e os dados para Android; uso de dados atualizado no voucher |
+| Cancelamento | `POST /esim/{id}/cancel` — só antes de ativar; devolve ao saldo a parte não usada |
+
+**Saldo:** sem saldo a emissão falha com “Saldo insuficiente” (o item fica para emitir de novo no painel depois de
+recarregar). O saldo aparece em Painel Subrinho › Fornecedores, com aviso quando está baixo.
+
 ## Fornecedores invisíveis na loja
 
 A loja (e o Painel do Afiliado) nunca mostra quem é o fornecedor: URLs com referência neutra (`/hospedagem/h1-862326`),
@@ -267,7 +285,7 @@ fornecedores de API real (categorias sem fornecedor aparecem como “Em breve”
 
 ## Integrações — o que falta plugar
 
-- **Fornecedores:** GGT e Hotelbeds já usam as APIs reais (veja acima). Os demais usam catálogo simulado com a mesma
+- **Fornecedores:** GGT, Hotelbeds, Tu Experienza, MAPRO e eSIMX já usam as APIs reais (veja acima). Os demais usam catálogo simulado com a mesma
   interface (`SupplierAdapter` em `src/server/suppliers/types.ts`: `search`, `getProduct`, `quote`, `book`). Para
   cada um, implemente o adaptador com a API dele e registre em `src/server/suppliers/registry.ts`.
 - **Câmbio “Dólar Poolvo”:** `poolvoProvider` em `src/server/fx/index.ts` precisa do formato da API

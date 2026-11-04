@@ -11,13 +11,17 @@ import { MAPRO_CODE, MAPRO_DEMO_CUSTOMERS, createMaproFromEnv } from "../mapro/a
 import { maproConfig, maproMissing } from "../mapro/client";
 import { TUE_CODE, createTueFromEnv } from "../tue/adapter";
 import { TueApiError, TueClient, tueConfig, tueMissing } from "../tue/client";
+import { ESIMX_SUPPLIER, createEsimxFromEnv } from "../esimx/adapter";
+import { esimxConfig, esimxMissing } from "../esimx/client";
 import { isLiveSupplier, suppliersMode } from "../registry";
 import { SupplierError } from "../types";
 
 export type HotelIntegration = {
   code: string;
   name: string;
-  category: "LODGING" | "HOUSES" | "TICKETS";
+  category: "LODGING" | "HOUSES" | "TICKETS" | "CHIP";
+  /** Chip: saldo pré-pago da conta no fornecedor (US$), de onde sai cada eSIM. null = não consultado. */
+  balanceUsd?: number | null;
   configured: boolean;
   live: boolean;
   environment: string | null;
@@ -89,7 +93,31 @@ export async function hotelIntegrations(): Promise<HotelIntegration[]> {
       destinations: null,
       destinationsUpdatedAt: null,
     },
+    {
+      code: ESIMX_SUPPLIER,
+      name: "eSIMX",
+      category: "CHIP",
+      configured: !!esimxConfig(),
+      live: isLiveSupplier(ESIMX_SUPPLIER),
+      environment: (() => {
+        const c = esimxConfig();
+        return c ? new URL(c.baseUrl).host : null;
+      })(),
+      missing: esimxMissing(),
+      destinations: null,
+      destinationsUpdatedAt: null,
+      // cada eSIM é pago com o saldo pré-pago: mostrar o saldo evita vender sem conseguir emitir
+      balanceUsd: await esimxBalanceUsd(),
+    },
   ];
+}
+
+/** Saldo da conta eSIMX em US$ (rápido; null se não configurado ou sem resposta em 5 s). */
+async function esimxBalanceUsd(): Promise<number | null> {
+  const a = createEsimxFromEnv();
+  if (!a) return null;
+  const cents = await Promise.race([a.balance().catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), 5_000))]);
+  return cents === null ? null : cents / 100;
 }
 
 /** Teste rápido e somente leitura: credenciais + conexão (+ mTLS na Hotelbeds). */
@@ -155,6 +183,20 @@ export async function testHotelIntegration(code: string): Promise<{ ok: boolean;
       if (who.customer_id && MAPRO_DEMO_CUSTOMERS.includes(who.customer_id))
         return done(process.env.VERCEL_ENV !== "production", `Token da conta DEMO da MAPRO (casas fictícias)${process.env.VERCEL_ENV === "production" ? ", bloqueado em produção; use o token de produção" : ", só para testes"}`);
       return done(true, `Conectado à MAPRO · administradora: ${who.customer_name ?? "?"} · canal: ${who.integration ?? "?"}`);
+    }
+    if (code === ESIMX_SUPPLIER) {
+      const a = createEsimxFromEnv();
+      if (!a) return done(false, `Faltam variáveis: ${esimxMissing().join(", ")}`);
+      // saldo + 1 pacote do catálogo: valida a chave (somente leitura, nada é comprado)
+      const cents = await a.balance();
+      const list = await a.client.get<{ total?: number }>("/package/list", { page_size: 1 }, 30_000);
+      const saldo = `US$ ${(cents / 100).toFixed(2)}`;
+      return done(
+        cents > 0,
+        cents > 0
+          ? `Conectado à eSIMX · ${list?.total ?? "?"} pacotes no catálogo · saldo ${saldo}`
+          : `Chave aceita e ${list?.total ?? "?"} pacotes no catálogo, mas o saldo é ${saldo}: recarregue no console da eSIMX antes de vender (cada eSIM é pago com o saldo).`,
+      );
     }
     return done(false, "Fornecedor sem integração real");
   } catch (e) {

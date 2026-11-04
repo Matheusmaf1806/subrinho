@@ -139,7 +139,8 @@ export async function crossSellFor(store: Store): Promise<CrossSell | null> {
   const inCartCats = new Set(items.map((i) => i.category));
   const extras = cats.live
     .filter((c) => (c.category === "INSURANCE" || c.category === "CHIP") && !inCartCats.has(c.category))
-    .map((c) => ({ label: c.category === "INSURANCE" ? "Seguro viagem" : "Chip de internet", href: `${b}/${c.slug}` }));
+    // o chip já abre no destino da viagem (a busca de eSIM entende cidades: "Paris" → França)
+    .map((c) => ({ label: c.category === "INSURANCE" ? "Seguro viagem" : "Chip de internet", href: c.category === "CHIP" ? `${b}/${c.slug}?${toQuery({ destino: destination })}` : `${b}/${c.slug}` }));
   if (!category) return null;
 
   const ticketQuery = toQuery({ destino: destination, data: d.data, adultos: d.adultos, criancas: d.criancas });

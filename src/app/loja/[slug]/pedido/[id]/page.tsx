@@ -8,7 +8,7 @@ import { after } from "next/server";
 import { isMockPayments, paymentProvider } from "@/server/payments/provider";
 import { paypalConfig } from "@/server/payments/paypal";
 import { syncPaypalOrder, type PaypalData } from "@/server/payments/paypal-checkout";
-import { autoIssueOrder } from "@/server/bookings/service";
+import { autoIssueOrder, refreshItemBooking } from "@/server/bookings/service";
 import { Alert, Badge, Button, Card, CardBody, CardHeader, statusTone } from "@/components/ui";
 import { CopyButton } from "@/components/ui-client";
 import { brl, date, dateTime, ORDER_STATUS_LABEL, orderNumber, paxSummary } from "@/lib/format";
@@ -44,7 +44,14 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
     } else if (r && r.state !== "WAITING") paypalNote = r.message;
   }
   const paypalClientId = order.paymentProvider === "paypal" ? (paypalConfig()?.clientId ?? null) : null;
-  const items = await db.select().from(orderItems).where(eq(orderItems.orderId, id));
+  let items = await db.select().from(orderItems).where(eq(orderItems.orderId, id));
+  // eSIM em emissão: consulta o fornecedor ao abrir (o QR Code costuma ficar pronto em segundos)
+  const esimPending = (list: typeof items) => list.filter((i) => i.category === "CHIP" && i.supplierStatus === "PENDING" && !!i.supplierBookingRef);
+  if (order.status === "PAID" && esimPending(items).length) {
+    await Promise.all(esimPending(items).map((i) => Promise.race([refreshItemBooking(i.id).catch(() => null), new Promise((r) => setTimeout(r, 6_000))])));
+    items = await db.select().from(orderItems).where(eq(orderItems.orderId, id));
+  }
+  const preparingEsim = order.status === "PAID" && esimPending(items).length > 0;
 
   const pix = (order.paymentData as { pix?: { brCode: string; expiresAt: string; txid: string } }).pix;
   const card = (order.paymentData as { card?: { brand: string; last4: string; installments: number } }).card;
@@ -56,6 +63,7 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
     <main className="mx-auto max-w-[1100px] space-y-4 px-4 py-10 sm:px-8">
       {pending && pix && !pixExpired && <AutoRefresh seconds={5} />}
       {pending && paypalInfo?.status === "PENDING" && <AutoRefresh seconds={15} />}
+      {preparingEsim && <AutoRefresh seconds={8} />}
       <div className="flex flex-wrap items-end justify-between gap-4 pb-4">
         <div>
           <p className="text-[13px] font-semibold text-muted">Pedido {orderNumber(order.number)}</p>
@@ -154,12 +162,14 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
                 {i.supplierStatus === "CONFIRMED" && i.supplierBookingRef ? (
                   <p className="mt-1 flex flex-wrap items-center gap-2 text-xs font-semibold text-success">
                     Reserva confirmada · localizador {i.supplierBookingRef}
-                    {(i.category === "LODGING" || i.category === "HOUSES" || i.category === "TICKETS") && (
+                    {(i.category === "LODGING" || i.category === "HOUSES" || i.category === "TICKETS" || i.category === "CHIP") && (
                       <a href={`/loja/${slug}/pedido/${order.id}/voucher/${i.id}`} className="rounded-full bg-ink px-3 py-1 text-[11px] font-semibold text-white hover:bg-ink-2">
-                        Ver voucher
+                        {i.category === "CHIP" ? "Ver QR Code do eSIM" : "Ver voucher"}
                       </a>
                     )}
                   </p>
+                ) : i.category === "CHIP" && i.supplierStatus === "PENDING" && order.status === "PAID" ? (
+                  <p className="mt-1 text-xs font-semibold text-muted">Preparando seu eSIM, o QR Code aparece aqui em instantes</p>
                 ) : i.supplierStatus === "CANCELLED" ? (
                   <p className="mt-1 text-xs font-semibold text-red-700">Reserva cancelada</p>
                 ) : order.status === "PAID" && (order.paymentData as { simulated?: boolean } | null)?.simulated ? (

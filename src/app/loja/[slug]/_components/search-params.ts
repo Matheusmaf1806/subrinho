@@ -45,6 +45,7 @@ export function parseSearch(raw: Raw) {
     quartos,
     seniores: n(g("seniores"), 0, 0, 10),
     qtd: n(g("qtd"), 1, 1, 20),
+    dias: n(g("dias"), 0, 0, 180),
   };
   return { d, minDate };
 }

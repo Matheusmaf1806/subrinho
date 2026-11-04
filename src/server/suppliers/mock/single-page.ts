@@ -169,6 +169,19 @@ export function createEsimMock(cfg: { code: string; name: string; currency: Curr
     tags: ["Ativação imediata", "Entrega por e-mail"],
     currency: cfg.currency,
     lines: lines(p, 1),
+    chip: {
+      dataMb: /ilimitado/i.test(p.data) ? 51200 : Number(p.data.replace(/\D/g, "")) * 1024,
+      days: p.days,
+      daily: false,
+      network: "5G",
+      tethering: true,
+      topup: false,
+      calls: false,
+      coverage: p.countries.length === 1 ? p.countries[0] : `${p.countries.length} países`,
+      countries: p.countries,
+      operators: [],
+      throttle: null,
+    },
   });
   return {
     code: cfg.code,

@@ -6,6 +6,7 @@ import { createGgtFromEnv } from "./ggt/adapter";
 import { createHotelbedsFromEnv } from "./hotelbeds/adapter";
 import { createMaproFromEnv } from "./mapro/adapter";
 import { createTueFromEnv } from "./tue/adapter";
+import { createEsimxFromEnv } from "./esimx/adapter";
 import { SupplierError, type SupplierAdapter } from "./types";
 
 /** `ref` = apelido neutro usado nas URLs e formulários da loja (nunca mostrar o nome do fornecedor ao cliente). */
@@ -22,7 +23,7 @@ export const SUPPLIERS: SupplierMeta[] = [
   { code: "MAPRO", ref: "c2", name: "Mapro", category: "HOUSES", defaultCurrency: "USD", notes: "Casas de temporada" },
   { code: "INTERMAC", ref: "s1", name: "Intermac Seguros", category: "INSURANCE", defaultCurrency: "BRL", notes: "Seguro viagem" },
   { code: "HERO", ref: "s2", name: "Hero Seguro", category: "INSURANCE", defaultCurrency: "USD", notes: "Seguro viagem (tarifa em USD)" },
-  { code: "ESIMX", ref: "x1", name: "esimx", category: "CHIP", defaultCurrency: "USD", notes: "Chip eSIM internacional" },
+  { code: "ESIMX", ref: "x1", name: "eSIMX", category: "CHIP", defaultCurrency: "USD", notes: "Chip eSIM internacional (API de atacado, saldo pré-pago)" },
 ];
 
 let adapters: Map<string, SupplierAdapter> | null = null;
@@ -37,7 +38,7 @@ function build(): Map<string, SupplierAdapter> {
   // simulado. O catálogo simulado existe só com SUPPLIERS_MODE=mock (desenvolvimento e testes).
   // Para integrar outro fornecedor, implemente SupplierAdapter (types.ts) e registre aqui.
   if (suppliersMode() === "auto") {
-    const live = [createTueFromEnv(), createGgtFromEnv(), createHotelbedsFromEnv(), createMaproFromEnv()].filter((a): a is NonNullable<typeof a> => !!a);
+    const live = [createTueFromEnv(), createGgtFromEnv(), createHotelbedsFromEnv(), createMaproFromEnv(), createEsimxFromEnv()].filter((a): a is NonNullable<typeof a> => !!a);
     return new Map(live.map((a) => [a.code, a as SupplierAdapter]));
   }
   const list: SupplierAdapter[] = [

@@ -86,27 +86,31 @@ export async function GET(request: Request) {
   let hoteis: Record<string, unknown> | undefined;
   let casas: Record<string, unknown> | undefined;
   let ingressos: Record<string, unknown> | undefined;
+  let chip: Record<string, unknown> | undefined;
   if (checks.tabelas?.ok && privileged) {
     try {
       const list = await hotelIntegrations();
       hoteis = {};
       casas = {};
       ingressos = {};
+      chip = {};
       for (const h of list) {
         const test = testSuppliers && h.configured ? await testHotelIntegration(h.code) : null;
-        (h.category === "HOUSES" ? casas : h.category === "TICKETS" ? ingressos : hoteis)[h.code] = {
+        (h.category === "HOUSES" ? casas : h.category === "TICKETS" ? ingressos : h.category === "CHIP" ? chip : hoteis)[h.code] = {
           modo: h.live ? "API real" : h.configured ? "credenciais ok, mas SUPPLIERS_MODE=mock" : "fora da loja (sem credenciais)",
           ambiente: h.environment,
           variaveis_faltando: h.missing.length ? h.missing : undefined,
           destinos: h.destinations ?? undefined,
           certificado: h.certificate ? (h.certificate.ok ? `válido, vence em ${h.certificate.daysLeft} dias` : h.certificate.error ?? (h.certificate.keyMatches === false ? "a chave não corresponde ao certificado" : "vencido")) : undefined,
           teste: test ? `${test.ok ? "ok" : "falhou"}: ${test.message}` : undefined,
+          saldo_usd: h.balanceUsd ?? undefined,
         };
       }
     } catch {
       hoteis = undefined;
       casas = undefined;
       ingressos = undefined;
+      chip = undefined;
     }
   }
 
@@ -171,7 +175,7 @@ export async function GET(request: Request) {
         status: ok ? "tudo certo" : "atenção",
         ambiente: process.env.VERCEL_ENV ?? "local",
         checks,
-        ...(privileged ? { pagamento, cambio, ingressos, hoteis, casas } : { fornecedores: "entre no Painel Subrinho (ou use Authorization: Bearer <CRON_SECRET>) para ver fornecedores e câmbio" }),
+        ...(privileged ? { pagamento, cambio, ingressos, hoteis, casas, chip } : { fornecedores: "entre no Painel Subrinho (ou use Authorization: Bearer <CRON_SECRET>) para ver fornecedores e câmbio" }),
       },
       null,
       2,

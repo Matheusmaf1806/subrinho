@@ -69,7 +69,23 @@ export default async function SubrinhoSuppliersPage() {
                     <Badge tone="danger">{h.certificate.error ? "Certificado ilegível" : h.certificate.keyMatches === false ? "Chave não corresponde ao certificado" : "Certificado vencido"}</Badge>
                   ))}
               </div>
-              {h.destinations === null ? (
+              {h.category === "CHIP" ? (
+                <>
+                  <p className="text-muted">Chip eSIM · planos e preços de atacado vêm da API (cache de 30 min). Cada eSIM é pago com o saldo pré-pago da conta, na emissão.</p>
+                  {h.configured && (
+                    <p>
+                      {h.balanceUsd === null || h.balanceUsd === undefined ? (
+                        <Badge tone="neutral">Saldo não consultado agora</Badge>
+                      ) : (
+                        <Badge tone={h.balanceUsd <= 0 ? "danger" : h.balanceUsd < 50 ? "warning" : "success"}>
+                          Saldo US$ {h.balanceUsd.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {h.balanceUsd <= 0 ? ": recarregue antes de vender" : h.balanceUsd < 50 ? ": saldo baixo" : ""}
+                        </Badge>
+                      )}
+                    </p>
+                  )}
+                </>
+              ) : h.destinations === null ? (
                 <p className="text-muted">Casas de temporada · a lista de casas, preços e disponibilidade vem da API a cada busca.</p>
               ) : (
                 <p className="text-muted">

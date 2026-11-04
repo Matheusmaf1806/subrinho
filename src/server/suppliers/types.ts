@@ -114,6 +114,26 @@ export type ProductSummary = {
   area?: string | null;
   /** Casas: dados para filtros e para o card. */
   house?: { bedrooms: number; bathrooms: number; maxGuests: number; privatePool: boolean };
+  /** Chip eSIM: dados para o card e para os filtros. */
+  chip?: ChipInfo;
+};
+
+export type ChipInfo = {
+  /** Franquia em MB (diária quando `daily`). */
+  dataMb: number;
+  days: number;
+  daily: boolean;
+  /** "5G" ou "4G" no destino buscado. */
+  network: string;
+  tethering: boolean;
+  topup: boolean;
+  calls: boolean;
+  /** Cobertura em uma linha ("Itália + 38 países"). */
+  coverage: string;
+  countries: string[];
+  /** Operadoras no destino buscado. */
+  operators: string[];
+  throttle: string | null;
 };
 
 export type ProductDetail = ProductSummary & {

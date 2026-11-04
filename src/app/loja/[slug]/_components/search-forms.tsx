@@ -22,6 +22,8 @@ export type SearchDefaults = {
   quartos?: number;
   seniores?: number;
   qtd?: number;
+  /** Chip: dias de viagem (0 = não informado), para recomendar o plano. */
+  dias?: number;
 };
 
 const field = "mt-0.5 block w-full min-w-0 border-0 bg-transparent p-0 text-[15px] font-semibold text-ink outline-none placeholder:font-medium placeholder:text-muted/70 focus:ring-0";
@@ -56,10 +58,10 @@ function Destination({ options, value, placeholder, general }: { options: string
   return <DestinationField options={options} general={general} value={value} placeholder={placeholder} className={cn(barCell, divided, "col-span-2 sm:col-span-1")} />;
 }
 
-function NumberCell({ name, label, value, min = 0, max = 20, divider, half = true }: { name: string; label: string; value?: number; min?: number; max?: number; divider?: boolean; half?: boolean }) {
+function NumberCell({ name, label, value, min = 0, max = 20, divider, half = true, placeholder }: { name: string; label: string; value?: number; min?: number; max?: number; divider?: boolean; half?: boolean; placeholder?: string }) {
   return (
     <Cell label={label} divider={divider} half={half}>
-      <input type="number" name={name} min={min} max={max} defaultValue={value} inputMode="numeric" className={field} />
+      <input type="number" name={name} min={min} max={max} defaultValue={value || undefined} placeholder={placeholder} inputMode="numeric" className={field} />
     </Cell>
   );
 }
@@ -132,9 +134,10 @@ export function InsuranceSearch({ action, d, regions, minDate, className }: Form
 
 export function ChipSearch({ action, d, destinations, className }: FormProps & { destinations: string[] }) {
   return (
-    <Bar action={action} className={className} cols="sm:grid-cols-[2fr_0.8fr_auto]">
-      <Destination options={destinations} value={d.destino} placeholder="Europa, Estados Unidos, Itália…" general={false} />
-      <NumberCell name="qtd" label="Chips" value={d.qtd ?? 1} min={1} divider={false} half={false} />
+    <Bar action={action} className={className} cols="sm:grid-cols-[2fr_0.9fr_0.8fr_auto]">
+      <Destination options={destinations} value={d.destino} placeholder="Itália, Europa, Paris, Orlando…" general={false} />
+      <NumberCell name="dias" label="Dias de viagem" value={d.dias} min={1} max={180} placeholder="Ex.: 10" />
+      <NumberCell name="qtd" label="Chips" value={d.qtd ?? 1} min={1} divider={false} />
     </Bar>
   );
 }
