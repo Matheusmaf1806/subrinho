@@ -110,39 +110,6 @@ dialog::backdrop {
   display: none;
 }
 
-/* Faixa de destinos correndo (topo da loja) */
-@keyframes marquee {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
-.marquee {
-  animation: marquee 45s linear infinite;
-}
-.marquee:hover {
-  animation-play-state: paused;
-}
-@media (prefers-reduced-motion: reduce) {
-  .marquee {
-    animation: none;
-  }
-}
-
-/* Selo postal: borda picotada (foto secundária do topo da loja) */
-.stamp {
-  --s: 14px;
-  padding: calc(var(--s) * 0.85);
-  -webkit-mask:
-    radial-gradient(circle calc(var(--s) * 0.32), #0000 97%, #000) calc(var(--s) / -2) calc(var(--s) / -2) / var(--s) var(--s) round,
-    linear-gradient(#000 0 0) 50% / calc(100% - var(--s)) calc(100% - var(--s)) no-repeat;
-  mask:
-    radial-gradient(circle calc(var(--s) * 0.32), #0000 97%, #000) calc(var(--s) / -2) calc(var(--s) / -2) / var(--s) var(--s) round,
-    linear-gradient(#000 0 0) 50% / calc(100% - var(--s)) calc(100% - var(--s)) no-repeat;
-}
-
 /* Grão de papel (textura sutil sobre fundos lisos) */
 .grain {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .5 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
@@ -168,15 +135,6 @@ dialog::backdrop {
   to {
     opacity: 1;
     transform: none;
-  }
-}
-@keyframes bob {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-7px);
   }
 }
 @keyframes pop {
@@ -210,14 +168,6 @@ dialog::backdrop {
     transform: translateX(220%) skewX(-18deg);
   }
 }
-@keyframes draw {
-  from {
-    stroke-dashoffset: var(--len, 600);
-  }
-  to {
-    stroke-dashoffset: 0;
-  }
-}
 
 /* entrada ao carregar (topo): data-enter + --d (atraso) */
 [data-enter] {
@@ -225,13 +175,6 @@ dialog::backdrop {
 }
 [data-drop] {
   animation: drop-in 0.7s cubic-bezier(0.3, 1.4, 0.5, 1) var(--d, 0ms) both;
-}
-[data-bob] {
-  animation: bob 5s ease-in-out var(--d, 0ms) infinite;
-}
-.draw-path {
-  stroke-dasharray: var(--len, 600);
-  animation: draw 1.4s cubic-bezier(0.6, 0, 0.2, 1) var(--d, 300ms) both;
 }
 .pop {
   animation: pop 0.45s cubic-bezier(0.3, 1.6, 0.5, 1);
@@ -268,15 +211,10 @@ dialog::backdrop {
 @media (prefers-reduced-motion: reduce) {
   [data-enter],
   [data-drop],
-  [data-bob],
   [data-reveal],
-  .draw-path,
   .pop,
   .blob {
     animation: none !important;
-  }
-  .draw-path {
-    stroke-dasharray: none;
   }
 }
 
@@ -506,7 +444,7 @@ dialog::backdrop {
   padding: 0 0.08em;
 }
 
-/* ───────── Topo "cinemático": fotos trocando sozinhas (4 slides de 6s) com zoom lento ───────── */
+/* ───────── Banner do topo da loja: fotos trocando sozinhas (4 slides de 6s) com zoom lento ───────── */
 @keyframes slide-fade {
   0% {
     opacity: 0;
@@ -558,31 +496,10 @@ dialog::backdrop {
   animation: slide-bar 24s linear infinite;
   animation-delay: var(--slide-delay, 0s);
 }
-/* ───────── Topo "noturno": estrelas piscando ───────── */
-@keyframes twinkle {
-  0%,
-  100% {
-    opacity: 0.35;
-  }
-  50% {
-    opacity: 0.9;
-  }
-}
-.stars {
-  background-image:
-    radial-gradient(1px 1px at 20px 30px, rgba(255, 255, 255, 0.9), transparent),
-    radial-gradient(1px 1px at 120px 80px, rgba(255, 255, 255, 0.7), transparent),
-    radial-gradient(1.5px 1.5px at 200px 150px, rgba(255, 255, 255, 0.8), transparent),
-    radial-gradient(1px 1px at 280px 40px, rgba(255, 255, 255, 0.6), transparent),
-    radial-gradient(1px 1px at 330px 200px, rgba(255, 255, 255, 0.7), transparent);
-  background-size: 360px 240px;
-  animation: twinkle 5s ease-in-out infinite;
-}
 @media (prefers-reduced-motion: reduce) {
   .slide,
   .slide img,
-  .slide-bar > span,
-  .stars {
+  .slide-bar > span {
     animation: none !important;
   }
   .slide:not(:first-child) {

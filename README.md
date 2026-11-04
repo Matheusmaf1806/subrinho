@@ -137,7 +137,7 @@ afiliado no Painel Subrinho, um editor com **prévia ao vivo** define:
 | Ícone da aba | Favicon próprio; sem ele, um monograma gerado na cor da agência (`/loja/<slug>/icone`). |
 | Cores | Cor principal (qualquer cor) e cor escura (blocos, botões e textos). O texto sobre a cor principal fica branco ou preto **automaticamente** (contraste WCAG) e a cor principal usada como texto é escurecida quando necessário. A cor escura precisa ter contraste ≥ 7:1 com o branco. |
 | Fonte | Moderna (Inter Tight), Geométrica (Manrope), Arredondada (Nunito) ou Elegante (Fraunces). |
-| Página inicial | Título (até 3 linhas), subtítulo, foto principal e secundária (upload, link ou fotos prontas). |
+| Textos e foto | O topo da página inicial é um banner de fotos de destinos com a busca (sem texto por cima). O **título** (até 3 linhas) aparece na tela de entrar e para leitores de tela/Google; o **subtítulo** é a descrição da loja no Google e no link compartilhado (sem ele, um resumo do que a loja vende); a **foto** (upload, link ou fotos prontas) aparece na tela de entrar e no link compartilhado. |
 | Rodapé | Frase, Instagram, contatos. |
 | “Tecnologia Subrinho” | Exibir ou ocultar — decidido pela Subrinho no Painel Subrinho. |
 

@@ -8,8 +8,12 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { AtSign, ImagePlus, Palette, Type, X } from "lucide-react";
 import { contrast, HEX_RE, WHITE } from "@/lib/color";
 import { DEFAULT_HERO_TITLE, DEFAULT_TAGLINE, FONT_OPTIONS, MIN_DARK_CONTRAST, monogram, resolveTheme, themeStyle } from "@/lib/theme";
+import { photo } from "@/lib/images";
 import { ActionForm, SubmitButton, type ActionState } from "./ui-client";
 import { cn, inputClass } from "./ui";
+
+/** Foto do banner na prévia (o topo da loja usa fotos de destinos). */
+const BANNER = photo("vernazza", 800, 360);
 
 export type BrandingInitial = {
   name: string;
@@ -207,7 +211,6 @@ export function BrandingEditor({
   const [logo, setLogo] = useState<string | null>(initial.logoUrl);
   const [logoDark, setLogoDark] = useState<string | null>(initial.logoOnDarkUrl);
   const [hero1, setHero1] = useState<string | null>(initial.heroImageUrl);
-  const [hero2, setHero2] = useState<string | null>(initial.heroImage2Url);
   // Após salvar, remonta os campos de imagem (limpa arquivos escolhidos e lê as URLs novas).
   const [fileKey, setFileKey] = useState(0);
 
@@ -215,7 +218,6 @@ export function BrandingEditor({
   const darkOk = HEX_RE.test(dark) && contrast(dark, WHITE) >= MIN_DARK_CONTRAST;
   const t = useMemo(() => resolveTheme({ brandColor: HEX_RE.test(brand) ? brand : undefined, darkColor: darkOk ? dark : undefined, fontFamily: font }), [brand, dark, font, darkOk]);
   const style = themeStyle({ brandColor: t.brand, darkColor: t.ink, fontFamily: font });
-  const lines = (heroTitle.trim() || DEFAULT_HERO_TITLE).split(/\r?\n/).filter(Boolean);
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1fr_440px]">
@@ -260,7 +262,7 @@ export function BrandingEditor({
             </div>
           </Section>
 
-          <Section icon={<ImagePlus />} title="Página inicial" hint="Título grande, subtítulo e fotos do topo da loja.">
+          <Section icon={<ImagePlus />} title="Textos e foto da loja" hint="O topo da página inicial é um banner com fotos de destinos e a busca. O título e a foto aparecem na tela de entrar e na prévia do link compartilhado; o subtítulo é a descrição da loja no Google.">
             <div className="grid gap-4">
               <label className="block">
                 <span className={lab}>Título (até 3 linhas)</span>
@@ -268,11 +270,10 @@ export function BrandingEditor({
               </label>
               <label className="block">
                 <span className={lab}>Subtítulo (opcional)</span>
-                <textarea name="heroSubtitle" rows={2} value={heroSubtitle} onChange={(e) => setHeroSubtitle(e.target.value)} maxLength={220} placeholder="Opcional — aparece abaixo do título, no computador" className={cn(inputClass, "h-auto py-3")} />
+                <textarea name="heroSubtitle" rows={2} value={heroSubtitle} onChange={(e) => setHeroSubtitle(e.target.value)} maxLength={220} placeholder="Opcional — descrição da loja no Google e no link compartilhado" className={cn(inputClass, "h-auto py-3")} />
               </label>
-              <div className="grid gap-6 lg:grid-cols-2">
-                <ImageField key={`h1-${fileKey}`} field="heroImageUrl" label="Foto principal" hint="Vertical — até 3 MB" current={initial.heroImageUrl} presets={presets} preset={presetOf(initial.heroImageUrl)} onPreview={setHero1} disabled={readOnly} />
-                <ImageField key={`h2-${fileKey}`} field="heroImage2Url" label="Foto secundária" hint="Quadrada — até 3 MB" current={initial.heroImage2Url} presets={presets} preset={presetOf(initial.heroImage2Url)} onPreview={setHero2} disabled={readOnly} />
+              <div className="max-w-md">
+                <ImageField key={`h1-${fileKey}`} field="heroImageUrl" label="Foto da loja" hint="Vertical — até 3 MB · tela de entrar e link compartilhado" current={initial.heroImageUrl} presets={presets} preset={presetOf(initial.heroImageUrl)} onPreview={setHero1} disabled={readOnly} />
               </div>
             </div>
           </Section>
@@ -325,43 +326,40 @@ export function BrandingEditor({
             </div>
             <span className="rounded-full bg-ink px-3 py-1.5 text-[11px] font-semibold text-white">Carrinho</span>
           </div>
-          <div className="relative overflow-hidden bg-brand-50 px-4 pb-4 pt-3">
-            <div className="grid-paper pointer-events-none absolute inset-0 [background-size:40px_40px,40px_40px,8px_8px,8px_8px]" />
-            <div className="relative grid grid-cols-[1.45fr_1fr] items-center gap-3">
-              <div>
-                <p className="text-[1.05rem] font-semibold leading-[1.05] tracking-[-0.04em]">
-                  {lines.map((l, i) => (
-                    <span key={i} className={cn(lines.length > 1 && i === lines.length - 1 && "marker text-brand-ink")}>
-                      {i > 0 && " "}
-                      {l}
-                    </span>
-                  ))}
-                </p>
-                <div className="mt-2 rounded-lg bg-white p-2 ring-1 ring-ink/10 shadow-[4px_4px_0_0_var(--color-brand-200)]">
-                  <div className="flex gap-2 border-b border-line pb-1 text-[8px] font-semibold">
-                    <span className="border-b-2 border-brand pb-0.5">Ingressos</span>
-                    <span className="text-muted">Hotéis</span>
-                    <span className="text-muted">Casas</span>
-                  </div>
-                  <div className="mt-1.5 rounded-md border border-line px-1.5 py-1 text-[8px] text-muted">Destino</div>
-                  <div className="mt-1 grid grid-cols-2 gap-1">
-                    <div className="rounded-md border border-line px-1.5 py-1 text-[8px] text-muted">Data</div>
-                    <div className="rounded-md border border-line px-1.5 py-1 text-[8px] text-muted">Pessoas</div>
-                  </div>
-                  <div className="mt-1 rounded-md bg-brand py-1 text-center text-[8px] font-semibold text-brand-fg">Buscar</div>
-                </div>
+          {/* topo: banner de fotos com a busca flutuando na base */}
+          <div className="px-2">
+            <div className="relative h-32 overflow-hidden rounded-[1.1rem] bg-ink">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={BANNER} alt="" className="h-full w-full object-cover" />
+              <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/55 to-transparent" />
+              <div className="absolute right-3 top-3 flex gap-1">
+                {[0, 1, 2, 3].map((i) => (
+                  <span key={i} className={cn("h-0.5 w-4 rounded-full", i === 0 ? "bg-white" : "bg-white/40")} />
+                ))}
               </div>
-              <div className="relative h-36">
-                <div className="absolute bottom-1 right-0 h-[80%] w-[72%] rounded-lg bg-brand" />
-                <div className="absolute right-[12%] top-0 h-[80%] w-[72%] overflow-hidden rounded-lg bg-black/10 ring-1 ring-black/5">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  {hero1 && <img src={hero1} alt="" className="h-full w-full object-cover" />}
-                </div>
-                <div className="absolute bottom-0 left-0 h-14 w-14 overflow-hidden rounded-md bg-white p-0.5 shadow-[3px_3px_0_0_var(--color-ink)]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  {hero2 && <img src={hero2} alt="" className="h-full w-full rounded-[4px] object-cover" />}
-                </div>
+            </div>
+            <div className="relative mx-3 -mt-11">
+              <div className="mb-1.5 inline-flex gap-0.5 rounded-full bg-black/30 p-0.5 text-[8px] font-semibold backdrop-blur">
+                <span className="rounded-full bg-white px-2 py-1 text-ink">Ingressos</span>
+                <span className="px-2 py-1 text-white/85">Hotéis</span>
+                <span className="px-2 py-1 text-white/85">Casas</span>
               </div>
+              <div className="grid grid-cols-[1.4fr_1fr_0.8fr_auto] items-center gap-1 rounded-xl bg-white p-1 shadow-[0_12px_30px_-14px_rgba(0,0,0,0.45)] ring-1 ring-black/5">
+                {[
+                  ["Destino", "Roma, Orlando…"],
+                  ["Data", "12/04"],
+                  ["Pessoas", "2"],
+                ].map(([k, v]) => (
+                  <div key={k} className="px-1.5 py-1 leading-tight">
+                    <p className="text-[6px] font-semibold uppercase tracking-[0.12em] text-muted">{k}</p>
+                    <p className="truncate text-[8px] font-semibold text-ink">{v}</p>
+                  </div>
+                ))}
+                <span className="rounded-full bg-ink px-2.5 py-1.5 text-[8px] font-semibold text-white">Buscar</span>
+              </div>
+              <p className="mt-2 text-center text-[8px] text-muted">
+                <span className="text-brand-ink">✓</span> Até 10x sem juros · <span className="text-brand-ink">✓</span> preço confirmado antes de pagar
+              </p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 p-2">
@@ -396,6 +394,20 @@ export function BrandingEditor({
             <span className="h-3 w-3 rounded-full" style={{ background: t.brand }} /> texto sobre a cor: {t.brandFg === "#FFFFFF" ? "branco" : "preto"}
           </span>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-surface px-3 py-1.5">fonte: {FONT_OPTIONS.find((f) => f.id === font)?.label}</span>
+        </div>
+
+        {/* onde ficam o título, o subtítulo e a foto: link compartilhado (WhatsApp, redes) e Google */}
+        <p className="mb-3 mt-6 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Link compartilhado</p>
+        <div style={style} className="flex gap-3 rounded-2xl bg-white p-3 font-sans ring-1 ring-black/[0.06]">
+          <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-surface">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {hero1 && <img src={hero1} alt="" className="h-full w-full object-cover" />}
+          </div>
+          <div className="min-w-0 leading-snug">
+            <p className="truncate text-sm font-semibold text-ink">{initial.name}</p>
+            <p className="line-clamp-2 text-xs text-muted">{heroSubtitle.trim() || "Resumo automático do que a loja vende."}</p>
+            <p className="mt-0.5 truncate text-[11px] font-medium text-brand-ink">{(heroTitle.trim() || DEFAULT_HERO_TITLE).replace(/\s*\n\s*/g, " ")}</p>
+          </div>
         </div>
       </aside>
     </div>

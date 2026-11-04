@@ -1,6 +1,6 @@
 "use client";
 
-import { Minus, Plus, Users } from "lucide-react";
+import { Minus, Plus } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { cn } from "@/components/ui";
 
@@ -63,7 +63,7 @@ export function guestsSummary(rooms: number, adults: number, children: number): 
  * Quartos, adultos, crianças e a idade de cada criança — num único campo com painel.
  * Envia: quartos, adultos, criancas, idades ("7,10").
  */
-export function GuestsField({ rooms: r0 = 1, adults: a0 = 2, ages: ages0 = [], className, card }: { rooms?: number; adults?: number; ages?: number[]; className?: string; card?: boolean }) {
+export function GuestsField({ rooms: r0 = 1, adults: a0 = 2, ages: ages0 = [], className }: { rooms?: number; adults?: number; ages?: number[]; className?: string }) {
   const [rooms, setRooms] = useState(r0);
   const [adults, setAdults] = useState(Math.max(a0, r0));
   const [ages, setAges] = useState<(number | null)[]>(ages0);
@@ -107,16 +107,10 @@ export function GuestsField({ rooms: r0 = 1, adults: a0 = 2, ages: ages0 = [], c
   return (
     <div
       ref={box}
-      className={cn(
-        card
-          ? "relative rounded-2xl border border-line bg-white transition hover:border-ink/30 focus-within:border-ink focus-within:shadow-[0_0_0_1px_var(--color-ink)]"
-          : "relative rounded-[1.25rem] transition hover:bg-surface focus-within:bg-surface",
-        className,
-      )}
+      className={cn("relative rounded-[1.25rem] transition hover:bg-surface focus-within:bg-surface", className)}
     >
-      <button type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen((o) => !o)} className={card ? "block w-full py-2.5 pl-11 pr-4 text-left" : "block w-full px-5 py-3 text-left"}>
-        {card && <Users className="absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted" aria-hidden />}
-        <span className={card ? "block text-[12px] font-medium text-muted" : "block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted"}>Hóspedes</span>
+      <button type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen((o) => !o)} className="block w-full px-5 py-3 text-left max-sm:px-4 max-sm:py-2.5">
+        <span className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Hóspedes</span>
         <span className={cn("mt-0.5 block truncate text-[15px] font-semibold", missing && error ? "text-red-600" : "text-ink")}>{guestsSummary(rooms, adults, ages.length)}</span>
       </button>
       <input type="hidden" name="quartos" value={rooms} />
