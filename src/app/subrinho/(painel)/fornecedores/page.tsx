@@ -69,18 +69,24 @@ export default async function SubrinhoSuppliersPage() {
                     <Badge tone="danger">{h.certificate.error ? "Certificado ilegível" : h.certificate.keyMatches === false ? "Chave não corresponde ao certificado" : "Certificado vencido"}</Badge>
                   ))}
               </div>
-              <p className="text-muted">
-                Destinos sincronizados: <strong className="text-ink">{h.destinations.toLocaleString("pt-BR")}</strong>
-                {h.destinationsUpdatedAt ? ` · atualizado em ${dateTime(h.destinationsUpdatedAt)}` : " · baixados automaticamente na primeira busca"}
-              </p>
+              {h.destinations === null ? (
+                <p className="text-muted">Casas de temporada · a lista de casas, preços e disponibilidade vem da API a cada busca.</p>
+              ) : (
+                <p className="text-muted">
+                  Destinos sincronizados: <strong className="text-ink">{h.destinations.toLocaleString("pt-BR")}</strong>
+                  {h.destinationsUpdatedAt ? ` · atualizado em ${dateTime(h.destinationsUpdatedAt)}` : " · baixados automaticamente na primeira busca"}
+                </p>
+              )}
               {canEdit && h.configured && (
                 <div className="flex flex-wrap gap-2">
                   <InlineActionButton action={testIntegrationAction} fields={{ code: h.code }} variant="outline">
                     Testar conexão
                   </InlineActionButton>
-                  <InlineActionButton action={syncDestinationsAction} fields={{ code: h.code }} variant="outline">
-                    Atualizar destinos
-                  </InlineActionButton>
+                  {h.destinations !== null && (
+                    <InlineActionButton action={syncDestinationsAction} fields={{ code: h.code }} variant="outline">
+                      Atualizar destinos
+                    </InlineActionButton>
+                  )}
                 </div>
               )}
             </CardBody>

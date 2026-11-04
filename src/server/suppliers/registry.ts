@@ -4,6 +4,7 @@ import { createHotelsMock, createHousesMock, HOUSES_MAPRO, HOUSES_MVH } from "./
 import { createTicketsMock, NADIO_CATALOG, TU_EXPERIENZA_CATALOG } from "./mock/tickets";
 import { createGgtFromEnv } from "./ggt/adapter";
 import { createHotelbedsFromEnv } from "./hotelbeds/adapter";
+import { createMaproFromEnv } from "./mapro/adapter";
 import { SupplierError, type SupplierAdapter } from "./types";
 
 export type SupplierMeta = { code: string; name: string; category: Category; defaultCurrency: Currency; notes: string };
@@ -35,6 +36,7 @@ function build(): Map<string, SupplierAdapter> {
   const real = suppliersMode() === "auto";
   const ggt = real ? createGgtFromEnv() : null;
   const hotelbeds = real ? createHotelbedsFromEnv() : null;
+  const mapro = real ? createMaproFromEnv() : null;
   const list: SupplierAdapter[] = [
     createTicketsMock({ code: "TU_EXPERIENZA", name: "Tu Experienza", currency: "EUR", catalog: TU_EXPERIENZA_CATALOG }),
     createTicketsMock({ code: "NADIO", name: "Nadio", currency: "USD", catalog: NADIO_CATALOG }),
@@ -42,7 +44,7 @@ function build(): Map<string, SupplierAdapter> {
     createHotelsMock({ code: "RATEHAWK", name: "RateHawk", currency: "BRL" }),
     hotelbeds ?? createHotelsMock({ code: "HOTELBEDS", name: "Hotelbeds", currency: "EUR" }),
     createHousesMock({ code: "MASTER_VACATION_HOME", name: "Master Vacation Home", currency: "USD", catalog: HOUSES_MVH }),
-    createHousesMock({ code: "MAPRO", name: "Mapro", currency: "USD", catalog: HOUSES_MAPRO }),
+    mapro ?? createHousesMock({ code: "MAPRO", name: "Mapro", currency: "USD", catalog: HOUSES_MAPRO }),
     createInsuranceMock({ code: "INTERMAC", name: "Intermac Seguros", currency: "BRL", plans: INTERMAC_PLANS.map((p) => ({ ...p })) }),
     createInsuranceMock({ code: "HERO", name: "Hero Seguro", currency: "USD", plans: HERO_PLANS }),
     createEsimMock({ code: "ESIMX", name: "esimx", currency: "USD" }),

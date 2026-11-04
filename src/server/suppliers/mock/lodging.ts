@@ -433,6 +433,7 @@ export function createHousesMock(cfg: { code: string; name: string; currency: Cu
     tags: h.amenities,
     currency: cfg.currency,
     lines: lines(h, checkIn, checkOut),
+    house: { bedrooms: h.bedrooms, bathrooms: h.bathrooms, maxGuests: h.maxGuests, privatePool: h.amenities.some((a) => /piscina/i.test(a)) },
   });
 
   return {

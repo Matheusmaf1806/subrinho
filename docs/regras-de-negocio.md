@@ -173,3 +173,28 @@ A visão do afiliado é montada por **lista branca** de campos (`getOrderForAffi
 - **Câmbio desatualizado:** com `FX_PROVIDER=manual`, a cotação precisa ser atualizada no Painel Subrinho. Se a
   mais recente tiver mais de 24 h, o Painel mostra um alerta na Visão geral e o `/api/health` avisa.
 
+## 8. Casas de temporada (MAPRO)
+
+> `src/server/suppliers/mapro/`, `src/server/suppliers/houses/common.ts` · testes: `tests/mapro.test.ts`
+
+- **Preço:** o custo é o total que a administradora cobra pela estadia (aluguel + taxas como limpeza, manutenção,
+  processamento + Sales Tax e Tourist Tax), em USD, e entra na mesma conta de todo item (câmbio → margens → parcelado).
+  As linhas somam exatamente o total do fornecedor; se não somarem (desconto/arredondamento dele), vira uma linha só
+  com o total dele. Serviços opcionais (ingressos, pet, early check-in) não entram.
+- **Caução:** quando a administradora inclui caução na cotação, ela faz parte do custo e aparece como “Caução
+  (reembolsável pela administradora)”, com aviso de que é devolvida após a vistoria de saída.
+- **Capacidade:** adultos + crianças não podem passar da capacidade da casa (conferido na busca, na cotação e no
+  carrinho). A API de reserva não recebe o número de hóspedes — vai o hóspede responsável (nome, e-mail, telefone).
+- **Disponibilidade:** busca e página da casa usam a cotação por período; quando a casa não está disponível, o
+  calendário diário mostra o motivo (data ocupada ou estadia mínima).
+- **Cancelamento:** a API não informa a política. Vale `MAPRO_FREE_CANCEL_DAYS` (cancelamento grátis até N dias
+  antes do check-in); sem a variável, a casa é vendida como “Não reembolsável”. O cancelamento pelo Painel Subrinho
+  não tem simulação de multa.
+- **Reserva:** só depois do pagamento, pela emissão controlada (como hotéis). Nunca duplica: antes de reservar procura
+  uma reserva não cancelada do nosso canal para a mesma casa e datas. Não reserva se o total do momento passar do custo
+  vendido. Se a criação não responder, procura a reserva antes de marcar falha.
+- **Voucher:** endereço, condomínio, check-in/check-out com horários, localizador, hóspedes e os códigos de acesso
+  (porta, portão, Wi-Fi) informados pela administradora.
+- **Fotos:** só fotos reais do fornecedor; sem foto, a loja mostra um espaço neutro (nunca foto ilustrativa como se
+  fosse a casa — vale também para hotéis).
+- **Conta DEMO:** em produção (`VERCEL_ENV=production`) o token da conta DEMO da MAPRO é recusado.

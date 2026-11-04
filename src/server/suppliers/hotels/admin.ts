@@ -1,4 +1,4 @@
-/** Situação das integrações reais de hotel (Painel Subrinho e /api/health). Nunca expõe credenciais. */
+/** Situação das integrações reais (hotéis e casas) — Painel Subrinho e /api/health. Nunca expõe credenciais. */
 import { count, max } from "drizzle-orm";
 import { getDb } from "@/server/db";
 import { hotelDestinations } from "@/server/db/schema";
@@ -7,17 +7,21 @@ import { GGT_CODE, createGgtAdapter } from "../ggt/adapter";
 import { GGT_OP, ggtConfig, isNotFound } from "../ggt/client";
 import { HB_CODE, createHotelbedsAdapter } from "../hotelbeds/adapter";
 import { hotelbedsConfig, hotelbedsMissing, inspectCertificate, type CertificateInfo } from "../hotelbeds/client";
+import { MAPRO_CODE, MAPRO_DEMO_CUSTOMERS, createMaproFromEnv } from "../mapro/adapter";
+import { maproConfig, maproMissing } from "../mapro/client";
 import { isLiveSupplier, suppliersMode } from "../registry";
 import { SupplierError } from "../types";
 
 export type HotelIntegration = {
   code: string;
   name: string;
+  category: "LODGING" | "HOUSES";
   configured: boolean;
   live: boolean;
   environment: string | null;
   missing: string[];
-  destinations: number;
+  /** null = o fornecedor não tem lista de destinos para sincronizar (casas). */
+  destinations: number | null;
   destinationsUpdatedAt: Date | null;
   certificate?: CertificateInfo;
 };
@@ -37,6 +41,7 @@ export async function hotelIntegrations(): Promise<HotelIntegration[]> {
     {
       code: GGT_CODE,
       name: "GGT | Best Buy Hotels",
+      category: "LODGING",
       configured: !!ggt,
       live: isLiveSupplier(GGT_CODE),
       environment: ggt?.environment ?? null,
@@ -47,6 +52,7 @@ export async function hotelIntegrations(): Promise<HotelIntegration[]> {
     {
       code: HB_CODE,
       name: "Hotelbeds",
+      category: "LODGING",
       configured: !!hb,
       live: isLiveSupplier(HB_CODE),
       environment: hb?.environment ?? null,
@@ -54,6 +60,20 @@ export async function hotelIntegrations(): Promise<HotelIntegration[]> {
       destinations: Number(st(HB_CODE)?.n ?? 0),
       destinationsUpdatedAt: st(HB_CODE)?.at ?? null,
       certificate: hb ? inspectCertificate(hb) : undefined,
+    },
+    {
+      code: MAPRO_CODE,
+      name: "Mapro",
+      category: "HOUSES",
+      configured: !!maproConfig(),
+      live: isLiveSupplier(MAPRO_CODE),
+      environment: (() => {
+        const c = maproConfig();
+        return c ? new URL(c.baseUrl).host : null;
+      })(),
+      missing: maproMissing(),
+      destinations: null,
+      destinationsUpdatedAt: null,
     },
   ];
 }
@@ -87,6 +107,15 @@ export async function testHotelIntegration(code: string): Promise<{ ok: boolean;
       await a.client.booking("GET", `/bookings?start=${today}&end=${addDays(today, 1)}&filterType=CREATION&from=1&to=1`, undefined, 30_000);
       await a.client.content(`/types/languages?fields=all&from=1&to=1`, 20_000);
       return done(true, `Conectado à Hotelbeds (${cfg.environment}) — mTLS e assinatura aceitos · certificado vence em ${cert.daysLeft} dias`);
+    }
+    if (code === MAPRO_CODE) {
+      const a = createMaproFromEnv();
+      if (!a) return done(false, `Faltam variáveis: ${maproMissing().join(", ")}`);
+      // /v1/whoami: valida o token e diz de qual administradora são as casas (somente leitura)
+      const who = await a.client.get<{ integration?: string; customer_id?: string; customer_name?: string }>("/v1/whoami", 20_000);
+      if (who.customer_id && MAPRO_DEMO_CUSTOMERS.includes(who.customer_id))
+        return done(process.env.VERCEL_ENV !== "production", `Token da conta DEMO da MAPRO (casas fictícias)${process.env.VERCEL_ENV === "production" ? " — bloqueado em produção; use o token de produção" : " — só para testes"}`);
+      return done(true, `Conectado à MAPRO — administradora: ${who.customer_name ?? "?"} · canal: ${who.integration ?? "?"}`);
     }
     return done(false, "Fornecedor sem integração real");
   } catch (e) {

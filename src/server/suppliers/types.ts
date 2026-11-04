@@ -78,6 +78,8 @@ export type ProductSummary = {
   perks?: { breakfast: boolean; refundable: boolean };
   /** Hotéis: bairro/área (selo do card). */
   area?: string | null;
+  /** Casas: dados para filtros e para o card. */
+  house?: { bedrooms: number; bathrooms: number; maxGuests: number; privatePool: boolean };
 };
 
 export type ProductDetail = ProductSummary & {
@@ -144,6 +146,8 @@ export type BookContext = {
   travelers: PersonData[];
   /** Quem responde pela reserva (pagador/cliente). */
   holder?: PersonData | null;
+  /** Contato do cliente (casas: a administradora exige e-mail e telefone do hóspede responsável). */
+  contact?: { email?: string | null; phone?: string | null; state?: string | null } | null;
   remark?: string | null;
 };
 
@@ -186,16 +190,16 @@ export interface SupplierAdapter {
   /** Cotação com preço correto da API para a configuração de pax (usado ao adicionar e ao alterar quantidade). */
   quote(req: QuoteRequest): Promise<Quote>;
   book(item: BookItem, ctx: BookContext): Promise<BookingResult>;
-  /** Consulta a reserva no fornecedor (status atualizado). */
-  bookingStatus?(bookingRef: string): Promise<BookingResult>;
+  /** Consulta a reserva no fornecedor (status atualizado). `stored` = dados gravados na emissão (ids internos do fornecedor). */
+  bookingStatus?(bookingRef: string, stored?: Record<string, unknown>): Promise<BookingResult>;
   /** Procura uma reserva feita com a nossa referência (evita reservar duas vezes). */
   findBooking?(item: BookItem): Promise<BookingResult | null>;
   /** Cancela a reserva no fornecedor (ou simula, quando suportado, para mostrar a multa). */
-  cancelBooking?(bookingRef: string, opts: { simulate: boolean }): Promise<CancelResult>;
+  cancelBooking?(bookingRef: string, opts: { simulate: boolean; stored?: Record<string, unknown> }): Promise<CancelResult>;
   /** O fornecedor consegue simular a multa antes de cancelar? */
   cancelSimulation?: boolean;
   /** Dados oficiais do voucher no fornecedor (ex.: link do PDF), quando houver. */
-  voucher?(bookingRef: string): Promise<Record<string, unknown> | null>;
+  voucher?(bookingRef: string, stored?: Record<string, unknown>): Promise<Record<string, unknown> | null>;
 }
 
 export const CATEGORY_LABEL: Record<Category, string> = {

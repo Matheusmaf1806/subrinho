@@ -1,14 +1,19 @@
 import Link from "next/link";
-import { Check, MapPin, Star } from "lucide-react";
+import { Check, ImageOff, MapPin, Star } from "lucide-react";
 import type { PricedDetail } from "@/server/catalog";
 import { CATEGORY_PHOTO, galleryFor, photo } from "@/lib/images";
 
-export function ProductHero({ p, back, cta }: { p: PricedDetail; back: { href: string; label: string }; cta?: { href: string; label: string; note?: string } }) {
-  const main = p.gallery?.[0] ?? p.imageUrl ?? photo(CATEGORY_PHOTO[p.category] ?? "colosseum", 1600);
+/** Fotos da página: as reais do fornecedor (nunca misturadas com fotos ilustrativas). */
+function photosOf(p: PricedDetail): string[] {
+  // Fornecedor real (galeria informada): somente as fotos dele — inventar foto de hotel/casa engana o cliente.
+  if (p.gallery) return [...new Set([...p.gallery, ...(p.imageUrl ? [p.imageUrl] : [])])].slice(0, 3);
+  // Catálogo simulado: foto do produto + fotos ilustrativas do destino.
   const [stockA, stockB] = galleryFor(p.category, p.destination);
-  // fotos reais do fornecedor quando houver; completa com fotos ilustrativas
-  const a = p.gallery?.[1] ?? stockA;
-  const b = p.gallery?.[2] ?? stockB;
+  return [p.imageUrl ?? photo(CATEGORY_PHOTO[p.category] ?? "colosseum", 1600), stockA, stockB];
+}
+
+export function ProductHero({ p, back, cta }: { p: PricedDetail; back: { href: string; label: string }; cta?: { href: string; label: string; note?: string } }) {
+  const photos = photosOf(p);
   const paragraphs = p.description.split(/\n{2,}/).map((x) => x.trim()).filter(Boolean);
   const info = p.info.filter((i) => i.label !== "Fornecedor");
   return (
@@ -39,14 +44,23 @@ export function ProductHero({ p, back, cta }: { p: PricedDetail; back: { href: s
         )}
       </div>
 
-      <div className="grid h-[300px] grid-cols-3 grid-rows-2 gap-3 sm:h-[460px]">
-        {[main, a, b].map((src, i) => (
-          <div key={i} className={i === 0 ? "col-span-2 row-span-2 overflow-hidden rounded-[2rem]" : "overflow-hidden rounded-[1.5rem]"}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={src.replace("w=900", i === 0 ? "w=1600" : "w=900")} alt={i === 0 ? p.title : ""} className="h-full w-full object-cover" loading={i === 0 ? "eager" : "lazy"} />
+      {photos.length === 0 ? (
+        <div className="grid h-[220px] place-items-center rounded-[2rem] bg-surface text-muted sm:h-[300px]">
+          <div className="flex flex-col items-center gap-2 text-center">
+            <ImageOff className="h-8 w-8" />
+            <p className="text-[14px] font-semibold">O fornecedor ainda não enviou fotos deste local.</p>
           </div>
-        ))}
-      </div>
+        </div>
+      ) : (
+        <div className={`grid h-[300px] gap-3 sm:h-[460px] ${photos.length >= 3 ? "grid-cols-3 grid-rows-2" : photos.length === 2 ? "grid-cols-2" : "grid-cols-1"}`}>
+          {photos.map((src, i) => (
+            <div key={src} className={i === 0 && photos.length >= 3 ? "col-span-2 row-span-2 overflow-hidden rounded-[2rem]" : i === 0 ? "overflow-hidden rounded-[2rem]" : "overflow-hidden rounded-[1.5rem]"}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={src.replace("w=900", i === 0 ? "w=1600" : "w=900")} alt={i === 0 ? p.title : ""} className="h-full w-full object-cover" loading={i === 0 ? "eager" : "lazy"} />
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="grid gap-10 border-t border-line pt-10 lg:grid-cols-[1.4fr_1fr]">
         <div>

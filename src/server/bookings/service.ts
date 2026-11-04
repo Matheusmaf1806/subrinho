@@ -135,13 +135,23 @@ export async function issueItemBooking(
         reference,
         maxCost: { currency: item.costCurrency, amount: item.costForeign },
       },
-      { travelers, holder, retry, remark: order.specialRequests },
+      {
+        travelers,
+        holder,
+        retry,
+        remark: order.specialRequests,
+        contact: {
+          email: order.customerData?.email ?? order.payerData?.email ?? null,
+          phone: order.customerData?.phone ?? order.payerData?.phone ?? null,
+          state: order.payerData?.address?.state ?? order.customerData?.address?.state ?? null,
+        },
+      },
     );
     status = r.status === "CONFIRMED" || r.status === "PENDING" || r.status === "REJECTED" || r.status === "CANCELLED" ? r.status : BOOKING_STATUS.PENDING;
     bookingRef = r.bookingRef || null;
     payload = { ...r.payload, reference, issuedAt: new Date().toISOString(), issuedBy: actor.name ?? actor.type };
     if (status === "CONFIRMED" && bookingRef && adapter.voucher) {
-      const voucher = await adapter.voucher(bookingRef).catch(() => null);
+      const voucher = await adapter.voucher(bookingRef, payload).catch(() => null);
       if (voucher) payload.voucher = voucher;
     }
     message = status === "CONFIRMED" ? `Reserva confirmada (${bookingRef})` : status === "PENDING" ? `Pedido enviado ao fornecedor (${bookingRef}) — aguardando confirmação` : `Fornecedor respondeu: ${BOOKING_STATUS_LABEL[status] ?? status}`;
@@ -169,17 +179,26 @@ export async function refreshItemBooking(itemId: string, db: DB = getDb()): Prom
   // Sem localizador (ex.: resposta perdida): procura pela nossa referência.
   if (!item.supplierBookingRef) {
     if (!adapter.findBooking || !prev.reference) throw new BookingIssueError("Este item ainda não tem reserva no fornecedor");
-    const found = await adapter.findBooking({ quoteRef: item.supplierQuoteRef, productId: item.productId, optionId: item.optionId, pax: item.pax, reference: String(prev.reference) });
+    const found = await adapter.findBooking({
+      quoteRef: item.supplierQuoteRef,
+      productId: item.productId,
+      optionId: item.optionId,
+      pax: item.pax,
+      serviceDate: item.serviceDate,
+      serviceEndDate: item.serviceEndDate,
+      details: item.details,
+      reference: String(prev.reference),
+    });
     if (!found) return { itemId, status: item.supplierStatus ?? "", bookingRef: null, message: "Nenhuma reserva encontrada no fornecedor com esta referência" };
     await db.update(orderItems).set({ supplierStatus: found.status, supplierBookingRef: found.bookingRef, supplierPayload: { ...prev, ...found.payload, recoveredAt: new Date().toISOString() } }).where(eq(orderItems.id, itemId));
     await db.insert(orderEvents).values({ orderId: item.orderId, type: "BOOKING_RECOVERED", data: { itemId, bookingRef: found.bookingRef, status: found.status } });
     return { itemId, status: found.status, bookingRef: found.bookingRef, message: `Reserva encontrada no fornecedor (${found.bookingRef})` };
   }
   if (!adapter.bookingStatus) throw new BookingIssueError("Este fornecedor não informa status");
-  const r = await adapter.bookingStatus(item.supplierBookingRef);
+  const r = await adapter.bookingStatus(item.supplierBookingRef, prev);
   const next: Record<string, unknown> = { ...prev, ...r.payload, checkedAt: new Date().toISOString() };
   if (r.status === "CONFIRMED" && adapter.voucher && !(prev.voucher as { voucherUrl?: string } | undefined)?.voucherUrl) {
-    const voucher = await adapter.voucher(item.supplierBookingRef).catch(() => null);
+    const voucher = await adapter.voucher(item.supplierBookingRef, next).catch(() => null);
     if (voucher) next.voucher = voucher;
   }
   await db.update(orderItems).set({ supplierStatus: r.status, supplierPayload: next }).where(eq(orderItems.id, itemId));
@@ -220,7 +239,7 @@ export async function cancelItemBooking(
   if (item.supplierStatus === BOOKING_STATUS.CANCELLED) throw new BookingIssueError("A reserva já está cancelada");
   const adapter = getAdapter(item.supplierCode);
   if (!adapter.cancelBooking) throw new BookingIssueError("Este fornecedor não permite cancelar pelo sistema");
-  const r = await adapter.cancelBooking(item.supplierBookingRef, opts);
+  const r = await adapter.cancelBooking(item.supplierBookingRef, { ...opts, stored: (item.supplierPayload ?? {}) as Record<string, unknown> });
   const money = r.penalty ? `${r.penalty.currency} ${Number(r.penalty.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : null;
   if (opts.simulate) {
     return { status: "SIMULATED", penalty: r.penalty, message: money ? `Se cancelar agora, a multa do fornecedor é de ${money}.` : "Sem multa informada pelo fornecedor para cancelar agora." };

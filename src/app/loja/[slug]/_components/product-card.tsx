@@ -4,6 +4,12 @@ import type { PricedSummary } from "@/server/catalog";
 import { brl } from "@/lib/format";
 import { Cover } from "./cover";
 
+function bathroomsLabel(n: number) {
+  const whole = Math.floor(n);
+  const txt = n - whole >= 0.5 ? `${whole}½` : String(whole);
+  return `${txt} banheiro${n > 1 ? "s" : ""}`;
+}
+
 export function ProductCard({ p, href, note, nights }: { p: PricedSummary; href: string; note?: string; nights?: number }) {
   const perNight = nights && nights > 1 ? Number(p.price.pix.div(nights).toFixed(0)) : null;
   const stars = p.stars ? `${"★".repeat(Math.floor(p.stars))}${p.stars % 1 ? "½" : ""}` : null;
@@ -36,12 +42,26 @@ export function ProductCard({ p, href, note, nights }: { p: PricedSummary; href:
             {p.perks?.refundable && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-800">Reembolsável</span>}
           </p>
         )}
+        {p.house && (
+          <p className="mt-1 text-[13px] font-medium text-ink/80">
+            {p.house.bedrooms} quarto{p.house.bedrooms === 1 ? "" : "s"} · {bathroomsLabel(p.house.bathrooms)} · até {p.house.maxGuests} hóspedes
+          </p>
+        )}
+        {p.house && p.tags.length > 0 && (
+          <p className="mt-1.5 flex flex-wrap gap-1 text-[12px] font-semibold">
+            {p.tags.slice(0, 3).map((t) => (
+              <span key={t} className="rounded-full bg-surface px-2 py-0.5 text-ink/80">
+                {t}
+              </span>
+            ))}
+          </p>
+        )}
         <p className="mt-1 inline-flex items-center gap-1 text-[13px] text-muted">
           <MapPin className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">{p.area ?? p.location}</span>
         </p>
         <div className="mt-3 flex items-end justify-between gap-3">
           <div className="leading-tight">
-            <p className="text-xs text-muted">a partir de</p>
+            <p className="text-xs text-muted">{p.house ? "total da estadia" : "a partir de"}</p>
             <p className="text-xl font-semibold tracking-[-0.03em] tabular">
               {brl(p.price.pix)} <span className="text-[13px] font-semibold tracking-normal text-accent-ink">Pix</span>
             </p>

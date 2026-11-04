@@ -106,6 +106,8 @@ export async function getProductDetail(
   }
   options.sort((a, b) => (a.price && b.price ? a.price.pix.comparedTo(b.price.pix) : a.price ? -1 : 1));
   const price = detail.lines.length ? priceOf(ctx, detail, null, detail) : null;
-  if (!price && !(detail.category === "LODGING" && detail.supplierCode && options.length === 0)) return null;
+  // hospedagem/casa sem disponibilidade nas datas: a página aparece com o motivo (sem preço)
+  const unavailable = options.length === 0 || options.every((o) => !o.available);
+  if (!price && !((detail.category === "LODGING" || detail.category === "HOUSES") && unavailable)) return null;
   return { ...detail, price, options };
 }

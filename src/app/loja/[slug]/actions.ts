@@ -398,6 +398,10 @@ export async function placeOrderAction(slug: string, token: string, _prev: Actio
 
 /** Hotéis: nome e sobrenome de todos os hóspedes (adultos e crianças) de cada quarto. */
 function hotelGuestsError(items: { category: string; pax: PaxConfig }[], travelers: PersonData[]): string | null {
+  if (items.some((i) => i.category === "HOUSES")) {
+    const lead = travelers.find((t) => t.type !== "CHILD" && t.name.trim());
+    if (!lead || lead.name.split(" ").filter(Boolean).length < 2) return "Informe nome e sobrenome do hóspede responsável pela casa (exigência da administradora)";
+  }
   const hotels = items.filter((i) => i.category === "LODGING");
   if (!hotels.length) return null;
   const adults = travelers.filter((t) => t.type !== "CHILD");

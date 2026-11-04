@@ -76,23 +76,26 @@ export async function GET(request: Request) {
 
   // Hotéis com API real (sem rede; ?fornecedores testa a conexão de cada um)
   let hoteis: Record<string, unknown> | undefined;
+  let casas: Record<string, unknown> | undefined;
   if (checks.tabelas?.ok) {
     try {
       const list = await hotelIntegrations();
       hoteis = {};
+      casas = {};
       for (const h of list) {
         const test = testSuppliers && h.configured ? await testHotelIntegration(h.code) : null;
-        hoteis[h.code] = {
+        (h.category === "HOUSES" ? casas : hoteis)[h.code] = {
           modo: h.live ? "API real" : h.configured ? "credenciais ok, mas SUPPLIERS_MODE=mock" : "simulado (sem credenciais)",
           ambiente: h.environment,
           variaveis_faltando: h.missing.length ? h.missing : undefined,
-          destinos: h.destinations,
+          destinos: h.destinations ?? undefined,
           certificado: h.certificate ? (h.certificate.ok ? `válido, vence em ${h.certificate.daysLeft} dias` : h.certificate.error ?? (h.certificate.keyMatches === false ? "a chave não corresponde ao certificado" : "vencido")) : undefined,
           teste: test ? `${test.ok ? "ok" : "falhou"}: ${test.message}` : undefined,
         };
       }
     } catch {
       hoteis = undefined;
+      casas = undefined;
     }
   }
 
@@ -120,7 +123,7 @@ export async function GET(request: Request) {
   }
 
   const ok = Object.values(checks).every((c) => c.ok);
-  return new Response(JSON.stringify({ status: ok ? "tudo certo" : "atenção", ambiente: process.env.VERCEL_ENV ?? "local", checks, cambio, hoteis }, null, 2), {
+  return new Response(JSON.stringify({ status: ok ? "tudo certo" : "atenção", ambiente: process.env.VERCEL_ENV ?? "local", checks, cambio, hoteis, casas }, null, 2), {
     status: ok ? 200 : 503,
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
   });

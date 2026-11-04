@@ -13,6 +13,7 @@ export function Cover({
   big,
   rounded = "rounded-3xl",
   overlay,
+  stock = false,
 }: {
   title: string;
   location?: string | null;
@@ -22,13 +23,22 @@ export function Cover({
   big?: boolean;
   rounded?: string;
   overlay?: React.ReactNode;
+  stock?: boolean;
 }) {
-  const src = imageUrl ?? photo(CATEGORY_PHOTO[category] ?? "colosseum", big ? 1600 : 900);
+  // Sem foto do fornecedor: espaço neutro (foto ilustrativa faria o cliente pensar que é o lugar).
+  // `stock` = catálogo simulado/sem produto específico, onde a foto da categoria é só ilustração.
+  const src = imageUrl ?? (stock ? photo(CATEGORY_PHOTO[category] ?? "colosseum", big ? 1600 : 900) : null);
   const Icon = categoryIcon(category);
   return (
     <div className={cn("relative overflow-hidden bg-surface-2", rounded, className)}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt={title} loading={big ? "eager" : "lazy"} className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]" />
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt={title} loading={big ? "eager" : "lazy"} className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]" />
+      ) : (
+        <div className="absolute inset-0 grid place-items-center text-muted" role="img" aria-label={`${title} — sem foto`}>
+          <Icon className="h-10 w-10 opacity-40" />
+        </div>
+      )}
       {location && (
         <span className={cn("absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 font-semibold text-ink backdrop-blur", big ? "text-sm" : "text-xs")}>
           <Icon className="h-3.5 w-3.5 text-accent-ink" /> {location}

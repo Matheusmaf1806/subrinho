@@ -18,6 +18,10 @@ export const metadata = { title: "Voucher" };
 
 type Details = {
   hotelName?: string;
+  houseName?: string;
+  resort?: string | null;
+  checkinTime?: string | null;
+  checkoutTime?: string | null;
   hotelCategory?: string | null;
   address?: string | null;
   destinationName?: string | null;
@@ -31,11 +35,21 @@ type Details = {
 };
 type Payload = {
   reference?: string;
+  referenceCode?: string | null;
   goReference?: string | null;
   hotelConfirmation?: string | null;
   payableThrough?: string | null;
   supplierVatNumber?: string | null;
-  voucher?: { voucherUrl?: string | null; phone?: string | null; address?: string | null; emergencyPhone?: string | null; bookedAndPayableBy?: string | null; remarks?: string | null };
+  voucher?: {
+    voucherUrl?: string | null;
+    phone?: string | null;
+    address?: string | null;
+    emergencyPhone?: string | null;
+    bookedAndPayableBy?: string | null;
+    remarks?: string | null;
+    /** Casas: códigos de acesso informados pela administradora. */
+    access?: { doorCode?: string | null; gateCode?: string | null; wifiName?: string | null; wifiPassword?: string | null } | null;
+  };
 };
 
 /** Nomes por quarto na mesma distribuição usada na reserva (adultos, depois crianças). */
@@ -69,7 +83,8 @@ export default async function VoucherPage({ params }: { params: Promise<{ slug: 
   if (!order || (viewer.kind === "CUSTOMER" && order.customerId !== viewer.customer.id)) notFound();
   const all = await db.select({ id: orderItems.id }).from(orderItems).where(eq(orderItems.orderId, id)).orderBy(orderItems.id);
   const [item] = await db.select().from(orderItems).where(and(eq(orderItems.id, itemId), eq(orderItems.orderId, id)));
-  if (!item || item.category !== "LODGING" || item.supplierStatus !== "CONFIRMED" || !item.supplierBookingRef) notFound();
+  if (!item || (item.category !== "LODGING" && item.category !== "HOUSES") || item.supplierStatus !== "CONFIRMED" || !item.supplierBookingRef) notFound();
+  const house = item.category === "HOUSES";
 
   const d = (item.details ?? {}) as Details;
   const p = (item.supplierPayload ?? {}) as Payload;
@@ -79,6 +94,15 @@ export default async function VoucherPage({ params }: { params: Promise<{ slug: 
   const phone = d.hotelPhone ?? p.voucher?.phone ?? null;
   const address = d.address ?? p.voucher?.address ?? null;
   const remarks = [d.remarks, p.voucher?.remarks].filter((x): x is string => !!x?.trim()).join("\n\n");
+  const access = p.voucher?.access;
+  const accessRows = access
+    ? ([
+        ["Código da porta", access.doorCode],
+        ["Código do portão", access.gateCode],
+        ["Wi-Fi", access.wifiName],
+        ["Senha do Wi-Fi", access.wifiPassword],
+      ].filter(([, v]) => !!v?.trim()) as [string, string][])
+    : [];
 
   return (
     <main className="mx-auto max-w-[820px] px-4 py-10 sm:px-8 print:max-w-none print:p-0">
@@ -102,7 +126,7 @@ export default async function VoucherPage({ params }: { params: Promise<{ slug: 
             <StoreMark store={store} />
             <div>
               <p className="text-[15px] font-semibold text-ink">{store.name}</p>
-              <p className="text-[12px] text-muted">Voucher de hospedagem</p>
+              <p className="text-[12px] text-muted">{house ? "Voucher da casa de temporada" : "Voucher de hospedagem"}</p>
             </div>
           </div>
           <div className="text-right">
@@ -113,10 +137,12 @@ export default async function VoucherPage({ params }: { params: Promise<{ slug: 
         </header>
 
         <section className="mt-6">
-          <h1 className="text-[1.75rem] font-semibold leading-tight tracking-[-0.03em] text-ink">{d.hotelName ?? item.title}</h1>
+          <h1 className="text-[1.75rem] font-semibold leading-tight tracking-[-0.03em] text-ink">{d.hotelName ?? d.houseName ?? item.title}</h1>
           {d.hotelCategory && <p className="mt-1 text-ink/70">{d.hotelCategory}</p>}
+          {house && item.subtitle && <p className="mt-1 text-ink/70">{item.subtitle}</p>}
           <dl className="mt-4">
             {address && <Row label="Endereço">{address}</Row>}
+            {d.resort && <Row label="Condomínio">{d.resort}</Row>}
             {d.destinationName && <Row label="Destino">{d.destinationName}</Row>}
             {phone && <Row label="Telefone do hotel">{phone}</Row>}
           </dl>
@@ -125,11 +151,17 @@ export default async function VoucherPage({ params }: { params: Promise<{ slug: 
         <section className="mt-6">
           <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">Reserva</h2>
           <dl>
-            <Row label="Check-in">{item.serviceDate ? date(item.serviceDate) : "—"}</Row>
-            <Row label="Check-out">{item.serviceEndDate ? date(item.serviceEndDate) : "—"}</Row>
+            <Row label="Check-in">
+              {item.serviceDate ? date(item.serviceDate) : "—"}
+              {d.checkinTime ? ` · a partir das ${d.checkinTime}` : ""}
+            </Row>
+            <Row label="Check-out">
+              {item.serviceEndDate ? date(item.serviceEndDate) : "—"}
+              {d.checkoutTime ? ` · até ${d.checkoutTime}` : ""}
+            </Row>
             {d.nights ? <Row label="Noites">{d.nights}</Row> : null}
-            <Row label="Quarto">{(d.rooms ?? []).join(" + ") || item.subtitle || "—"}</Row>
-            <Row label="Regime">{d.board ?? "—"}</Row>
+            {!house && <Row label="Quarto">{(d.rooms ?? []).join(" + ") || item.subtitle || "—"}</Row>}
+            {!house && <Row label="Regime">{d.board ?? "—"}</Row>}
             <Row label="Localizador do fornecedor">
               <span className="font-mono">{item.supplierBookingRef}</span>
               {p.goReference ? <span className="text-muted"> · {p.goReference}</span> : null}
@@ -149,13 +181,33 @@ export default async function VoucherPage({ params }: { params: Promise<{ slug: 
           <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">Hóspedes</h2>
           <dl>
             <Row label="Titular">{holder}</Row>
-            {rooms.map((r, i) => (
+            {house ? (
+              <Row label="Hóspedes">
+                {[item.pax.adults ? `${item.pax.adults} adulto${item.pax.adults > 1 ? "s" : ""}` : null, item.pax.children ? `${item.pax.children} criança${item.pax.children > 1 ? "s" : ""}` : null].filter(Boolean).join(" e ")}
+                {(order.travelers ?? []).length > 1 ? ` — ${(order.travelers ?? []).map((t) => t.name).filter(Boolean).join(", ")}` : ""}
+              </Row>
+            ) : null}
+            {!house && rooms.map((r, i) => (
               <Row key={i} label={`Quarto ${i + 1}`}>
                 {[...r.adults, ...r.children.map((c) => `${c.name} (${c.age === 0 ? "menos de 1 ano" : `${c.age} ano${c.age > 1 ? "s" : ""}`})`)].join(", ")}
               </Row>
             ))}
           </dl>
         </section>
+
+        {accessRows.length > 0 && (
+          <section className="mt-6">
+            <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">Acesso à casa</h2>
+            <dl>
+              {accessRows.map(([label, v]) => (
+                <Row key={label} label={label}>
+                  <span className="font-mono">{v}</span>
+                </Row>
+              ))}
+            </dl>
+            <p className="mt-1 text-[12px] text-muted">Informado pela administradora. Os códigos podem ser atualizados por ela antes da chegada.</p>
+          </section>
+        )}
 
         {order.specialRequests && (
           <section className="mt-6">
@@ -185,9 +237,13 @@ export default async function VoucherPage({ params }: { params: Promise<{ slug: 
               {item.supplierBookingRef}
             </p>
           )}
-          {p.voucher?.bookedAndPayableBy && <p>Reservado e pagável por: {p.voucher.bookedAndPayableBy}</p>}
+          {p.voucher?.bookedAndPayableBy && <p>{house ? "Administradora" : "Reservado e pagável por"}: {p.voucher.bookedAndPayableBy}</p>}
           {p.voucher?.emergencyPhone && <p>Telefone de emergência: {p.voucher.emergencyPhone}</p>}
-          <p>Apresente este voucher e um documento com foto no check-in. Taxas locais indicadas acima são pagas diretamente no hotel.</p>
+          <p>
+            {house
+              ? "Guarde este voucher e tenha um documento com foto na chegada. Siga as instruções de acesso da administradora."
+              : "Apresente este voucher e um documento com foto no check-in. Taxas locais indicadas acima são pagas diretamente no hotel."}
+          </p>
         </footer>
       </article>
     </main>

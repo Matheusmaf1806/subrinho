@@ -197,6 +197,23 @@ página do hotel, sem gastar uma nova busca no fornecedor.
 **Diagnóstico:** Painel Subrinho → Fornecedores (modo de cada fornecedor, validade do certificado, “Testar conexão”,
 “Atualizar destinos”) e `GET /api/health?fornecedores` (testa as conexões, somente leitura).
 
+## Casas de temporada com API real — MAPRO
+
+`src/server/suppliers/mapro/` (Channels API, token Bearer). Fluxo:
+
+| Etapa | Chamada |
+|---|---|
+| Busca | `GET /v1/quote?checkin&checkout` — casas disponíveis já com o total (aluguel + taxas da administradora + impostos), por cursor; destino “Orlando” inclui Kissimmee, Davenport etc. |
+| Casa | `GET /v1/properties/{id}` (fotos, quartos e camas, comodidades em português) + a cotação da busca; indisponível → `GET …/calendars` explica o motivo (ocupada / estadia mínima) |
+| Cotação (carrinho e checkout) | cotação nova da casa (capacidade conferida) |
+| Reserva | procura reserva igual do nosso canal (nunca duplica) → cotação nova (não reserva acima do custo vendido) → `POST /v1/reservations` |
+| Status / voucher / cancelamento | `GET` / `DELETE /v1/reservations/{ULID}` — o voucher mostra endereço, horários, localizador e os códigos de acesso informados pela administradora |
+
+A API não informa política de cancelamento: configure `MAPRO_FREE_CANCEL_DAYS` (sem ela, “Não reembolsável”). Cauções
+cobradas pela administradora aparecem como “Caução (reembolsável pela administradora)”. O token da conta DEMO é
+bloqueado em produção. **Master Vacation Home:** aguardando a documentação da API (o token sozinho não diz o endereço
+nem as rotas) — até lá fica fora da vitrine sempre que a MAPRO estiver ativa.
+
 ## Integrações — o que falta plugar
 
 - **Fornecedores:** GGT e Hotelbeds já usam as APIs reais (veja acima). Os demais usam catálogo simulado com a mesma
