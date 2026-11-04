@@ -131,6 +131,9 @@ export function groupAmenities(list: string[], first: Record<string, string[]> =
 export function tidyAmenity(s: string): string {
   return s
     .replace(/\s+/g, " ")
+    // "Número de banheiras de hidromassagem – - 1" / "Número de piscinas: 1" → "Banheiras de hidromassagem: 1"
+    .replace(/\s*[–-]\s*[–-]\s*(\d+)\s*$/, ": $1")
+    .replace(/^n[úu]mero (?:de|total de)\s+(.+?):\s*(\d+)$/i, (_m, what: string, n: string) => `${what.charAt(0).toUpperCase()}${what.slice(1)}: ${n}`)
     .replace(/\((?:sobretaxa|surcharge|taxa adicional|com custo)\)/gi, "(pago à parte)")
     .replace(/^[-•·\s]+|[.;,\s]+$/g, "")
     .trim();

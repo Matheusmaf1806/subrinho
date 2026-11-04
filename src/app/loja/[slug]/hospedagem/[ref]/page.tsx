@@ -11,7 +11,8 @@ import { brl, date, paxSummary } from "@/lib/format";
 import { daysBetween } from "@/lib/tz";
 import { getStore, getStorePricing } from "../../_lib/store";
 import { storeInsight } from "../../_lib/insight";
-import { CommissionTag, SupplierTag } from "../../_components/reveal";
+import { SupplierTag } from "../../_components/reveal";
+import { RelatedProducts } from "../../_components/related";
 import { lodgingQuery, parseSearch, supplierParams } from "../../_components/search-params";
 import { LodgingSearch } from "../../_components/search-forms";
 import { MobileSearchToggle } from "../../_components/search-toggle";
@@ -20,7 +21,7 @@ import { PriceTag } from "../../_components/price-tag";
 import { HotelGallery } from "../../_components/hotel/hotel-gallery";
 import { RoomFilters } from "../../_components/hotel/room-filters";
 import { RoomPhoto } from "../../_components/hotel/room-photo";
-import { HotelAmenities, HotelIssues, HotelLocation, HotelOverview, HotelPolicies, SectionHeading, StayCard } from "../../_components/hotel/hotel-sections";
+import { BookingSummary, HotelAmenities, HotelIssues, HotelLocation, HotelOverview, HotelPolicies, MobileBookingBar, SectionHeading } from "../../_components/hotel/hotel-sections";
 import { addToCartAction } from "../../actions";
 
 // Consulta disponibilidade + conteúdo do hotel no fornecedor; "Reservar" cota de novo (preço final).
@@ -85,71 +86,54 @@ export default async function HotelDetail({
     ...(h.coordinates || h.nearby.length ? [{ href: "#localizacao", label: "Localização" }] : []),
     ...(h.policies.length || h.times.checkInFrom ? [{ href: "#politicas", label: "Políticas" }] : []),
   ];
-  const fromNote = cheapest?.price ? `${brl(cheapest.price.pix)}` : null;
+  const fromPrice = cheapest?.price ?? null;
+  // nome longo: título menor (não ocupa meia tela)
+  const titleSize = p.title.length > 32 ? "text-[clamp(2rem,3.4vw,3.25rem)]" : "text-[clamp(2.3rem,4.6vw,4.25rem)]";
 
   return (
-    <main className="mx-auto max-w-[1440px] px-4 pb-16 pt-8 sm:px-8">
+    <main className="mx-auto max-w-[1440px] px-4 pb-28 pt-8 sm:px-8 lg:pb-16">
       {/* ───────── Cabeçalho ───────── */}
       <Link href={`${base}?${lodgingQuery(d)}`} className="group inline-flex h-9 items-center gap-2 rounded-full bg-white px-4 text-[13px] font-semibold text-ink shadow-[0_1px_2px_rgba(0,0,0,0.06)] ring-1 ring-black/[0.06] transition hover:ring-ink/20">
         <span className="transition group-hover:-translate-x-0.5">←</span> Voltar para hotéis
       </Link>
-      <div className="mt-6 flex flex-wrap items-end justify-between gap-6">
-        <div className="min-w-0">
-          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[14px] text-muted">
-            {p.stars ? (
-              <span className="font-semibold text-amber-500" aria-label={`${p.stars} estrelas`}>
-                {"★".repeat(Math.floor(p.stars))}
-                {p.stars % 1 ? "½" : ""}
-              </span>
-            ) : null}
-            <span className="inline-flex items-center gap-1.5">
-              <MapPin className="h-4 w-4" aria-hidden /> {p.location}
+      <div className="mt-6 max-w-[1100px]">
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[14px] text-muted">
+          {p.stars ? (
+            <span className="font-semibold text-amber-500" aria-label={`${p.stars} estrelas`}>
+              {"★".repeat(Math.floor(p.stars))}
+              {p.stars % 1 ? "½" : ""}
             </span>
-            {(h.coordinates || h.nearby.length > 0) && (
-              <a href="#localizacao" className="font-semibold text-ink underline decoration-ink/25 underline-offset-4 hover:decoration-ink">
-                Ver no mapa
-              </a>
-            )}
-          </p>
-          <h1 data-enter className="display mt-3 text-[clamp(2.3rem,4.6vw,4.25rem)] text-ink">
-            {p.title}
-          </h1>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {withBreakfast > 0 && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-surface px-3.5 py-1.5 text-[13px] font-semibold text-ink">
-                <Coffee className="h-4 w-4" aria-hidden /> Café da manhã em {withBreakfast === p.options.length ? "todas as opções" : `${withBreakfast} opç${withBreakfast > 1 ? "ões" : "ão"}`}
-              </span>
-            )}
-            {withFree > 0 && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3.5 py-1.5 text-[13px] font-semibold text-emerald-800">
-                <BadgeCheck className="h-4 w-4" aria-hidden /> Cancelamento grátis disponível
-              </span>
-            )}
-            {h.times.checkInFrom && (
-              <span className="rounded-full bg-surface px-3.5 py-1.5 text-[13px] font-semibold text-ink">
-                Check-in {h.times.checkInFrom}
-                {h.times.checkOutUntil ? ` · Check-out ${h.times.checkOutUntil}` : ""}
-              </span>
-            )}
-          </div>
-        </div>
-        {fromNote && (
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-[13px] text-muted">a partir de</p>
-              <p className="text-2xl font-semibold tracking-[-0.03em] text-ink">
-                {fromNote} <span className="text-[13px] font-semibold text-accent-ink">no Pix</span>
-              </p>
-              <p className="text-[12px] text-muted">
-                total · {nights} noite{nights > 1 ? "s" : ""}
-              </p>
-              <CommissionTag c={cheapest?.price?.commission} className="mt-1.5" />
-            </div>
-            <a href="#quartos" className="inline-flex h-12 items-center gap-2 rounded-full bg-ink px-6 text-[15px] font-semibold text-white transition hover:bg-ink-2">
-              Ver quartos <span aria-hidden>↓</span>
+          ) : null}
+          <span className="inline-flex items-center gap-1.5">
+            <MapPin className="h-4 w-4" aria-hidden /> {p.location}
+          </span>
+          {(h.coordinates || h.nearby.length > 0) && (
+            <a href="#localizacao" className="font-semibold text-ink underline decoration-ink/25 underline-offset-4 hover:decoration-ink">
+              Ver no mapa
             </a>
-          </div>
-        )}
+          )}
+        </p>
+        <h1 data-enter className={cn("display mt-3 text-balance text-ink", titleSize)}>
+          {p.title}
+        </h1>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {withBreakfast > 0 && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-surface px-3.5 py-1.5 text-[13px] font-semibold text-ink">
+              <Coffee className="h-4 w-4" aria-hidden /> Café da manhã em {withBreakfast === p.options.length ? "todas as opções" : `${withBreakfast} opç${withBreakfast > 1 ? "ões" : "ão"}`}
+            </span>
+          )}
+          {withFree > 0 && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3.5 py-1.5 text-[13px] font-semibold text-emerald-800">
+              <BadgeCheck className="h-4 w-4" aria-hidden /> Cancelamento grátis disponível
+            </span>
+          )}
+          {h.times.checkInFrom && (
+            <span className="rounded-full bg-surface px-3.5 py-1.5 text-[13px] font-semibold text-ink">
+              Check-in {h.times.checkInFrom}
+              {h.times.checkOutUntil ? ` · Check-out ${h.times.checkOutUntil}` : ""}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* ───────── Fotos ───────── */}
@@ -170,26 +154,11 @@ export default async function HotelDetail({
         ))}
       </nav>
 
-      <div className="mt-10 space-y-16">
+      <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_370px] xl:gap-14">
+        <div className="min-w-0 space-y-16">
         {/* ───────── Visão geral ───────── */}
-        <section id="visao-geral" className="grid scroll-mt-36 gap-10 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+        <section id="visao-geral" className="scroll-mt-36">
           <HotelOverview h={h} allAmenities={allAmenities} />
-          <StayCard
-            h={h}
-            checkIn={d.checkin}
-            checkOut={d.checkout}
-            nights={nights}
-            pax={pax}
-            footer={
-              fromNote ? (
-                <a href="#quartos" className="flex h-12 w-full items-center justify-center rounded-full bg-accent text-[15px] font-semibold text-accent-fg transition hover:opacity-90">
-                  Ver {p.options.length} opç{p.options.length > 1 ? "ões" : "ão"} a partir de {fromNote}
-                </a>
-              ) : (
-                <p className="text-[14px] text-muted">Sem quartos para estas datas. Altere a busca abaixo.</p>
-              )
-            }
-          />
         </section>
 
         <HotelIssues h={h} />
@@ -201,7 +170,7 @@ export default async function HotelDetail({
             {date(d.checkin)} a {date(d.checkout)} · {nights} noite{nights > 1 ? "s" : ""} · {pax}
             {ages.length ? ` (${ages.map((a) => (a === 0 ? "< 1 ano" : `${a} ano${a > 1 ? "s" : ""}`)).join(", ")})` : ""}
           </p>
-          <div className="mb-6">
+          <div id="alterar-busca" className="mb-6 scroll-mt-36">
             <MobileSearchToggle summary="Alterar datas ou hóspedes" detail={`${date(d.checkin)} a ${date(d.checkout)} · ${pax}`}>
               <LodgingSearch action={`${base}/${ref}`} d={{ ...d, destino: d.destino || p.destination }} destinations={[p.destination]} minDate={minDate} />
             </MobileSearchToggle>
@@ -243,7 +212,7 @@ export default async function HotelDetail({
                       data-room
                       data-cafe={breakfast ? "" : undefined}
                       data-gratis={o.freeCancellationUntil ? "" : undefined}
-                      className={cn("grid overflow-hidden rounded-[1.75rem] bg-white ring-1 ring-inset ring-black/[0.07]", photo ? "sm:grid-cols-[230px_minmax(0,1fr)_auto]" : "sm:grid-cols-[minmax(0,1fr)_auto]")}
+                      className={cn("grid overflow-hidden rounded-[1.75rem] bg-white ring-1 ring-inset ring-black/[0.07]", photo ? "sm:grid-cols-[200px_minmax(0,1fr)_minmax(210px,auto)]" : "sm:grid-cols-[minmax(0,1fr)_minmax(210px,auto)]")}
                     >
                       {photo && <RoomPhoto src={photo} own={own.length > 0} count={own.length} urls={own} />}
                       <div className="min-w-0 p-5 sm:p-6">
@@ -301,7 +270,7 @@ export default async function HotelDetail({
                             size="sm"
                             commission={o.price.commission}
                             note={`total da estadia · ${nights} noite${nights > 1 ? "s" : ""}${nights > 1 ? ` · ≈ ${brl(Number(o.price.pix.div(nights).toFixed(0)))}/noite` : ""}`}
-                            className="sm:text-right"
+                            align="right"
                           />
                         )}
                         {o.available && o.price && (
@@ -334,7 +303,41 @@ export default async function HotelDetail({
         <HotelAmenities h={h} />
         <HotelLocation h={h} address={p.location} title={p.title} />
         <HotelPolicies h={h} />
+        </div>
+
+        {/* painel de reserva: acompanha a rolagem no computador */}
+        <aside className="hidden lg:block">
+          <div className="sticky top-[136px]">
+            <BookingSummary
+              h={h}
+              price={fromPrice}
+              options={p.options.length}
+              checkIn={d.checkin}
+              checkOut={d.checkout}
+              nights={nights}
+              pax={pax}
+              breakfast={withBreakfast}
+              freeCancel={withFree}
+            />
+          </div>
+        </aside>
       </div>
+
+      <div className="mt-16">
+        <RelatedProducts
+          ctx={ctx}
+          reveal={reveal}
+          category="LODGING"
+          params={supplierParams({ ...d, destino: d.destino || p.destination, dest: d.destino ? d.dest : "" }, "lodging")}
+          current={{ supplierCode: supplier, productId, groupKey: p.groupKey, pix: fromPrice ? Number(fromPrice.pix.toString()) : null, stars: p.stars ?? null }}
+          hrefBase={base}
+          query={lodgingQuery({ ...d, destino: d.destino || p.destination })}
+          title={`Outros hotéis em ${p.destination || "destino"}`}
+          note={`${nights} noite${nights > 1 ? "s" : ""}`}
+          nights={nights}
+        />
+      </div>
+      <MobileBookingBar price={fromPrice} nights={nights} />
     </main>
   );
 }

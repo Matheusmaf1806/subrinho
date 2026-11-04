@@ -453,7 +453,7 @@ export function createHotelbedsAdapter(cfg: HotelbedsConfig, opts: { transport?:
 
   async function content(code: string): Promise<Content | null> {
     return cached(
-      `hb:content:v2:${code}:${cfg.language}`,
+      `hb:content:v3:${code}:${cfg.language}`,
       CONTENT_TTL,
       async () => {
         const r = await client.content<{ hotel?: Record<string, unknown> }>(`/hotels/${encodeURIComponent(code)}/details?language=${encodeURIComponent(cfg.language)}&useSecondaryLanguage=true`, 30_000);

@@ -97,7 +97,7 @@ export function TicketBooking({
               <span className="text-right text-xs leading-tight text-muted tabular">
                 <span className="block text-[15px] font-semibold text-ink">{fmt(o.adultPix)}</span>
                 adulto{o.childPix !== null && <span className="block">{fmt(o.childPix)} criança</span>}
-                {o.adultCommission !== undefined && <span className="mt-1 block font-semibold text-emerald-700">comissão {fmt(o.adultCommission)}</span>}
+                {o.adultCommission !== undefined && <span className="mt-1 inline-block rounded-full bg-emerald-600 px-2 py-0.5 font-semibold text-white">comissão {fmt(o.adultCommission)}</span>}
               </span>
             </label>
           ))}
@@ -114,9 +114,12 @@ export function TicketBooking({
         </div>
         <p className="mt-1 text-xs text-white/50">Confirmado com o fornecedor ao adicionar. Também em 10x sem juros.</p>
         {commission !== null && (
-          <p className="mt-2 text-[13px] font-semibold text-emerald-300 tabular">
-            Comissão da agência: {fmt(commission)}
-            {current?.commissionPct !== undefined ? ` · ${current.commissionPct.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%` : ""}
+          <p className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-emerald-500 px-3.5 py-2.5 text-white tabular">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/80">Sua comissão</span>
+            <span className="text-[17px] font-semibold">
+              {fmt(commission)}
+              {current?.commissionPct !== undefined ? <span className="text-[13px] font-medium text-white/80"> · {current.commissionPct.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%</span> : null}
+            </span>
           </p>
         )}
       </div>

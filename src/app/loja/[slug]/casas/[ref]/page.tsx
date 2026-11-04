@@ -11,6 +11,7 @@ import { storeInsight } from "../../_lib/insight";
 import { SupplierTag } from "../../_components/reveal";
 import { parseSearch, supplierParams, toQuery } from "../../_components/search-params";
 import { BookingPanel, ProductHero } from "../../_components/product-hero";
+import { RelatedProducts } from "../../_components/related";
 import { AddToCartForm } from "../../_components/add-to-cart";
 import { PaxStepper } from "../../_components/pax-stepper";
 import { PriceTag } from "../../_components/price-tag";
@@ -54,7 +55,8 @@ export default async function HouseDetail({
   const reason = !o?.available && !tooMany ? (o?.notes?.[0] ?? "A casa não está disponível para estas datas.") : null;
 
   return (
-    <main className="mx-auto grid max-w-[1440px] gap-10 px-4 py-8 sm:px-8 lg:grid-cols-[1fr_440px] xl:gap-16">
+    <main className="mx-auto max-w-[1440px] px-4 py-8 sm:px-8">
+      <div className="grid gap-10 lg:grid-cols-[1fr_440px] xl:gap-16">
       <ProductHero
         p={p}
         back={{ href: `/loja/${slug}/casas?${toQuery({ destino: d.destino, checkin: d.checkin, checkout: d.checkout, adultos: d.adultos, criancas: d.criancas })}`, label: "Voltar para casas" }}
@@ -136,6 +138,20 @@ export default async function HouseDetail({
           <p className="text-[12px] text-muted">Ao reservar, consultamos a administradora de novo para garantir disponibilidade e o valor final.</p>
         </div>
       </BookingPanel>
+      </div>
+      <div className="mt-16">
+        <RelatedProducts
+          ctx={ctx}
+          reveal={reveal}
+          category="HOUSES"
+          params={supplierParams({ ...d, destino: d.destino || p.destination }, "houses")}
+          current={{ supplierCode: supplier, productId, groupKey: p.groupKey, pix: o?.price ? Number(o.price.pix.toString()) : null }}
+          hrefBase={`/loja/${slug}/casas`}
+          query={toQuery({ destino: d.destino || p.destination, checkin: d.checkin, checkout: d.checkout, adultos: d.adultos, criancas: d.criancas })}
+          title={`Outras casas em ${p.destination || "destino"}`}
+          nights={nights}
+        />
+      </div>
     </main>
   );
 }

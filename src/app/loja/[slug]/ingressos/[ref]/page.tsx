@@ -9,6 +9,7 @@ import { storeInsight } from "../../_lib/insight";
 import { parseSearch, supplierParams, toQuery } from "../../_components/search-params";
 import { BookingPanel, ProductHero } from "../../_components/product-hero";
 import { TicketBooking } from "../../_components/ticket-booking";
+import { RelatedProducts } from "../../_components/related";
 import { addToCartAction } from "../../actions";
 
 // Consulta o produto e os horários da data no fornecedor.
@@ -62,7 +63,8 @@ export default async function TicketDetail({
   );
 
   return (
-    <main className="mx-auto grid max-w-[1440px] gap-10 px-4 py-8 sm:px-8 lg:grid-cols-[1fr_440px] xl:gap-16">
+    <main className="mx-auto max-w-[1440px] px-4 py-8 sm:px-8">
+      <div className="grid gap-10 lg:grid-cols-[1fr_440px] xl:gap-16">
       <ProductHero p={p} back={{ href: `/loja/${slug}/ingressos?${toQuery({ destino: d.destino, data: d.data, adultos: d.adultos, criancas: d.criancas })}`, label: "Voltar para ingressos" }} />
       <BookingPanel title="Escolha seus ingressos">
           <TicketBooking
@@ -76,6 +78,20 @@ export default async function TicketDetail({
             defaultChildren={d.criancas}
           />
       </BookingPanel>
+      </div>
+      <div className="mt-16">
+        <RelatedProducts
+          ctx={ctx}
+          reveal={reveal}
+          category="TICKETS"
+          params={supplierParams({ ...d, destino: d.destino || p.destination }, "tickets")}
+          current={{ supplierCode: supplier, productId, groupKey: p.groupKey, pix: p.price ? Number(p.price.pix.toString()) : null }}
+          hrefBase={`/loja/${slug}/ingressos`}
+          query={toQuery({ destino: d.destino || p.destination, data: d.data, adultos: d.adultos, criancas: d.criancas })}
+          title={`Mais experiências em ${p.destination || "destino"}`}
+          note="adulto"
+        />
+      </div>
     </main>
   );
 }

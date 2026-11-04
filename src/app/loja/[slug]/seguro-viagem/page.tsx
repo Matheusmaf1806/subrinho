@@ -65,7 +65,7 @@ export default async function InsurancePage({ params, searchParams }: { params: 
                 </div>
                 <p className={`text-[15px] leading-relaxed ${i === 1 ? "text-white/70" : "text-muted"}`}>{p.subtitle}</p>
                 <div className="flex flex-col gap-3 sm:items-end">
-                  <PriceTag pix={p.price.pix} plan={p.price.plan} size="sm" note={`${travelers} viajante(s) · ${days} dias`} className="sm:text-right" invert={i === 1} commission={p.price.commission} />
+                  <PriceTag pix={p.price.pix} plan={p.price.plan} size="sm" note={`${travelers} viajante(s) · ${days} dias`} align="right" invert={i === 1} commission={p.price.commission} />
                   <SupplierTag name={p.revealSupplier} className="mt-2" />
                   <AddToCartForm
                     action={add}

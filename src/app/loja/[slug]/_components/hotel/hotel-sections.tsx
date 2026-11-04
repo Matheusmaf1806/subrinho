@@ -1,16 +1,19 @@
 /**
- * Seções da página do hotel (servidor): visão geral, comodidades, localização e políticas.
- * Tudo a partir do conteúdo do fornecedor já organizado (HotelContent); seção sem dados não aparece.
+ * Seções da página do hotel (servidor): visão geral, painel de reserva, comodidades, localização e
+ * políticas. Tudo a partir do conteúdo do fornecedor já organizado (HotelContent); seção sem dados
+ * não aparece. Tamanhos de texto: títulos de seção iguais, corpo 14–16 px em todas as seções.
  */
 import type { ReactNode } from "react";
 import {
   Accessibility,
   Baby,
+  BadgeCheck,
   BedDouble,
   CircleParking,
-  Clock,
+  Coffee,
   ConciergeBell,
   ExternalLink,
+  IdCard,
   Info,
   Languages,
   LogIn,
@@ -21,11 +24,14 @@ import {
   UtensilsCrossed,
   Waves,
   Wifi,
-  IdCard,
   type LucideIcon,
 } from "lucide-react";
 import type { HotelContent } from "@/server/suppliers/types";
-import { date } from "@/lib/format";
+import { brl, date } from "@/lib/format";
+import type { InstallmentPlan } from "@/server/pricing/engine";
+import type { Decimal } from "@/server/pricing/money";
+import { cn } from "@/components/ui";
+import { CommissionBox, type Commission } from "../reveal";
 import { amenityIcon, topAmenities } from "./amenity-icon";
 
 const GROUP_ICON: Record<string, LucideIcon> = {
@@ -44,7 +50,7 @@ export function SectionHeading({ eyebrow, title, children }: { eyebrow?: string;
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div>
         {eyebrow && <p className="mb-2 text-[12px] font-semibold uppercase tracking-[0.16em] text-accent-ink">{eyebrow}</p>}
-        <h2 className="text-[clamp(1.9rem,3.4vw,2.75rem)] font-semibold leading-none tracking-[-0.045em] text-ink">{title}</h2>
+        <h2 className="text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-none tracking-[-0.045em] text-ink">{title}</h2>
       </div>
       {children}
     </div>
@@ -52,12 +58,12 @@ export function SectionHeading({ eyebrow, title, children }: { eyebrow?: string;
 }
 
 /** Lista que mostra os primeiros itens e o resto em "Ver mais" (sem JS). */
-function Collapsible({ items, max, render }: { items: string[]; max: number; render: (it: string) => ReactNode }) {
-  const head = items.length > max + 2 ? items.slice(0, max) : items;
+function Collapsible({ items, max, render, className }: { items: string[]; max: number; render: (it: string) => ReactNode; className?: string }) {
+  const head = items.length > max + 1 ? items.slice(0, max) : items;
   const tail = items.slice(head.length);
   return (
-    <>
-      <ul className="mt-3 space-y-2">{head.map(render)}</ul>
+    <div className={className}>
+      <ul className="space-y-2">{head.map(render)}</ul>
       {tail.length > 0 && (
         <details className="group mt-2">
           <summary className="cursor-pointer list-none text-[13px] font-semibold text-ink underline decoration-ink/25 underline-offset-4 hover:decoration-ink">
@@ -67,7 +73,7 @@ function Collapsible({ items, max, render }: { items: string[]; max: number; ren
           <ul className="mt-2 space-y-2">{tail.map(render)}</ul>
         </details>
       )}
-    </>
+    </div>
   );
 }
 
@@ -78,13 +84,18 @@ export function HotelOverview({ h, allAmenities }: { h: HotelContent; allAmeniti
   const lead = titled.length ? titled.filter((a) => /localiza|quartos/i.test(a.title!)) : h.about.slice(0, 2);
   const rest = h.about.filter((a) => !lead.includes(a));
   const top = topAmenities(allAmenities, 8);
+  const facts: { icon: LucideIcon; text: string }[] = [
+    ...h.facts.slice(0, 2).map((f) => ({ icon: Info, text: `${f.label}: ${f.value}` })),
+    ...(h.times.minAge ? [{ icon: IdCard, text: `Idade mínima no check-in: ${h.times.minAge} anos` }] : []),
+    ...(h.languages.length ? [{ icon: Languages, text: `Idiomas: ${h.languages.join(", ")}` }] : []),
+  ];
   return (
     <div className="min-w-0 space-y-8">
       <div className="space-y-5">
         {lead.map((a, i) => (
           <div key={i}>
             {a.title && <p className="mb-1.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-muted">{a.title}</p>}
-            <p className={i === 0 ? "text-[18px] leading-relaxed text-ink" : "text-[16px] leading-relaxed text-ink/80"}>{a.text}</p>
+            <p className="text-[16px] leading-relaxed text-ink/85">{a.text}</p>
           </div>
         ))}
         {rest.length > 0 && (
@@ -104,14 +115,23 @@ export function HotelOverview({ h, allAmenities }: { h: HotelContent; allAmeniti
           </details>
         )}
       </div>
+      {facts.length > 0 && (
+        <ul className="flex flex-wrap gap-2">
+          {facts.map((f) => (
+            <li key={f.text} className="inline-flex items-center gap-2 rounded-full bg-surface px-3.5 py-2 text-[13px] font-medium text-ink">
+              <f.icon className="h-4 w-4 text-muted" aria-hidden /> {f.text}
+            </li>
+          ))}
+        </ul>
+      )}
       {top.length > 0 && (
         <div>
-          <p className="mb-3 text-[15px] font-semibold text-ink">Destaques do hotel</p>
+          <p className="mb-3 text-[16px] font-semibold text-ink">Destaques do hotel</p>
           <ul className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
             {top.map(({ text, Icon }) => (
-              <li key={text} className="flex items-center gap-3 text-[15px] text-ink">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-50 text-accent-ink">
-                  <Icon className="h-5 w-5" aria-hidden />
+              <li key={text} className="flex items-center gap-3 text-[14px] leading-snug text-ink">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-50 text-accent-ink">
+                  <Icon className="h-[18px] w-[18px]" aria-hidden />
                 </span>
                 {text}
               </li>
@@ -128,35 +148,116 @@ export function HotelOverview({ h, allAmenities }: { h: HotelContent; allAmeniti
   );
 }
 
-/** Cartão lateral: datas, horários, idade mínima, números do hotel e idiomas. */
-export function StayCard({ h, checkIn, checkOut, nights, pax, footer }: { h: HotelContent; checkIn: string; checkOut: string; nights: number; pax: string; footer?: ReactNode }) {
+// ───────────────────────── Painel de reserva (lateral fixa) ─────────────────────────
+
+type Price = { pix: Decimal; plan: InstallmentPlan; commission?: Commission };
+
+/**
+ * Painel lateral que acompanha a rolagem: preço a partir de, comissão (ADMIN), datas com os
+ * horários do hotel, destaques das tarifas e o botão para os quartos.
+ */
+export function BookingSummary({
+  h,
+  price,
+  options,
+  checkIn,
+  checkOut,
+  nights,
+  pax,
+  breakfast,
+  freeCancel,
+}: {
+  h: HotelContent;
+  price: Price | null;
+  options: number;
+  checkIn: string;
+  checkOut: string;
+  nights: number;
+  pax: string;
+  breakfast: number;
+  freeCancel: number;
+}) {
   const t = h.times;
-  const rows: { icon: LucideIcon; label: string; value: string }[] = [
-    { icon: LogIn, label: "Check-in", value: `${date(checkIn)}${t.checkInFrom ? ` · a partir das ${t.checkInFrom}` : ""}${t.checkInUntil ? ` (até ${t.checkInUntil})` : ""}` },
-    { icon: LogOut, label: "Check-out", value: `${date(checkOut)}${t.checkOutUntil ? ` · até ${t.checkOutUntil}` : ""}` },
-    ...(t.minAge ? [{ icon: IdCard, label: "Idade mínima no check-in", value: `${t.minAge} anos` }] : []),
-    ...h.facts.slice(0, 3).map((f) => ({ icon: Info, label: f.label, value: f.value })),
-    ...(h.languages.length ? [{ icon: Languages, label: "Idiomas na recepção", value: h.languages.join(", ") }] : []),
-  ];
   return (
-    <aside className="rounded-[1.75rem] bg-white p-6 ring-1 ring-inset ring-black/[0.07] shadow-[0_30px_80px_-50px_rgba(10,10,11,0.45)] lg:sticky lg:top-[136px]">
-      <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-muted">Sua estadia</p>
-      <p className="mt-1 text-xl font-semibold tracking-[-0.03em] text-ink">
-        {nights} noite{nights > 1 ? "s" : ""} · {pax}
-      </p>
-      <dl className="mt-5 space-y-3.5">
-        {rows.map((r) => (
-          <div key={r.label} className="flex gap-3">
-            <r.icon className="mt-0.5 h-[18px] w-[18px] shrink-0 text-muted" aria-hidden />
-            <div className="min-w-0">
-              <dt className="text-[12px] text-muted">{r.label}</dt>
-              <dd className="text-[15px] font-semibold text-ink">{r.value}</dd>
-            </div>
-          </div>
-        ))}
+    <div className="rounded-[1.75rem] bg-white p-6 ring-1 ring-inset ring-black/[0.07] shadow-[0_30px_80px_-50px_rgba(10,10,11,0.5)]">
+      {price ? (
+        <>
+          <p className="text-[13px] text-muted">a partir de</p>
+          <p className="mt-0.5 flex items-baseline gap-1.5 text-[2rem] font-semibold leading-none tracking-[-0.04em] text-ink tabular">
+            {brl(price.pix)} <span className="text-[13px] font-semibold tracking-normal text-accent-ink">no Pix</span>
+          </p>
+          <p className="mt-1.5 text-[13px] text-muted tabular">
+            ou <span className="text-ink">{price.plan.count}x de {brl(price.plan.installment)}</span> sem juros
+          </p>
+          <p className="mt-0.5 text-[12px] text-muted">
+            total da estadia · {nights} noite{nights > 1 ? "s" : ""} · {pax}
+          </p>
+          <CommissionBox c={price.commission} className="mt-4 w-full" />
+        </>
+      ) : (
+        <p className="text-[15px] font-semibold text-ink">Sem quartos para estas datas</p>
+      )}
+
+      <dl className="mt-5 grid grid-cols-2 overflow-hidden rounded-2xl ring-1 ring-inset ring-line">
+        <div className="p-3.5">
+          <dt className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+            <LogIn className="h-3.5 w-3.5" aria-hidden /> Check-in
+          </dt>
+          <dd className="mt-1 text-[14px] font-semibold text-ink">{date(checkIn)}</dd>
+          {t.checkInFrom && <dd className="text-[12px] text-muted">a partir das {t.checkInFrom}</dd>}
+        </div>
+        <div className="border-l border-line p-3.5">
+          <dt className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+            <LogOut className="h-3.5 w-3.5" aria-hidden /> Check-out
+          </dt>
+          <dd className="mt-1 text-[14px] font-semibold text-ink">{date(checkOut)}</dd>
+          {t.checkOutUntil && <dd className="text-[12px] text-muted">até as {t.checkOutUntil}</dd>}
+        </div>
       </dl>
-      {footer && <div className="mt-6 border-t border-line pt-5">{footer}</div>}
-    </aside>
+
+      {(breakfast > 0 || freeCancel > 0) && (
+        <ul className="mt-4 space-y-1.5 text-[13px] text-ink">
+          {freeCancel > 0 && (
+            <li className="flex items-center gap-2">
+              <BadgeCheck className="h-4 w-4 text-emerald-600" aria-hidden /> Cancelamento grátis em {freeCancel === options ? "todas as opções" : `${freeCancel} opç${freeCancel > 1 ? "ões" : "ão"}`}
+            </li>
+          )}
+          {breakfast > 0 && (
+            <li className="flex items-center gap-2">
+              <Coffee className="h-4 w-4 text-accent-ink" aria-hidden /> Café da manhã em {breakfast === options ? "todas as opções" : `${breakfast} opç${breakfast > 1 ? "ões" : "ão"}`}
+            </li>
+          )}
+        </ul>
+      )}
+
+      <a href="#quartos" className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-accent text-[15px] font-semibold text-accent-fg transition hover:opacity-90">
+        {price ? `Ver ${options} opç${options > 1 ? "ões" : "ão"} de quarto` : "Alterar a busca"} <span aria-hidden>↓</span>
+      </a>
+      <a href="#alterar-busca" className="mt-2 block text-center text-[13px] font-semibold text-muted underline decoration-ink/20 underline-offset-4 hover:text-ink">
+        Alterar datas ou hóspedes
+      </a>
+    </div>
+  );
+}
+
+/** Barra fixa no rodapé do celular (o painel lateral só aparece no computador). */
+export function MobileBookingBar({ price, nights }: { price: Price | null; nights: number }) {
+  if (!price) return null;
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white/95 px-4 py-3 backdrop-blur-xl lg:hidden">
+      <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-3">
+        <div className="min-w-0 leading-tight">
+          <p className="text-[11px] text-muted">a partir de · {nights} noite{nights > 1 ? "s" : ""}</p>
+          <p className="text-[19px] font-semibold tracking-[-0.03em] text-ink tabular">
+            {brl(price.pix)} <span className="text-[12px] font-semibold text-accent-ink">Pix</span>
+          </p>
+          {price.commission && <p className="text-[12px] font-semibold text-emerald-700 tabular">comissão {brl(price.commission.amount)}</p>}
+        </div>
+        <a href="#quartos" className="inline-flex h-11 shrink-0 items-center rounded-full bg-accent px-5 text-[14px] font-semibold text-accent-fg">
+          Ver quartos
+        </a>
+      </div>
+    </div>
   );
 }
 
@@ -193,30 +294,34 @@ export function HotelAmenities({ h }: { h: HotelContent }) {
   return (
     <section id="comodidades" className="scroll-mt-36">
       <SectionHeading eyebrow="Comodidades" title="O que o hotel oferece" />
-      <div className="columns-1 gap-4 sm:columns-2 lg:columns-3 [&>*]:mb-4">
+      <div className="grid gap-x-8 gap-y-8 sm:grid-cols-2 xl:grid-cols-3">
         {groups.map((g) => {
           const Icon = GROUP_ICON[g.group] ?? ConciergeBell;
           return (
-            <div key={g.group} className="break-inside-avoid rounded-[1.5rem] bg-surface p-5">
-              <p className="flex items-center gap-2.5 text-[16px] font-semibold text-ink">
-                <span className="grid h-9 w-9 place-items-center rounded-xl bg-white text-accent-ink">
-                  <Icon className="h-[18px] w-[18px]" aria-hidden />
-                </span>
+            <div key={g.group} className="min-w-0">
+              <p className="flex items-center gap-2.5 border-b border-line pb-3 text-[15px] font-semibold text-ink">
+                <Icon className="h-[18px] w-[18px] text-accent-ink" aria-hidden />
                 {g.group}
+                <span className="ml-auto text-[12px] font-medium text-muted tabular">{g.items.length}</span>
               </p>
-              {g.group === "Nos quartos" && <p className="mt-2 text-[12px] text-muted">Pode variar conforme o tipo de quarto.</p>}
-              <Collapsible items={g.items} max={10} render={(it) => {
-                const I = amenityIcon(it);
-                return (
-                  <li key={it} className="flex items-start gap-2.5 text-[14px] leading-snug text-ink/85">
-                    <I className="mt-0.5 h-4 w-4 shrink-0 text-muted" aria-hidden /> {it}
-                  </li>
-                );
-              }} />
+              <Collapsible
+                items={g.items}
+                max={6}
+                className="mt-3"
+                render={(it) => {
+                  const I = amenityIcon(it);
+                  return (
+                    <li key={it} className="flex items-start gap-2.5 text-[14px] leading-snug text-ink/85">
+                      <I className="mt-0.5 h-4 w-4 shrink-0 text-muted" aria-hidden /> {it}
+                    </li>
+                  );
+                }}
+              />
             </div>
           );
         })}
       </div>
+      {h.roomAmenities.length > 0 && <p className="mt-6 text-[12px] text-muted">O que há nos quartos pode variar conforme o tipo de quarto.</p>}
     </section>
   );
 }
@@ -252,90 +357,72 @@ export function HotelLocation({ h, address, title }: { h: HotelContent; address:
           </a>
         )}
       </SectionHeading>
-      <div className={map ? "grid gap-6 lg:grid-cols-[1.35fr_1fr]" : ""}>
-        {map && (
-          <div className="flex flex-col overflow-hidden rounded-[1.75rem] bg-surface ring-1 ring-inset ring-black/[0.06]">
-            <iframe title={`Mapa: ${title}`} src={map} loading="lazy" className="h-[340px] w-full flex-1 border-0 sm:min-h-[420px]" referrerPolicy="no-referrer" />
-            <p className="flex items-start gap-2 px-5 py-4 text-[14px] text-ink">
-              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-accent-ink" aria-hidden /> {address}
-            </p>
-          </div>
-        )}
-        {(places.length > 0 || airports.length > 0) && (
-          <div className="space-y-6">
-            {places.length > 0 && (
-              <div>
-                <p className="mb-1 text-[15px] font-semibold text-ink">O que tem por perto</p>
-                <List items={places.slice(0, 12)} icon={MapPin} />
-              </div>
-            )}
-            {airports.length > 0 && (
-              <div>
-                <p className="mb-1 text-[15px] font-semibold text-ink">Aeroportos</p>
-                <List items={airports.slice(0, 4)} icon={Plane} />
-              </div>
-            )}
-            <p className="text-[12px] text-muted">Distâncias em linha reta, informadas pelo hotel.</p>
-          </div>
-        )}
-      </div>
+      {map && (
+        <div className="overflow-hidden rounded-[1.75rem] bg-surface ring-1 ring-inset ring-black/[0.06]">
+          <iframe title={`Mapa: ${title}`} src={map} loading="lazy" className="h-[320px] w-full border-0 sm:h-[380px]" referrerPolicy="no-referrer" />
+          <p className="flex items-start gap-2 px-5 py-4 text-[14px] text-ink">
+            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-accent-ink" aria-hidden /> {address}
+          </p>
+        </div>
+      )}
+      {(places.length > 0 || airports.length > 0) && (
+        <div className="mt-6 grid gap-x-10 gap-y-6 md:grid-cols-2">
+          {places.length > 0 && (
+            <div>
+              <p className="mb-1 text-[15px] font-semibold text-ink">O que tem por perto</p>
+              <List items={places.slice(0, 10)} icon={MapPin} />
+            </div>
+          )}
+          {airports.length > 0 && (
+            <div>
+              <p className="mb-1 text-[15px] font-semibold text-ink">Aeroportos</p>
+              <List items={airports.slice(0, 4)} icon={Plane} />
+              <p className="mt-3 text-[12px] text-muted">Distâncias em linha reta, informadas pelo hotel.</p>
+            </div>
+          )}
+        </div>
+      )}
     </section>
   );
 }
 
 // ───────────────────────── Políticas ─────────────────────────
 
+/** Uma linha por assunto (título à esquerda, conteúdo à direita), todas no mesmo tamanho. */
 export function HotelPolicies({ h }: { h: HotelContent }) {
   const t = h.times;
-  const hasTimes = t.checkInFrom || t.checkOutUntil || t.minAge;
-  if (!hasTimes && !h.policies.length) return null;
+  const rows: { title: string; content: ReactNode }[] = [];
+  if (t.checkInFrom || t.checkInUntil) rows.push({ title: "Check-in", content: <p>{[t.checkInFrom && `a partir das ${t.checkInFrom}`, t.checkInUntil && `até as ${t.checkInUntil}`].filter(Boolean).join(" · ")}</p> });
+  if (t.checkOutUntil) rows.push({ title: "Check-out", content: <p>até as {t.checkOutUntil}</p> });
+  if (t.minAge) rows.push({ title: "Idade mínima", content: <p>{t.minAge} anos para o responsável pela reserva</p> });
+  for (const p of h.policies) {
+    rows.push({
+      title: p.title,
+      content: (
+        <Collapsible
+          items={p.items}
+          max={4}
+          render={(it) => (
+            <li key={it} className="flex items-start gap-2">
+              <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-ink/40" aria-hidden /> {it}
+            </li>
+          )}
+        />
+      ),
+    });
+  }
+  if (!rows.length) return null;
   return (
     <section id="politicas" className="scroll-mt-36">
       <SectionHeading eyebrow="Antes de reservar" title="Políticas e informações" />
-      <div className="grid items-start gap-4 md:grid-cols-2">
-        {hasTimes && (
-          <div className="rounded-[1.5rem] bg-surface p-5 sm:p-6">
-            <p className="flex items-center gap-2 text-[16px] font-semibold text-ink">
-              <Clock className="h-[18px] w-[18px] text-accent-ink" aria-hidden /> Check-in e check-out
-            </p>
-            <dl className="mt-4 grid grid-cols-2 gap-3">
-              {t.checkInFrom && (
-                <div className="rounded-2xl bg-white p-4">
-                  <dt className="text-[12px] text-muted">Check-in</dt>
-                  <dd className="text-[17px] font-semibold text-ink">
-                    a partir das {t.checkInFrom}
-                    {t.checkInUntil && <span className="block text-[13px] font-medium text-muted">até as {t.checkInUntil}</span>}
-                  </dd>
-                </div>
-              )}
-              {t.checkOutUntil && (
-                <div className="rounded-2xl bg-white p-4">
-                  <dt className="text-[12px] text-muted">Check-out</dt>
-                  <dd className="text-[17px] font-semibold text-ink">até as {t.checkOutUntil}</dd>
-                </div>
-              )}
-              {t.minAge && (
-                <div className="col-span-2 rounded-2xl bg-white p-4">
-                  <dt className="text-[12px] text-muted">Idade mínima do responsável no check-in</dt>
-                  <dd className="text-[17px] font-semibold text-ink">{t.minAge} anos</dd>
-                </div>
-              )}
-            </dl>
-          </div>
-        )}
-        {h.policies.map((p) => (
-          <div key={p.title} className="rounded-[1.5rem] bg-surface p-5 sm:p-6">
-            <p className="flex items-center gap-2 text-[16px] font-semibold text-ink">
-              <Info className="h-[18px] w-[18px] text-accent-ink" aria-hidden /> {p.title}
-            </p>
-            <Collapsible items={p.items} max={6} render={(it) => (
-              <li key={it} className="flex items-start gap-2 text-[14px] leading-relaxed text-ink/80">
-                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-ink/30" aria-hidden /> {it}
-              </li>
-            )} />
+      <dl className="divide-y divide-line overflow-hidden rounded-[1.75rem] bg-white ring-1 ring-inset ring-black/[0.07]">
+        {rows.map((r) => (
+          <div key={r.title} className="grid gap-1.5 px-5 py-4 sm:grid-cols-[200px_minmax(0,1fr)] sm:gap-6 sm:px-6">
+            <dt className="text-[15px] font-semibold text-ink">{r.title}</dt>
+            <dd className={cn("text-[14px] leading-relaxed text-ink/80")}>{r.content}</dd>
           </div>
         ))}
-      </div>
+      </dl>
     </section>
   );
 }
