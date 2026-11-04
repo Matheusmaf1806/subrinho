@@ -267,12 +267,12 @@ export function BrandingEditor({
                 <textarea name="heroTitle" rows={3} value={heroTitle} onChange={(e) => setHeroTitle(e.target.value)} placeholder={DEFAULT_HERO_TITLE} maxLength={80} className={cn(inputClass, "h-auto py-3 text-lg font-semibold")} />
               </label>
               <label className="block">
-                <span className={lab}>Subtítulo</span>
-                <textarea name="heroSubtitle" rows={2} value={heroSubtitle} onChange={(e) => setHeroSubtitle(e.target.value)} maxLength={220} placeholder={`Em branco, a loja lista o que vende: “Ingressos, hotéis e casas de temporada no mesmo carrinho… com o atendimento da ${initial.name}.”`} className={cn(inputClass, "h-auto py-3")} />
+                <span className={lab}>Subtítulo (opcional)</span>
+                <textarea name="heroSubtitle" rows={2} value={heroSubtitle} onChange={(e) => setHeroSubtitle(e.target.value)} maxLength={220} placeholder="Opcional — aparece abaixo do título, no computador" className={cn(inputClass, "h-auto py-3")} />
               </label>
               <div className="grid gap-6 lg:grid-cols-2">
-                <ImageField key={`h1-${fileKey}`} field="heroImageUrl" label="Foto principal" hint="Quadrada ou vertical — até 3 MB" current={initial.heroImageUrl} presets={presets} preset={presetOf(initial.heroImageUrl)} onPreview={setHero1} disabled={readOnly} />
-                <ImageField key={`h2-${fileKey}`} field="heroImage2Url" label="Foto secundária" hint="Vertical (4:5) — até 3 MB" current={initial.heroImage2Url} presets={presets} preset={presetOf(initial.heroImage2Url)} onPreview={setHero2} disabled={readOnly} />
+                <ImageField key={`h1-${fileKey}`} field="heroImageUrl" label="Foto principal" hint="Vertical (aparece em arco) — até 3 MB" current={initial.heroImageUrl} presets={presets} preset={presetOf(initial.heroImageUrl)} onPreview={setHero1} disabled={readOnly} />
+                <ImageField key={`h2-${fileKey}`} field="heroImage2Url" label="Foto secundária" hint="Quadrada (aparece em círculo) — até 3 MB" current={initial.heroImage2Url} presets={presets} preset={presetOf(initial.heroImage2Url)} onPreview={setHero2} disabled={readOnly} />
               </div>
             </div>
           </Section>
@@ -325,35 +325,43 @@ export function BrandingEditor({
             </div>
             <span className="rounded-full bg-ink px-3 py-1.5 text-[11px] font-semibold text-white">Carrinho</span>
           </div>
-          <div className="bg-gradient-to-b from-brand-50 to-white px-4 pb-4 pt-3">
-            <div className="grid grid-cols-[1.1fr_1fr] items-center gap-3">
+          <div className="relative overflow-hidden px-4 pb-4 pt-3">
+            <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-brand-50" />
+            <div className="pointer-events-none absolute -right-6 top-14 h-36 w-36 rounded-full bg-brand-100" />
+            <div className="relative grid grid-cols-[1.45fr_1fr] items-center gap-3">
               <div>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2 py-0.5 text-[9px] font-semibold ring-1 ring-black/[0.05]">
-                  <span className="h-1.5 w-1.5 rounded-full bg-brand" /> {initial.name}
-                </span>
-                <p className="display mt-2 text-[1.55rem]">
+                <p className="text-[1.05rem] font-semibold leading-[1.05] tracking-[-0.04em]">
                   {lines.map((l, i) => (
-                    <span key={i} className={cn("block", lines.length > 1 && i === lines.length - 1 && "text-brand-ink")}>
+                    <span key={i} className={cn(lines.length > 1 && i === lines.length - 1 && "text-brand-ink")}>
+                      {i > 0 && " "}
                       {l}
                     </span>
                   ))}
                 </p>
-                <p className="mt-2 line-clamp-2 text-[10px] leading-snug text-muted">{heroSubtitle.trim() || "Ingressos, hotéis e casas no mesmo carrinho…"}</p>
+                <div className="mt-2 rounded-xl bg-white p-2 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.45)] ring-1 ring-black/[0.06]">
+                  <div className="flex gap-2 border-b border-line pb-1 text-[8px] font-semibold">
+                    <span className="border-b-2 border-brand pb-0.5">Ingressos</span>
+                    <span className="text-muted">Hotéis</span>
+                    <span className="text-muted">Casas</span>
+                  </div>
+                  <div className="mt-1.5 rounded-md border border-line px-1.5 py-1 text-[8px] text-muted">Destino</div>
+                  <div className="mt-1 grid grid-cols-2 gap-1">
+                    <div className="rounded-md border border-line px-1.5 py-1 text-[8px] text-muted">Data</div>
+                    <div className="rounded-md border border-line px-1.5 py-1 text-[8px] text-muted">Pessoas</div>
+                  </div>
+                  <div className="mt-1 rounded-md bg-brand py-1 text-center text-[8px] font-semibold text-brand-fg">Buscar</div>
+                </div>
               </div>
-              <div className="relative h-32">
-                <div className="absolute inset-y-0 left-[18%] right-0 overflow-hidden rounded-xl bg-black/10">
+              <div className="relative h-36">
+                <div className="absolute right-0 top-0 h-32 w-[78%] overflow-hidden rounded-b-xl rounded-t-[3rem] bg-black/10 ring-2 ring-white">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   {hero1 && <img src={hero1} alt="" className="h-full w-full object-cover" />}
                 </div>
-                <div className="absolute bottom-2 left-0 aspect-[4/5] w-[38%] overflow-hidden rounded-lg bg-black/10 ring-2 ring-white">
+                <div className="absolute bottom-0 left-0 h-14 w-14 overflow-hidden rounded-full bg-black/10 ring-2 ring-white">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   {hero2 && <img src={hero2} alt="" className="h-full w-full object-cover" />}
                 </div>
               </div>
-            </div>
-            <div className="mt-3 flex items-center gap-1.5 rounded-2xl bg-white p-1.5 shadow-[0_10px_30px_-18px_rgba(0,0,0,0.45)] ring-1 ring-black/[0.06]">
-              <span className="flex-1 px-2 text-[10px] text-muted">Destino · Data · Pessoas</span>
-              <span className="rounded-full bg-ink px-3 py-1.5 text-[10px] font-semibold text-white">Buscar</span>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 p-2">

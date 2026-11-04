@@ -11,7 +11,7 @@ type Suggestion = { key: string; label: string; detail: string };
  * Envia `destino` (texto) e `dest` (chave do destino escolhido). Se o cliente só digitar, o servidor
  * resolve o texto.
  */
-export function DestinationField({ value, destKey, placeholder, className }: { value?: string; destKey?: string; placeholder: string; className?: string }) {
+export function DestinationField({ value, destKey, placeholder, className, card }: { value?: string; destKey?: string; placeholder: string; className?: string; card?: boolean }) {
   const [text, setText] = useState(value ?? "");
   const [key, setKey] = useState(destKey ?? "");
   const [items, setItems] = useState<Suggestion[]>([]);
@@ -45,8 +45,16 @@ export function DestinationField({ value, destKey, placeholder, className }: { v
   };
 
   return (
-    <div className={cn("relative rounded-[1.25rem] px-5 py-3 transition hover:bg-surface focus-within:bg-surface sm:after:absolute sm:after:inset-y-3 sm:after:right-0 sm:after:w-px sm:after:bg-line", className)}>
-      <label htmlFor={`${listId}-input`} className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+    <div
+      className={cn(
+        card
+          ? "relative rounded-2xl border border-line bg-white py-2.5 pl-11 pr-4 transition hover:border-ink/30 focus-within:border-ink focus-within:shadow-[0_0_0_1px_var(--color-ink)]"
+          : "relative rounded-[1.25rem] px-5 py-3 transition hover:bg-surface focus-within:bg-surface sm:after:absolute sm:after:inset-y-3 sm:after:right-0 sm:after:w-px sm:after:bg-line",
+        className,
+      )}
+    >
+      {card && <MapPin className="absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted" aria-hidden />}
+      <label htmlFor={`${listId}-input`} className={card ? "block text-[12px] font-medium text-muted" : "block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted"}>
         Destino
       </label>
       <input

@@ -1,10 +1,9 @@
 /**
- * Topo da página inicial da loja: nome e título da agência, fotos (editáveis no editor de marca),
- * garantias reais da compra e a busca. Fundo claro com um toque da cor da agência — funciona com
- * qualquer cor e com fotos verticais ou horizontais.
+ * Topo da página inicial — a busca é a protagonista: título curto da agência, cartão de busca com
+ * abas por produto e, ao lado, as fotos da agência em formas na cor da marca. No celular o cartão
+ * fica sobre a foto principal. Cores, fotos e título vêm da identidade de cada agência.
  */
-import Link from "next/link";
-import { ArrowUpRight, BadgeCheck, CreditCard, Headphones, MessageCircle, QrCode, ShieldCheck } from "lucide-react";
+import { ArrowUpRight, BadgeCheck, MessageCircle } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/components/ui";
 import { SearchTabs } from "./search-tabs";
@@ -21,120 +20,92 @@ export function StoreHero({
   pixAvailable,
   maxInstallments,
   whatsapp,
-  popular,
 }: {
   name: string;
   lines: string[];
-  subtitle: string;
+  /** Só quando a agência escreveu um subtítulo (no celular fica escondido para a busca subir). */
+  subtitle: string | null;
   image: string;
   image2: string;
   tabs: Tab[];
   pixAvailable: boolean;
   maxInstallments: number;
   whatsapp: string | null;
-  popular: { name: string; href: string }[];
 }) {
-  const trust = [
-    { icon: CreditCard, text: `Até ${maxInstallments}x sem juros` },
-    pixAvailable ? { icon: QrCode, text: "Desconto no Pix" } : { icon: ShieldCheck, text: "Pagamento seguro" },
-    { icon: BadgeCheck, text: "Preço confirmado na hora" },
-    { icon: Headphones, text: "Atendimento humano" },
-  ];
   const wa = whatsapp ? `https://wa.me/${whatsapp.replace(/\D/g, "")}` : null;
+  const note = [`Até ${maxInstallments}x sem juros`, pixAvailable ? "desconto no Pix" : null, "preço e disponibilidade confirmados antes de pagar"].filter(Boolean).join(" · ");
 
   return (
-    <section className="relative isolate">
-      {/* um toque da cor da agência atrás do topo, sumindo no branco */}
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[560px] bg-gradient-to-b from-brand-50 via-brand-50/50 to-white lg:h-[640px]" />
-      <div className="mx-auto max-w-[1440px] px-4 pt-6 sm:px-8 sm:pt-10 lg:pt-12">
-        <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.92fr)] lg:gap-16">
-          <div className="max-w-2xl">
-            <span className="inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-1.5 text-[13px] font-semibold text-ink shadow-[0_1px_2px_rgba(0,0,0,0.06)] ring-1 ring-black/[0.05]">
-              <span className="h-2 w-2 rounded-full bg-accent" aria-hidden /> {name}
-            </span>
-            <h1 className="display mt-5 text-[clamp(2.75rem,6vw,5.5rem)] text-ink sm:mt-6">
-              {lines.map((l, i) => (
-                <span key={i} className={cn("block", lines.length > 1 && i === lines.length - 1 && "text-accent-ink")}>
-                  {l}
-                </span>
-              ))}
-            </h1>
-            <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted sm:mt-6 sm:text-lg">{subtitle}</p>
-            <ul className="mt-8 hidden max-w-[34rem] grid-cols-2 gap-x-6 gap-y-3 sm:grid">
-              {trust.map((t) => (
-                <li key={t.text} className="flex items-center gap-2.5 text-[14px] font-semibold leading-tight text-ink">
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white text-accent-ink shadow-[0_1px_2px_rgba(0,0,0,0.06)] ring-1 ring-black/[0.05]">
-                    <t.icon className="h-4 w-4" aria-hidden />
-                  </span>
-                  {t.text}
-                </li>
-              ))}
-            </ul>
-          </div>
+    <section className="relative isolate overflow-x-clip">
+      {/* celular: foto da agência atrás do cartão */}
+      <div aria-hidden className="absolute inset-x-0 top-0 -z-10 h-[300px] lg:hidden">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={image} alt="" className="h-full w-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/25 to-black/10" />
+      </div>
+      {/* desktop: formas na cor da agência à direita */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-20 hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent)] lg:block">
+        <div className="absolute -right-48 -top-56 h-[880px] w-[880px] rounded-full bg-brand-50" />
+        <div className="absolute -right-24 top-24 h-[560px] w-[560px] rounded-full bg-brand-100" />
+      </div>
 
-          {/* fotos: principal grande + secundária sobreposta (só no desktop) */}
-          <div className="relative hidden h-[500px] lg:block">
-            <div className="absolute inset-y-0 left-[16%] right-0 overflow-hidden rounded-[2.5rem] bg-surface">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={image} alt="" className="h-full w-full object-cover" fetchPriority="high" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
-            </div>
-            <div className="absolute bottom-12 left-0 aspect-[4/5] w-[34%] overflow-hidden rounded-[1.75rem] bg-surface shadow-[0_30px_60px_-25px_rgba(0,0,0,0.45)] ring-[6px] ring-white">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={image2} alt="" className="h-full w-full object-cover" />
-            </div>
-            {wa ? (
-              <a
-                href={wa}
-                target="_blank"
-                rel="noreferrer"
-                className="group absolute bottom-6 right-6 flex items-center gap-3 rounded-2xl bg-white/95 py-3 pl-3 pr-4 shadow-[0_20px_40px_-20px_rgba(0,0,0,0.5)] backdrop-blur transition hover:bg-white"
-              >
-                <span className="grid h-10 w-10 place-items-center rounded-xl bg-accent text-accent-fg">
-                  <MessageCircle className="h-5 w-5" aria-hidden />
-                </span>
-                <span className="leading-tight">
-                  <span className="block text-[13px] text-muted">Dúvidas sobre a viagem?</span>
-                  <span className="flex items-center gap-1 text-[15px] font-semibold text-ink">
-                    Fale com a {name} <ArrowUpRight className="h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden />
-                  </span>
-                </span>
-              </a>
+      <div className="mx-auto grid max-w-[1440px] items-center gap-10 px-4 pb-4 pt-8 sm:px-8 lg:grid-cols-[minmax(0,700px)_minmax(0,1fr)] lg:gap-14 lg:pb-6 lg:pt-10">
+        <div>
+          <h1 className="max-w-[20ch] text-[clamp(1.9rem,3.4vw,3.1rem)] font-semibold leading-[1.04] tracking-[-0.04em] text-white drop-shadow-sm lg:max-w-none lg:text-ink lg:drop-shadow-none">
+            {lines.map((l, i) => (
+              <span key={i} className={cn(lines.length > 1 && i === lines.length - 1 && "lg:text-accent-ink")}>
+                {i > 0 && " "}
+                {l}
+              </span>
+            ))}
+          </h1>
+          {subtitle && <p className="mt-3 hidden max-w-xl text-[16px] leading-relaxed text-muted lg:block">{subtitle}</p>}
+
+          <div className="mt-6 rounded-[1.75rem] bg-white p-4 shadow-[0_30px_80px_-35px_rgba(10,10,11,0.45)] ring-1 ring-black/[0.06] sm:p-6">
+            {tabs.length > 0 ? (
+              <SearchTabs tabs={tabs} variant="underline" />
             ) : (
-              <div className="absolute bottom-6 right-6 rounded-2xl bg-white/95 px-4 py-3 shadow-[0_20px_40px_-20px_rgba(0,0,0,0.5)] backdrop-blur">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Pague em até</p>
-                <p className="mt-1 text-[1.75rem] font-semibold leading-none tracking-[-0.04em] text-ink">
-                  {maxInstallments}x <span className="text-[15px] tracking-normal text-accent-ink">sem juros</span>
-                </p>
-              </div>
+              <p className="py-6 text-center text-[15px] text-muted">Em breve, produtos para a sua viagem.</p>
             )}
+            <p className="mt-5 flex items-start gap-2 border-t border-line pt-4 text-[13px] text-muted sm:justify-center sm:text-center">
+              <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-accent-ink" aria-hidden />
+              <span>{note}</span>
+            </p>
           </div>
         </div>
 
-        {tabs.length > 0 && (
-          <div className="mt-7 sm:mt-10">
-            <SearchTabs tabs={tabs} tone="light" />
+        {/* fotos da agência (desktop) */}
+        <div className="relative hidden h-[540px] lg:block">
+          <div className="absolute right-6 top-0 h-[520px] w-[400px] overflow-hidden rounded-b-[2.5rem] rounded-t-[200px] bg-surface shadow-[0_40px_80px_-40px_rgba(0,0,0,0.5)] ring-8 ring-white xl:right-14">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={image} alt="" className="h-full w-full object-cover" fetchPriority="high" />
           </div>
-        )}
-        {popular.length > 0 && (
-          <div className="no-scrollbar -mx-4 mt-5 flex items-center gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
-            <span className="mr-1 shrink-0 text-[13px] font-semibold text-muted">Populares</span>
-            {popular.map((p) => (
-              <Link key={p.name} href={p.href} className="shrink-0 rounded-full bg-surface px-3.5 py-2 text-[13px] font-semibold text-ink transition hover:bg-surface-2">
-                {p.name}
-              </Link>
-            ))}
+          <div className="absolute bottom-6 left-2 h-[190px] w-[190px] overflow-hidden rounded-full bg-surface shadow-[0_30px_60px_-25px_rgba(0,0,0,0.5)] ring-8 ring-white xl:left-10">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={image2} alt="" className="h-full w-full object-cover" />
           </div>
-        )}
-        {/* celular: garantias depois da busca, numa fileira */}
-        <ul className="no-scrollbar -mx-4 mt-6 flex gap-2 overflow-x-auto px-4 sm:hidden">
-          {trust.map((t) => (
-            <li key={t.text} className="flex shrink-0 items-center gap-2 rounded-full bg-white py-2 pl-2 pr-3.5 text-[13px] font-semibold text-ink ring-1 ring-black/[0.06]">
-              <t.icon className="h-4 w-4 text-accent-ink" aria-hidden />
-              {t.text}
-            </li>
-          ))}
-        </ul>
+          <span className="absolute left-6 top-16 inline-flex items-center gap-2 rounded-full bg-ink px-4 py-2.5 text-[14px] font-semibold text-white shadow-lg xl:left-16">
+            <span className="h-2 w-2 rounded-full bg-accent" aria-hidden /> {maxInstallments}x sem juros em tudo
+          </span>
+          {wa && (
+            <a
+              href={wa}
+              target="_blank"
+              rel="noreferrer"
+              className="group absolute bottom-16 right-0 flex items-center gap-3 rounded-2xl bg-white py-3 pl-3 pr-4 shadow-[0_20px_40px_-18px_rgba(0,0,0,0.45)] ring-1 ring-black/[0.05] transition hover:-translate-y-0.5 xl:right-4"
+            >
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-accent text-accent-fg">
+                <MessageCircle className="h-5 w-5" aria-hidden />
+              </span>
+              <span className="leading-tight">
+                <span className="block text-[12px] text-muted">Dúvidas sobre a viagem?</span>
+                <span className="flex items-center gap-1 text-[14px] font-semibold text-ink">
+                  Fale com a {name} <ArrowUpRight className="h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden />
+                </span>
+              </span>
+            </a>
+          )}
+        </div>
       </div>
     </section>
   );

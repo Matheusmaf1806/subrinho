@@ -14,7 +14,6 @@ import { StoreHero } from "./_components/store-hero";
 import { paymentProvider } from "@/server/payments/provider";
 import { getSettings } from "@/server/settings";
 import { BadgeCheck } from "lucide-react";
-import type { Category } from "@/server/db/schema";
 import { parseSearch, supplierParams, toQuery } from "./_components/search-params";
 import { ProductCard } from "./_components/product-card";
 
@@ -34,21 +33,6 @@ const DESTINATIONS: { name: string; image: PhotoKey; country: string }[] = [
   { name: "Nova York", image: "nycSkyline", country: "Estados Unidos" },
   { name: "Florença", image: "florence", country: "Itália" },
 ];
-
-const OFFER: Partial<Record<Category, string>> = {
-  TICKETS: "ingressos",
-  LODGING: "hotéis",
-  HOUSES: "casas de temporada",
-  INSURANCE: "seguro viagem",
-  CHIP: "chip internacional",
-};
-
-/** "Ingressos, hotéis e casas de temporada no mesmo carrinho…" — só o que a loja vende de verdade. */
-function defaultSubtitle(name: string, live: Category[]) {
-  const items = live.map((c) => OFFER[c]).filter((x): x is string => !!x);
-  const list = items.length > 1 ? `${items.slice(0, -1).join(", ")} e ${items.at(-1)}` : (items[0] ?? "Sua viagem");
-  return `${list.charAt(0).toUpperCase()}${list.slice(1)} no mesmo carrinho, com preço confirmado na hora e o atendimento da ${name}.`;
-}
 
 function SectionTitle({ title, href, cta = "Ver todos" }: { title: string; href?: string; cta?: string }) {
   return (
@@ -81,23 +65,21 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
 
   const pixAvailable = paymentProvider().pixAvailable;
   const settings = await getSettings(db);
-  // destinos populares levam à busca de ingressos (ou de hotéis, se a loja não vende ingressos)
-  const popularSlug = live.has("TICKETS") ? "ingressos" : live.has("LODGING") ? "hospedagem" : null;
 
   const tabs = cats.live.map((c) => {
     const Icon = c.icon;
     const action = `${base}/${c.slug}`;
     const content =
       c.category === "TICKETS" ? (
-        <TicketsSearch action={action} d={d} destinations={dest("TICKETS")} minDate={minDate} />
+        <TicketsSearch action={action} d={d} destinations={dest("TICKETS")} minDate={minDate} layout="card" />
       ) : c.category === "LODGING" ? (
-        <LodgingSearch action={action} d={d} destinations={dest("LODGING")} minDate={minDate} />
+        <LodgingSearch action={action} d={d} destinations={dest("LODGING")} minDate={minDate} layout="card" />
       ) : c.category === "HOUSES" ? (
-        <LodgingSearch action={action} d={d} destinations={dest("HOUSES")} minDate={minDate} houses />
+        <LodgingSearch action={action} d={d} destinations={dest("HOUSES")} minDate={minDate} houses layout="card" />
       ) : c.category === "INSURANCE" ? (
-        <InsuranceSearch action={action} d={d} regions={INSURANCE_REGIONS} minDate={minDate} />
+        <InsuranceSearch action={action} d={d} regions={INSURANCE_REGIONS} minDate={minDate} layout="card" />
       ) : (
-        <ChipSearch action={action} d={d} destinations={dest("CHIP")} />
+        <ChipSearch action={action} d={d} destinations={dest("CHIP")} layout="card" />
       );
     return { key: c.slug, label: c.short, icon: <Icon className="h-4 w-4" />, content };
   });
@@ -108,14 +90,13 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
       <StoreHero
         name={store.name}
         lines={brand.heroLines}
-        subtitle={store.heroSubtitle?.trim() || defaultSubtitle(store.name, cats.live.map((c) => c.category))}
+        subtitle={store.heroSubtitle?.trim() || null}
         image={brand.heroImage}
         image2={brand.heroImage2}
         tabs={tabs}
         pixAvailable={pixAvailable}
         maxInstallments={settings.maxInstallments}
         whatsapp={store.whatsapp}
-        popular={popularSlug ? DESTINATIONS.map((x) => ({ name: x.name, href: `${base}/${popularSlug}?${toQuery({ destino: x.name })}` })) : []}
       />
 
       {/* ───────── Categorias (bento) ───────── */}
