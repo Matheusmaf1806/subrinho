@@ -53,7 +53,39 @@ export type OfferOption = {
   minSellPrice?: MinSellPrice | null;
   /** Ingressos: custo de 1 criança nesta opção (evita consultar o fornecedor só para exibir o preço). */
   childLines?: PriceLine[] | null;
+  /** Hotéis: dados do tipo de quarto (fotos e comodidades daquele quarto, quando o fornecedor informa). */
+  room?: RoomContent | null;
   available: boolean;
+};
+
+export type RoomContent = { photos: string[]; amenities: string[]; maxPax?: number | null };
+
+/** Foto do hotel com a categoria ("Quartos", "Piscina"…) para os filtros da galeria. */
+export type HotelPhoto = { url: string; tag: string | null };
+
+/**
+ * Conteúdo do hotel organizado para a página (o que o fornecedor manda, separado por assunto).
+ * Tudo opcional na prática: listas vazias / null quando o fornecedor não informa.
+ */
+export type HotelContent = {
+  photos: HotelPhoto[];
+  /** Trechos da descrição (Localização, Quartos, Restaurantes…); título null = texto corrido. */
+  about: { title: string | null; text: string }[];
+  /** Comodidades do hotel por grupo (Lazer, Alimentação, Internet…). */
+  amenities: { group: string; items: string[] }[];
+  /** O que os quartos costumam ter. */
+  roomAmenities: string[];
+  times: { checkInFrom: string | null; checkInUntil: string | null; checkOutUntil: string | null; minAge: number | null };
+  coordinates: { lat: number; lng: number } | null;
+  /** Atrações e aeroportos próximos, com distância. */
+  nearby: { name: string; distance: string | null; kind: "place" | "airport" }[];
+  /** Taxas pagas no hotel, instruções de chegada, avisos. */
+  policies: { title: string; items: string[] }[];
+  languages: string[];
+  /** Avisos com data (obras, piscina fechada…) que pegam a estadia. */
+  issues: { text: string; from: string | null; to: string | null }[];
+  /** Números do hotel (quartos, andares, ano de construção…). */
+  facts: { label: string; value: string }[];
 };
 
 export type ProductSummary = {
@@ -93,6 +125,8 @@ export type ProductDetail = ProductSummary & {
   options: OfferOption[];
   paxRules: PaxRule[];
   info: { label: string; value: string }[];
+  /** Hotéis: conteúdo completo organizado (galeria com categorias, horários, mapa, arredores, políticas). */
+  hotel?: HotelContent | null;
 };
 
 export type QuoteRequest = {

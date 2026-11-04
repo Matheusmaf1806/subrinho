@@ -23,6 +23,7 @@ import {
   type BookItem,
   type BookingResult,
   type CancelResult,
+  type HotelContent,
   type OfferOption,
   type PaxRule,
   type ProductDetail,
@@ -35,6 +36,7 @@ import {
   SupplierIntegrationError,
 } from "../types";
 import { cached, cacheSet } from "../hotels/cache";
+import { EMPTY_HOTEL_CONTENT, groupAmenities, photoTag, roomAmenitiesFrom, splitDescription } from "../hotels/content";
 import {
   ascii,
   asCurrency,
@@ -303,6 +305,44 @@ export function boldHeadingsToColon(html: string): string {
   return html.replace(/(^|<p[^>]*>|<br\s*\/?>)\s*<b>\s*([^<:]{2,60}?)\s*:?\s*<\/b>\s*(?=[^<\s])/gi, (_m, lead: string, title: string) => `${lead}${title}: `);
 }
 
+// ───────────────────────── Conteúdo do hotel (HOTEL_INFO) ─────────────────────────
+
+const lines = (html: string) =>
+  htmlToText(html)
+    .split("\n")
+    .map((s) => s.trim())
+    .filter((s) => s && !/^may include:?$/i.test(s));
+
+/** Resposta do HOTEL_INFO → dados do hotel (descrição em seções, fotos com categoria, mapa). */
+export function parseHotelInfo(m: Record<string, unknown>) {
+  const pics = ((m.Pictures as Record<string, unknown> | undefined)?.Picture as unknown[] | undefined) ?? [];
+  const photos = pics
+    .map((p) => ({ url: text(p), tag: photoTag(typeof p === "object" && p ? String((p as Record<string, unknown>)["@Description"] ?? "") : "") }))
+    .filter((p) => /^https?:\/\//.test(p.url));
+  const geo = (m.GeoCodes ?? {}) as Record<string, unknown>;
+  const lat = Number(text(geo.Latitude));
+  const lng = Number(text(geo.Longitude));
+  const description = cleanDescription(htmlToText(boldHeadingsToColon(text(m.Description))));
+  const hotelFacilities = lines(text(m.HotelFacilities));
+  // nº de quartos: campo próprio ou "num dos 212 quartos" na descrição
+  const rooms = Number(text(m.RoomCount)) || Number(description.match(/\b(\d{2,4}) (?:quartos|rooms|unidades)\b/i)?.[1]);
+  return {
+    name: text(m.HotelName),
+    address: text(m.Address),
+    description,
+    hotelFacilities: rankFacilities(hotelFacilities),
+    roomFacilities: lines(text(m.RoomFacilities)),
+    category: parseStars(text(m.Category)),
+    phone: text(m.Phone) || null,
+    pictures: photos.map((p) => p.url),
+    photos,
+    coordinates: Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 ? { lat, lng } : null,
+    sections: splitDescription(description),
+    amenities: groupAmenities(hotelFacilities),
+    roomCount: Number.isInteger(rooms) && rooms > 0 ? rooms : null,
+  };
+}
+
 // ───────────────────────── Requisições ─────────────────────────
 
 function roomsXml(rooms: RoomOccupancy[]): string {
@@ -401,30 +441,9 @@ export function createGgtAdapter(cfg: GgtConfig, opts: { fetch?: typeof fetch } 
 
   async function hotelInfo(id: string) {
     return cached(
-      `ggt:info:${id}:${cfg.language}`,
+      `ggt:info:v2:${id}:${cfg.language}`,
       INFO_TTL,
-      async () => {
-        const m = await client.xml(GGT_OP.HOTEL_INFO, `<Main Version="2.2"><InfoHotelId>${escapeXml(id)}</InfoHotelId><InfoLanguage>${escapeXml(cfg.language)}</InfoLanguage></Main>`, 20_000);
-        const pics = ((m.Pictures as Record<string, unknown> | undefined)?.Picture as unknown[] | undefined) ?? [];
-        return {
-          name: text(m.HotelName),
-          address: text(m.Address),
-          description: cleanDescription(htmlToText(boldHeadingsToColon(text(m.Description)))),
-          hotelFacilities: rankFacilities(
-            htmlToText(text(m.HotelFacilities))
-              .split("\n")
-              .map((s) => s.trim())
-              .filter((s) => s && !/^may include:?$/i.test(s)),
-          ),
-          roomFacilities: htmlToText(text(m.RoomFacilities))
-            .split("\n")
-            .map((s) => s.trim())
-            .filter((s) => s && !/^may include:?$/i.test(s)),
-          category: parseStars(text(m.Category)),
-          phone: text(m.Phone) || null,
-          pictures: pics.map((p) => text(p)).filter((u) => /^https?:\/\//.test(u)),
-        };
-      },
+      async () => parseHotelInfo(await client.xml(GGT_OP.HOTEL_INFO, `<Main Version="2.2"><InfoHotelId>${escapeXml(id)}</InfoHotelId><InfoLanguage>${escapeXml(cfg.language)}</InfoLanguage></Main>`, 20_000)),
       { cacheIf: (v) => !!v.name },
     ).catch(() => null);
   }
@@ -601,6 +620,16 @@ export function createGgtAdapter(cfg: GgtConfig, opts: { fetch?: typeof fetch } 
             groupKey: hotelGroupKey(name),
           };
       const gallery = info?.pictures?.length ? info.pictures : h?.image ? [h.image] : [];
+      const coords = info?.coordinates ?? (h?.lat != null && h?.lng != null ? { lat: h.lat, lng: h.lng } : null);
+      const hotel: HotelContent = {
+        ...EMPTY_HOTEL_CONTENT,
+        photos: info?.photos?.length ? info.photos : gallery.map((url) => ({ url, tag: null })),
+        ...(info?.sections ?? {}),
+        amenities: info?.amenities ?? [],
+        roomAmenities: roomAmenitiesFrom(info?.roomFacilities ?? []),
+        coordinates: coords,
+        facts: info?.roomCount ? [{ label: "Quartos", value: info.roomCount.toLocaleString("pt-BR") }] : [],
+      };
       return {
         ...base,
         location: info?.address ? titleCase(info.address) : base.location,
@@ -615,6 +644,7 @@ export function createGgtAdapter(cfg: GgtConfig, opts: { fetch?: typeof fetch } 
           { label: "Estadia", value: `${nights} noite${nights > 1 ? "s" : ""}` },
           { label: "Hóspedes", value: occupancyLabel(pax) },
         ],
+        hotel,
       };
     },
 

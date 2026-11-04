@@ -6,7 +6,7 @@ import { quoteDisplayPrice, type PricingContext } from "@/server/pricing/cart-pr
 import { mediaUrl, mediaUrls } from "@/server/media";
 import { stripSupplierMentions, stripSupplierMentionsList } from "@/lib/supplier-names";
 import { adaptersFor, getAdapter } from "@/server/suppliers/registry";
-import { SupplierError, type OfferOption, type ProductDetail, type ProductSummary, type SearchParams } from "@/server/suppliers/types";
+import { SupplierError, type HotelContent, type OfferOption, type ProductDetail, type ProductSummary, type SearchParams } from "@/server/suppliers/types";
 import type { Decimal } from "@/server/pricing/money";
 import type { InstallmentPlan } from "@/server/pricing/engine";
 
@@ -119,6 +119,28 @@ export async function getProductDetail(
     imageUrl: mediaUrl(detail.imageUrl),
     gallery: detail.gallery ? mediaUrls(detail.gallery) : undefined,
     price,
-    options: options.map((o) => ({ ...o, notes: o.notes ? stripSupplierMentionsList(o.notes) : o.notes })),
+    options: options.map((o) => ({
+      ...o,
+      notes: o.notes ? stripSupplierMentionsList(o.notes) : o.notes,
+      room: o.room ? { ...o.room, photos: mediaUrls(o.room.photos), amenities: stripSupplierMentionsList(o.room.amenities) } : o.room,
+    })),
+    hotel: detail.hotel ? hotelForStore(detail.hotel) : detail.hotel,
+  };
+}
+
+/** Conteúdo do hotel pelo domínio da loja: fotos cifradas e textos sem o nome do fornecedor. */
+function hotelForStore(h: HotelContent): HotelContent {
+  return {
+    ...h,
+    photos: h.photos.flatMap((p) => {
+      const url = mediaUrl(p.url);
+      return url ? [{ ...p, url }] : [];
+    }),
+    about: h.about.map((a) => ({ ...a, text: stripSupplierMentions(a.text) })).filter((a) => a.text),
+    amenities: h.amenities.map((g) => ({ ...g, items: stripSupplierMentionsList(g.items) })).filter((g) => g.items.length),
+    roomAmenities: stripSupplierMentionsList(h.roomAmenities),
+    nearby: h.nearby.filter((n) => stripSupplierMentions(n.name)),
+    policies: h.policies.map((p) => ({ ...p, items: stripSupplierMentionsList(p.items) })).filter((p) => p.items.length),
+    issues: h.issues.map((i) => ({ ...i, text: stripSupplierMentions(i.text) })).filter((i) => i.text),
   };
 }

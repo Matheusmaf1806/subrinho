@@ -1,5 +1,6 @@
 import type { Category, Currency, PaxConfig, PriceLine } from "@/server/db/schema";
-import { type OfferOption, type PaxRule, type ProductDetail, type ProductSummary, type SupplierAdapter, SupplierError } from "../types";
+import { type HotelContent, type OfferOption, type PaxRule, type ProductDetail, type ProductSummary, type SupplierAdapter, SupplierError } from "../types";
+import { EMPTY_HOTEL_CONTENT, groupAmenities } from "../hotels/content";
 import { bookingRef, defaultDate, dynamicFactor, expiresAtFor, hash, matchesDestination, money4, nightsBetween, quoteRef } from "./util";
 import { addDays } from "@/lib/tz";
 import { photo, type PhotoKey } from "@/lib/images";
@@ -245,6 +246,7 @@ export function createHotelsMock(cfg: { code: string; name: string; currency: Cu
             optionId: `${room.id}-${board.id}`,
             title: `${room.name} — ${board.name}`,
             description: `${room.beds} · até ${room.maxGuests} pessoas`,
+            room: { photos: [photo(hash(room.id) % 2 ? "hotelRoomWarm" : "hotelRoomModern", 1200)], amenities: [room.beds, "Ar-condicionado", "TV de tela plana", "Wi-Fi grátis", "Cofre", "Secador de cabelo"], maxPax: room.maxGuests },
             currency: cfg.currency,
             lines: lines(h, room, board, pax, checkIn, checkOut),
             attributes: [
@@ -266,6 +268,7 @@ export function createHotelsMock(cfg: { code: string; name: string; currency: Cu
           { label: "Nota dos hóspedes", value: h.rating.toFixed(1) },
           { label: "Check-in / Check-out", value: "15h / 11h" },
         ],
+        hotel: mockHotelContent(h),
       };
     },
     async quote(req) {
@@ -511,5 +514,47 @@ export function createHousesMock(cfg: { code: string; name: string; currency: Cu
     async book() {
       return { bookingRef: bookingRef("CS"), status: "CONFIRMED", payload: { mock: true } };
     },
+  };
+}
+
+/** Conteúdo simulado do hotel (só no catálogo de teste), no mesmo formato dos fornecedores reais. */
+const PLACES: Record<string, { lat: number; lng: number; near: [string, string][]; airport: [string, string] }> = {
+  Orlando: { lat: 28.3852, lng: -81.5639, near: [["Disney Springs", "2,1 km"], ["Magic Kingdom", "11 km"], ["Universal Orlando", "16 km"], ["ICON Park", "14 km"]], airport: ["Aeroporto Internacional de Orlando (MCO)", "27 km"] },
+  Roma: { lat: 41.9009, lng: 12.4833, near: [["Fontana di Trevi", "200 m"], ["Panteão", "800 m"], ["Coliseu", "1,9 km"], ["Vaticano", "2,6 km"]], airport: ["Aeroporto de Fiumicino (FCO)", "30 km"] },
+  Paris: { lat: 48.8579, lng: 2.3622, near: [["Centre Pompidou", "650 m"], ["Place des Vosges", "500 m"], ["Notre-Dame", "1,3 km"], ["Louvre", "2 km"]], airport: ["Aeroporto Charles de Gaulle (CDG)", "26 km"] },
+  Lisboa: { lat: 38.7107, lng: -9.1421, near: [["Praça do Comércio", "700 m"], ["Bairro Alto", "400 m"], ["Elevador de Santa Justa", "350 m"], ["Castelo de São Jorge", "1,4 km"]], airport: ["Aeroporto Humberto Delgado (LIS)", "8 km"] },
+  "Nova York": { lat: 40.758, lng: -73.9855, near: [["Times Square", "150 m"], ["Broadway", "300 m"], ["Rockefeller Center", "750 m"], ["Central Park", "1,4 km"]], airport: ["Aeroporto JFK", "24 km"] },
+};
+
+function mockHotelContent(h: Hotel): HotelContent {
+  const place = PLACES[h.destination];
+  const shots: [PhotoKey, string][] = [
+    [h.image, "Fachada e arredores"],
+    ["hotelRoomWarm", "Quartos"],
+    ["hotelRoomModern", "Quartos"],
+    ["infinityPool", "Piscina"],
+    ["hotelLounge", "Áreas comuns"],
+    ["hotelPoolNight", "Piscina"],
+    ["palmPool", "Lazer"],
+    ["tropicalResort", "Fachada e arredores"],
+  ];
+  return {
+    ...EMPTY_HOTEL_CONTENT,
+    photos: shots.map(([k, tag]) => ({ url: photo(k, 1400), tag })),
+    about: [
+      { title: "Localização", text: h.description },
+      { title: "Quartos", text: `Quartos com ar-condicionado, TV de tela plana e Wi-Fi grátis. ${h.rooms.length} tipos de quarto, para até ${Math.max(...h.rooms.map((r) => r.maxGuests))} pessoas.` },
+    ],
+    amenities: groupAmenities([...h.amenities, "Wi-Fi grátis", "Recepção 24 horas", "Academia", "Restaurante", "Estacionamento (pago à parte)", "Acesso para cadeiras de rodas", "Berço disponível"]),
+    roomAmenities: ["Ar-condicionado", "TV de tela plana", "Cofre", "Secador de cabelo", "Frigobar", "Artigos de higiene grátis"],
+    times: { checkInFrom: "15:00", checkInUntil: "23:00", checkOutUntil: "11:00", minAge: 18 },
+    coordinates: place ? { lat: place.lat, lng: place.lng } : null,
+    nearby: place ? [...place.near.map(([name, distance]) => ({ name, distance, kind: "place" as const })), { name: place.airport[0], distance: place.airport[1], kind: "airport" as const }] : [],
+    policies: [
+      { title: "Taxas pagas no hotel", items: ["Taxa de resort: USD 25 por quarto, por noite"] },
+      { title: "Na chegada", items: ["Apresente documento com foto e cartão de crédito para despesas extras.", "Pedidos especiais dependem de disponibilidade no check-in."] },
+    ],
+    languages: ["Português", "Inglês", "Espanhol"],
+    facts: [{ label: "Quartos", value: String(120 + (hash(h.key) % 200)) }],
   };
 }

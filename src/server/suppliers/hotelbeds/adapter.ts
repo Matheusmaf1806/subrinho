@@ -23,18 +23,21 @@ import {
   type BookItem,
   type BookingResult,
   type CancelResult,
+  type HotelContent,
   type OfferOption,
   type PaxRule,
   type ProductDetail,
   type ProductSummary,
   type Quote,
   type QuoteRequest,
+  type RoomContent,
   type SearchParams,
   type SupplierAdapter,
   SupplierError,
   SupplierIntegrationError,
 } from "../types";
 import { cached, cacheGet, cacheSet } from "../hotels/cache";
+import { EMPTY_HOTEL_CONTENT, formatMeters, groupAmenities, hbImageTag, hhmm, issuesDuring, roomAmenitiesFrom } from "../hotels/content";
 import { asCurrency, boardLabel, brDate, hotelGroupKey, htmlToText, money2, parseStars, rankFacilities, splitName, stableId, starsText, titleCase, validateStay } from "../hotels/common";
 import { destinationCount, parseCityName, resolveDestination, saveSupplierDestinations, supplierCodesFor, type DestinationRow } from "../hotels/destinations";
 import { CHILD_MAX_AGE, HOTEL_MAX_ADULTS, HOTEL_MAX_CHILDREN, HOTEL_MAX_ROOMS, distributeRooms, normalizeHotelPax, occupancyKey, occupancyLabel, paxKey, type RoomOccupancy } from "../hotels/occupancy";
@@ -298,7 +301,20 @@ function roomsTitle(o: HbOption, pax: PaxConfig): string {
 
 // ───────────────────────── Adaptador ─────────────────────────
 
-type Content = { name: string; description: string; address: string; city: string; images: string[]; facilities: string[]; stars?: number; phone?: string | null };
+type Content = {
+  name: string;
+  description: string;
+  address: string;
+  city: string;
+  images: string[];
+  facilities: string[];
+  stars?: number;
+  phone?: string | null;
+  /** Conteúdo organizado para a página do hotel (avisos ainda sem o filtro de datas da estadia). */
+  hotel: HotelContent;
+  /** Fotos e comodidades por tipo de quarto (roomCode). */
+  rooms: Record<string, RoomContent>;
+};
 
 export function createHotelbedsAdapter(cfg: HotelbedsConfig, opts: { transport?: Transport } = {}): SupplierAdapter & {
   client: HotelbedsClient;
@@ -437,38 +453,11 @@ export function createHotelbedsAdapter(cfg: HotelbedsConfig, opts: { transport?:
 
   async function content(code: string): Promise<Content | null> {
     return cached(
-      `hb:content:${code}:${cfg.language}`,
+      `hb:content:v2:${code}:${cfg.language}`,
       CONTENT_TTL,
       async () => {
         const r = await client.content<{ hotel?: Record<string, unknown> }>(`/hotels/${encodeURIComponent(code)}/details?language=${encodeURIComponent(cfg.language)}&useSecondaryLanguage=true`, 30_000);
-        const h = (r.hotel ?? {}) as {
-          name?: { content?: string };
-          description?: { content?: string };
-          address?: { content?: string };
-          city?: { content?: string };
-          category?: { code?: string; description?: { content?: string } };
-          images?: HbImage[];
-          facilities?: { description?: { content?: string }; indLogic?: boolean; indYesOrNo?: boolean; facilityGroupCode?: number; number?: number }[];
-          phones?: { phoneNumber?: string; phoneType?: string }[];
-        };
-        const phone = (h.phones ?? []).find((p) => /hotel/i.test(p.phoneType ?? "")) ?? (h.phones ?? []).find((p) => /book/i.test(p.phoneType ?? "")) ?? h.phones?.[0];
-        return {
-          name: h.name?.content?.trim() ?? "",
-          description: htmlToText(h.description?.content),
-          address: [h.address?.content, h.city?.content].filter(Boolean).map((x) => titleCase(String(x).trim())).join(", "),
-          city: titleCase(h.city?.content?.trim() ?? ""),
-          images: sortImages(h.images ?? []).map((p) => PHOTO_BASE_XL + p),
-          // comodidades de verdade: grupos 60 (quarto), 70 (gerais), 71 (bar/restaurante), 73 (lazer), 74 (esportes);
-          // fora: dados do prédio (10), cartões aceitos (30), distâncias (40), negócios (72), avisos (85)
-          facilities: rankFacilities(
-            (h.facilities ?? [])
-              .filter((f) => [60, 70, 71, 73, 74].includes(Number(f.facilityGroupCode)) && f.description?.content)
-              .filter((f) => f.indLogic !== false && f.indYesOrNo !== false && (f.indLogic === true || f.indYesOrNo === true || Number(f.number) > 0))
-              .map((f) => f.description!.content!.trim()),
-          ),
-          stars: parseStars(h.category?.code ?? h.category?.description?.content),
-          phone: phone?.phoneNumber?.trim() || null,
-        };
+        return parseHotelDetails((r.hotel ?? {}) as HbHotelDetails);
       },
       { cacheIf: (v) => !!v.name },
     ).catch(() => null);
@@ -622,6 +611,7 @@ export function createHotelbedsAdapter(cfg: HotelbedsConfig, opts: { transport?:
             freeCancellationUntil: freeCancellationUntil(o),
             minSellPrice: minSellPriceFor(o),
             notes: optionNotes(o),
+            room: info?.rooms[o.roomCode] ?? null,
             available: true,
           }),
         ),
@@ -632,6 +622,7 @@ export function createHotelbedsAdapter(cfg: HotelbedsConfig, opts: { transport?:
           { label: "Hóspedes", value: occupancyLabel(pax) },
           ...(info?.phone ? [{ label: "Telefone do hotel", value: info.phone }] : []),
         ],
+        hotel: info ? { ...info.hotel, issues: issuesDuring(info.hotel.issues, checkIn, checkOut) } : null,
       };
     },
 
@@ -814,7 +805,7 @@ function clientRef(ref: string): string {
 }
 
 /** Imagem da Content API: na lista de hotéis o tipo vem em imageTypeCode; no detalhe, em type.code. */
-type HbImage = { path?: string; imageTypeCode?: string; type?: { code?: string }; visualOrder?: number; order?: number };
+type HbImage = { path?: string; imageTypeCode?: string; type?: { code?: string }; visualOrder?: number; order?: number; roomCode?: string };
 
 /** Fotos gerais (GEN) primeiro, na ordem visual sugerida pela Hotelbeds. */
 function sortImages(images: HbImage[]): string[] {
@@ -828,6 +819,139 @@ function sortImages(images: HbImage[]): string[] {
 function coverImage(images: HbImage[]): string | null {
   const [p] = sortImages(images);
   return p ? PHOTO_BASE + p : null;
+}
+
+// ───────────────────────── Conteúdo do hotel (Content API /hotels/{code}/details) ─────────────────────────
+
+type HbText = { content?: string };
+type HbFacility = {
+  facilityCode?: number;
+  facilityGroupCode?: number;
+  description?: HbText;
+  indLogic?: boolean;
+  indYesOrNo?: boolean;
+  indFee?: boolean;
+  number?: number;
+  distance?: number;
+  timeFrom?: string;
+  timeTo?: string;
+  order?: number;
+};
+export type HbHotelDetails = {
+  name?: HbText;
+  description?: HbText;
+  address?: HbText;
+  city?: HbText;
+  category?: { code?: string; description?: HbText };
+  coordinates?: { latitude?: number | string; longitude?: number | string };
+  images?: HbImage[];
+  facilities?: HbFacility[];
+  phones?: { phoneNumber?: string; phoneType?: string }[];
+  interestPoints?: { poiName?: string; distance?: string | number; order?: number }[];
+  terminals?: { terminalCode?: string; terminalType?: string; distance?: number; name?: HbText; description?: HbText }[];
+  issues?: { description?: HbText; dateFrom?: string; dateTo?: string; alternative?: boolean }[];
+  rooms?: {
+    roomCode?: string;
+    description?: string;
+    maxPax?: number;
+    roomFacilities?: HbFacility[];
+    roomStays?: { stayType?: string; description?: string; roomStayFacilities?: { description?: HbText; number?: number }[] }[];
+  }[];
+};
+
+const txt = (t: HbText | undefined) => t?.content?.replace(/\s+/g, " ").trim() ?? "";
+/** A comodidade existe no hotel (a API manda também as que não existem, com indLogic/indYesOrNo falso). */
+const present = (f: HbFacility) => f.indLogic !== false && f.indYesOrNo !== false && (f.indLogic === true || f.indYesOrNo === true || Number(f.number) > 0);
+const withFee = (f: HbFacility, d: string) => (f.indFee ? `${d} (pago à parte)` : d);
+const isDate = (s: string | undefined) => (s && /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : null);
+
+/** Detalhe do hotel na Content API → dados da página (fotos com categoria, horários, arredores, avisos, quartos). */
+export function parseHotelDetails(h: HbHotelDetails): Content {
+  const facilities = h.facilities ?? [];
+  const phone = (h.phones ?? []).find((p) => /hotel/i.test(p.phoneType ?? "")) ?? (h.phones ?? []).find((p) => /book/i.test(p.phoneType ?? "")) ?? h.phones?.[0];
+  const ordered = [...(h.images ?? [])]
+    .filter((i) => i.path)
+    .sort((a, b) => ((a.imageTypeCode ?? a.type?.code) === "GEN" ? 0 : 1) - ((b.imageTypeCode ?? b.type?.code) === "GEN" ? 0 : 1) || (a.visualOrder ?? 9999) - (b.visualOrder ?? 9999) || (a.order ?? 9999) - (b.order ?? 9999));
+  const url = (i: HbImage) => PHOTO_BASE_XL + i.path!.replace(/^\/+/, "");
+
+  // horários: código 260 = hora do check-in, 390 = hora do check-out (ou pelo texto)
+  const byText = (re: RegExp) => facilities.find((f) => re.test(txt(f.description)));
+  const ci = facilities.find((f) => f.facilityCode === 260) ?? byText(/check.?in/i);
+  const co = facilities.find((f) => f.facilityCode === 390) ?? byText(/check.?out/i);
+  const age = facilities.find((f) => f.facilityCode === 564) ?? byText(/idade m[ií]nima|minimum.*age/i);
+  const timeOf = (f: HbFacility | undefined): string | null => (f?.timeFrom ? hhmm(f.timeFrom) : null);
+  const untilOf = (f: HbFacility | undefined) => {
+    const t = f?.timeTo ? hhmm(f.timeTo) : null;
+    return t && t !== "00:00" ? t : null;
+  };
+
+  const amenities = facilities.filter((f) => [70, 71, 72, 73, 74].includes(Number(f.facilityGroupCode)) && txt(f.description) && present(f) && f !== ci && f !== co).map((f) => withFee(f, txt(f.description)));
+  const roomLevel = facilities.filter((f) => Number(f.facilityGroupCode) === 60 && txt(f.description) && present(f)).map((f) => withFee(f, txt(f.description)));
+  const keepInMind = facilities.filter((f) => Number(f.facilityGroupCode) === 85 && txt(f.description) && f !== age && f.indLogic !== false && f.indYesOrNo !== false).map((f) => withFee(f, txt(f.description)));
+  const cards = facilities.filter((f) => Number(f.facilityGroupCode) === 30 && txt(f.description) && present(f)).map((f) => txt(f.description));
+  const facts = facilities
+    .filter((f) => [10, 20].includes(Number(f.facilityGroupCode)) && txt(f.description) && Number(f.number) > 0)
+    .map((f) => ({ label: txt(f.description), value: Number(f.number).toLocaleString("pt-BR", { useGrouping: Number(f.number) >= 10000 }) }));
+  const distances = facilities
+    .filter((f) => Number(f.facilityGroupCode) === 40 && txt(f.description) && Number(f.distance) > 0)
+    .map((f) => {
+      const name = txt(f.description).replace(/^dist[aâ]ncia\s+(?:d[aoe]s?\s+)?/i, "").replace(/\s*\((?:km|m|metros)\)$/i, "");
+      return { name: name.charAt(0).toUpperCase() + name.slice(1), distance: formatMeters(f.distance), kind: /aeroporto|airport/i.test(name) ? ("airport" as const) : ("place" as const) };
+    });
+  const pois = [...(h.interestPoints ?? [])]
+    .filter((p) => p.poiName?.trim())
+    .sort((a, b) => (Number(a.distance) || 9e9) - (Number(b.distance) || 9e9))
+    .map((p) => ({ name: p.poiName!.trim(), distance: formatMeters(p.distance), kind: "place" as const }));
+  const terminals = (h.terminals ?? []).map((t) => {
+    const name = txt(t.name) || txt(t.description);
+    const airport = (t.terminalType ?? "").toUpperCase() === "A" || /aeroporto|airport/i.test(name);
+    return { name: name ? `${name}${t.terminalCode && !name.includes(t.terminalCode) ? ` (${t.terminalCode})` : ""}` : `${airport ? "Aeroporto" : "Terminal"} ${t.terminalCode ?? ""}`.trim(), distance: Number(t.distance) > 0 ? `${t.distance} km` : null, kind: airport ? ("airport" as const) : ("place" as const) };
+  });
+  const lat = Number(h.coordinates?.latitude);
+  const lng = Number(h.coordinates?.longitude);
+
+  const rooms: Record<string, RoomContent> = {};
+  for (const room of h.rooms ?? []) {
+    if (!room.roomCode) continue;
+    const beds = (room.roomStays ?? []).flatMap((st) => (st.roomStayFacilities ?? []).filter((f) => txt(f.description)).map((f) => (Number(f.number) > 1 ? `${f.number} × ${txt(f.description)}` : txt(f.description))));
+    const feats = (room.roomFacilities ?? []).filter((f) => txt(f.description) && present(f)).map((f) => withFee(f, txt(f.description)));
+    rooms[room.roomCode] = {
+      photos: ordered.filter((i) => i.roomCode === room.roomCode).slice(0, 8).map(url),
+      amenities: roomAmenitiesFrom([...beds, ...feats]).slice(0, 14),
+      maxPax: Number(room.maxPax) > 0 ? Number(room.maxPax) : null,
+    };
+  }
+
+  const description = htmlToText(h.description?.content);
+  const hotel: HotelContent = {
+    ...EMPTY_HOTEL_CONTENT,
+    photos: ordered.map((i) => ({ url: url(i), tag: hbImageTag(i.imageTypeCode ?? i.type?.code) })),
+    about: description.split(/\n{2,}/).map((t) => t.trim()).filter(Boolean).map((t) => ({ title: null, text: t })),
+    amenities: groupAmenities(amenities),
+    roomAmenities: roomAmenitiesFrom(roomLevel),
+    times: { checkInFrom: timeOf(ci), checkInUntil: untilOf(ci), checkOutUntil: untilOf(co) ?? timeOf(co), minAge: age && Number(age.number) > 0 ? Number(age.number) : null },
+    coordinates: Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0) ? { lat, lng } : null,
+    nearby: [...pois, ...distances, ...terminals].slice(0, 30),
+    policies: [
+      ...(keepInMind.length ? [{ title: "Na chegada", items: keepInMind }] : []),
+      ...(cards.length ? [{ title: "Cartões aceitos no hotel", items: [cards.join(", ")] }] : []),
+    ],
+    issues: (h.issues ?? []).filter((i) => txt(i.description)).map((i) => ({ text: txt(i.description), from: isDate(i.dateFrom), to: isDate(i.dateTo) })),
+    facts,
+  };
+  return {
+    name: txt(h.name),
+    description,
+    address: [h.address?.content, h.city?.content].filter(Boolean).map((x) => titleCase(String(x).trim())).join(", "),
+    city: titleCase(txt(h.city)),
+    images: ordered.map(url),
+    // comodidades de verdade: grupos 60 (quarto), 70 (gerais), 71 (bar/restaurante), 73 (lazer), 74 (esportes)
+    facilities: rankFacilities(facilities.filter((f) => [60, 70, 71, 73, 74].includes(Number(f.facilityGroupCode)) && txt(f.description) && present(f) && f !== ci && f !== co).map((f) => txt(f.description))),
+    stars: parseStars(h.category?.code ?? txt(h.category?.description)),
+    phone: phone?.phoneNumber?.trim() || null,
+    hotel,
+    rooms,
+  };
 }
 
 function bookingResult(b: HbBooking): BookingResult {

@@ -506,3 +506,9 @@ dialog::backdrop {
     opacity: 0;
   }
 }
+
+/* Página do hotel: filtros rápidos da lista de quartos (RoomFilters) */
+[data-room-filter~="cafe"] [data-room]:not([data-cafe]),
+[data-room-filter~="gratis"] [data-room]:not([data-gratis]) {
+  display: none;
+}
