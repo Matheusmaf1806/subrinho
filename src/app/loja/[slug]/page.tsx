@@ -66,6 +66,9 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
   const pixAvailable = paymentProvider().pixAvailable;
   const settings = await getSettings(db);
 
+  // faixa de destinos: leva à busca de ingressos (ou de hotéis, se a loja não vende ingressos)
+  const marqueeSlug = live.has("TICKETS") ? "ingressos" : live.has("LODGING") ? "hospedagem" : null;
+
   const tabs = cats.live.map((c) => {
     const Icon = c.icon;
     const action = `${base}/${c.slug}`;
@@ -97,6 +100,9 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
         pixAvailable={pixAvailable}
         maxInstallments={settings.maxInstallments}
         whatsapp={store.whatsapp}
+        destinations={
+          marqueeSlug ? [...DESTINATIONS.map((x) => x.name), "Milão", "Veneza", "Barcelona", "Londres"].map((n) => ({ name: n, href: `${base}/${marqueeSlug}?${toQuery({ destino: n })}` })) : []
+        }
       />
 
       {/* ───────── Categorias (bento) ───────── */}

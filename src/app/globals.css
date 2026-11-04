@@ -109,3 +109,41 @@ dialog::backdrop {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Faixa de destinos correndo (topo da loja) */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.marquee {
+  animation: marquee 45s linear infinite;
+}
+.marquee:hover {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee {
+    animation: none;
+  }
+}
+
+/* Selo postal: borda picotada (foto secundária do topo da loja) */
+.stamp {
+  --s: 14px;
+  padding: calc(var(--s) * 0.85);
+  -webkit-mask:
+    radial-gradient(circle calc(var(--s) * 0.32), #0000 97%, #000) calc(var(--s) / -2) calc(var(--s) / -2) / var(--s) var(--s) round,
+    linear-gradient(#000 0 0) 50% / calc(100% - var(--s)) calc(100% - var(--s)) no-repeat;
+  mask:
+    radial-gradient(circle calc(var(--s) * 0.32), #0000 97%, #000) calc(var(--s) / -2) calc(var(--s) / -2) / var(--s) var(--s) round,
+    linear-gradient(#000 0 0) 50% / calc(100% - var(--s)) calc(100% - var(--s)) no-repeat;
+}
+
+/* Grão de papel (textura sutil sobre fundos lisos) */
+.grain {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .5 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
