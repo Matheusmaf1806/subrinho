@@ -9,6 +9,7 @@ import { ArrowChip, cn } from "@/components/ui";
 import { photo, type PhotoKey } from "@/lib/images";
 import { noEmDash } from "@/lib/text";
 import { getStore, getStorePricing, storeBrand } from "./_lib/store";
+import { storeInsight } from "./_lib/insight";
 import { COMING_SOON } from "./_components/category";
 import { storeCategories } from "./_lib/categories";
 import { ChipSearch, InsuranceSearch, LodgingSearch, TicketsSearch } from "./_components/search-forms";
@@ -70,6 +71,7 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
   const { slug } = await params;
   const store = await getStore(slug);
   const ctx = await getStorePricing(store.id);
+  const reveal = await storeInsight(store.id);
   const base = `/loja/${store.slug}`;
   const brand = storeBrand(store);
   const { d, minDate } = parseSearch({});
@@ -78,8 +80,8 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
   const cats = await storeCategories();
   const live = new Set(cats.live.map((c) => c.category));
   const [tickets, hotels] = await Promise.all([
-    live.has("TICKETS") ? searchCatalog(db, ctx, "TICKETS", supplierParams(d, "tickets")) : Promise.resolve([]),
-    live.has("LODGING") ? searchCatalog(db, ctx, "LODGING", supplierParams(d, "lodging")) : Promise.resolve([]),
+    live.has("TICKETS") ? searchCatalog(db, ctx, "TICKETS", supplierParams(d, "tickets"), { reveal }) : Promise.resolve([]),
+    live.has("LODGING") ? searchCatalog(db, ctx, "LODGING", supplierParams(d, "lodging"), { reveal }) : Promise.resolve([]),
   ]);
 
   const pixAvailable = paymentProvider().pixAvailable;

@@ -5,6 +5,7 @@ import { getProductDetail } from "@/server/catalog";
 import { quoteDisplayPrice } from "@/server/pricing/cart-pricing";
 import { getAdapter } from "@/server/suppliers/registry";
 import { getStore, getStorePricing } from "../../_lib/store";
+import { storeInsight } from "../../_lib/insight";
 import { parseSearch, supplierParams, toQuery } from "../../_components/search-params";
 import { BookingPanel, ProductHero } from "../../_components/product-hero";
 import { TicketBooking } from "../../_components/ticket-booking";
@@ -26,8 +27,9 @@ export default async function TicketDetail({
   const { supplierCode: supplier, productId } = target;
   const store = await getStore(slug);
   const ctx = await getStorePricing(store.id);
+  const reveal = await storeInsight(store.id);
   const { d, minDate } = parseSearch(await searchParams);
-  const p = await getProductDetail(db, ctx, supplier, productId, supplierParams(d, "tickets")).catch(() => null);
+  const p = await getProductDetail(db, ctx, supplier, productId, supplierParams(d, "tickets"), { reveal }).catch(() => null);
   if (!p || p.category !== "TICKETS") notFound();
 
   const adapter = getAdapter(supplier);
@@ -35,10 +37,13 @@ export default async function TicketDetail({
   const options = await Promise.all(
     p.options.map(async (o) => {
       let childPix: number | null = null;
+      let childCommission: number | null = null;
       try {
         // o fornecedor já informa o custo infantil da opção; senão, cota 1 criança
         const lines = o.childLines !== undefined ? o.childLines : (await adapter.quote({ productId, optionId: o.optionId, date: d.data, pax: { adults: 0, children: 1 } })).lines;
-        childPix = lines?.length ? Number(quoteDisplayPrice(ctx, { ...p, optionId: o.optionId }, o.currency, lines).pix.toString()) : null;
+        const child = lines?.length ? quoteDisplayPrice(ctx, { ...p, optionId: o.optionId }, o.currency, lines, null, { commission: reveal.commission }) : null;
+        childPix = child ? Number(child.pix.toString()) : null;
+        childCommission = child?.commission ? Number(child.commission.amount.toString()) : null;
       } catch {
         childPix = null;
       }
@@ -49,6 +54,9 @@ export default async function TicketDetail({
         adultPix: o.price ? Number(o.price.pix.toString()) : 0,
         childPix,
         available: o.available && !!o.price,
+        // só para quem pode ver (o componente roda no navegador: sem permissão, nem vai na página)
+        ...(o.revealSupplier ? { supplier: o.revealSupplier } : {}),
+        ...(o.price?.commission ? { adultCommission: Number(o.price.commission.amount.toString()), childCommission, commissionPct: Number(o.price.commission.pct.toString()) } : {}),
       };
     }),
   );

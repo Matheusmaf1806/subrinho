@@ -7,6 +7,8 @@ import { Input } from "@/components/ui";
 import { brl, date } from "@/lib/format";
 import { addDays, daysBetween } from "@/lib/tz";
 import { getStore, getStorePricing } from "../../_lib/store";
+import { storeInsight } from "../../_lib/insight";
+import { SupplierTag } from "../../_components/reveal";
 import { parseSearch, supplierParams, toQuery } from "../../_components/search-params";
 import { BookingPanel, ProductHero } from "../../_components/product-hero";
 import { AddToCartForm } from "../../_components/add-to-cart";
@@ -30,10 +32,11 @@ export default async function HouseDetail({
   const { supplierCode: supplier, productId } = target;
   const store = await getStore(slug);
   const ctx = await getStorePricing(store.id);
+  const reveal = await storeInsight(store.id);
   const sp = await searchParams;
   const parsed = parseSearch(sp);
   const d = { ...parsed.d, checkout: sp.checkout ? parsed.d.checkout : addDays(parsed.d.checkin, 7) };
-  const p = await getProductDetail(db, ctx, supplier, productId, supplierParams(d, "houses")).catch((e) => {
+  const p = await getProductDetail(db, ctx, supplier, productId, supplierParams(d, "houses"), { reveal }).catch((e) => {
     console.error(`[casa] ${supplier}/${productId}:`, e);
     return null;
   });
@@ -79,10 +82,12 @@ export default async function HouseDetail({
             <button className="col-span-2 h-10 rounded-full bg-surface text-[13px] font-semibold text-ink hover:bg-surface-2">Atualizar datas</button>
           </form>
 
+          <SupplierTag name={o?.revealSupplier} className="mb-3" />
           {available && o.price ? (
             <PriceTag
               pix={o.price.pix}
               plan={o.price.plan}
+              commission={o.price.commission}
               note={`${date(d.checkin)} a ${date(d.checkout)} · ${nights} noite${nights > 1 ? "s" : ""}${nights > 1 ? ` · ≈ ${brl(Number(o.price.pix.div(nights).toFixed(0)))}/noite` : ""} · taxas e impostos inclusos`}
             />
           ) : tooMany ? (

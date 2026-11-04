@@ -12,10 +12,15 @@ import { cn } from "@/components/ui";
 
 type Photo = { url: string; tag: string | null };
 
+/** Abre a galeria de fora (ex.: foto do cartão de um quarto): só uma categoria ou só algumas fotos. */
+export const GALLERY_EVENT = "hotel-gallery:open";
+export type GalleryRequest = { tag?: string | null; urls?: string[] };
+
 export function HotelGallery({ photos, title }: { photos: Photo[]; title: string }) {
   const [open, setOpen] = useState(false);
   const [tag, setTag] = useState<string | null>(null);
   const [index, setIndex] = useState(0);
+  const [custom, setCustom] = useState<Photo[] | null>(null);
   const thumbs = useRef<HTMLDivElement>(null);
 
   const tags = useMemo(() => {
@@ -23,14 +28,27 @@ export function HotelGallery({ photos, title }: { photos: Photo[]; title: string
     for (const p of photos) if (p.tag) count.set(p.tag, (count.get(p.tag) ?? 0) + 1);
     return [...count.entries()];
   }, [photos]);
-  const list = useMemo(() => (tag ? photos.filter((p) => p.tag === tag) : photos), [photos, tag]);
+  const list = useMemo(() => custom ?? (tag ? photos.filter((p) => p.tag === tag) : photos), [photos, tag, custom]);
   const current = list[Math.min(index, list.length - 1)];
 
   const show = (i: number) => {
+    setCustom(null);
     setTag(null);
     setIndex(i);
     setOpen(true);
   };
+
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      const r = (e as CustomEvent<GalleryRequest>).detail ?? {};
+      setCustom(r.urls?.length ? r.urls.map((u) => photos.find((p) => p.url === u) ?? { url: u, tag: null }) : null);
+      setTag(r.urls?.length ? null : (r.tag ?? null));
+      setIndex(0);
+      setOpen(true);
+    };
+    window.addEventListener(GALLERY_EVENT, onOpen);
+    return () => window.removeEventListener(GALLERY_EVENT, onOpen);
+  }, [photos]);
   const step = useCallback((d: number) => setIndex((i) => (list.length ? (i + d + list.length) % list.length : 0)), [list.length]);
 
   useEffect(() => {
@@ -126,7 +144,7 @@ export function HotelGallery({ photos, title }: { photos: Photo[]; title: string
                 <X className="h-5 w-5" />
               </button>
             </div>
-            {tags.length > 1 && (
+            {tags.length > 1 && !custom && (
               <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 pb-3 sm:px-8">
                 {[[null, photos.length] as const, ...tags].map(([t, n]) => (
                   <button

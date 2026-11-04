@@ -10,6 +10,8 @@ import { Badge, cn } from "@/components/ui";
 import { brl, date, paxSummary } from "@/lib/format";
 import { daysBetween } from "@/lib/tz";
 import { getStore, getStorePricing } from "../../_lib/store";
+import { storeInsight } from "../../_lib/insight";
+import { CommissionTag, SupplierTag } from "../../_components/reveal";
 import { lodgingQuery, parseSearch, supplierParams } from "../../_components/search-params";
 import { LodgingSearch } from "../../_components/search-forms";
 import { MobileSearchToggle } from "../../_components/search-toggle";
@@ -17,6 +19,7 @@ import { AddToCartForm } from "../../_components/add-to-cart";
 import { PriceTag } from "../../_components/price-tag";
 import { HotelGallery } from "../../_components/hotel/hotel-gallery";
 import { RoomFilters } from "../../_components/hotel/room-filters";
+import { RoomPhoto } from "../../_components/hotel/room-photo";
 import { HotelAmenities, HotelIssues, HotelLocation, HotelOverview, HotelPolicies, SectionHeading, StayCard } from "../../_components/hotel/hotel-sections";
 import { addToCartAction } from "../../actions";
 
@@ -39,8 +42,9 @@ export default async function HotelDetail({
   const { supplierCode: supplier, productId } = target;
   const store = await getStore(slug);
   const ctx = await getStorePricing(store.id);
+  const reveal = await storeInsight(store.id);
   const { d, minDate } = parseSearch(await searchParams);
-  const p = await getProductDetail(db, ctx, supplier, productId, supplierParams(d, "lodging")).catch((e) => {
+  const p = await getProductDetail(db, ctx, supplier, productId, supplierParams(d, "lodging"), { reveal }).catch((e) => {
     console.error(`[hotel] ${supplier}/${productId}:`, e);
     return null;
   });
@@ -61,6 +65,8 @@ export default async function HotelDetail({
     amenities: p.highlights.length ? [{ group: "Serviços", items: p.highlights }] : [],
   };
   const allAmenities = [...h.amenities.flatMap((g) => g.items), ...h.roomAmenities];
+  // fotos de quartos do hotel: usadas no cartão quando o fornecedor não liga foto ao tipo de quarto
+  const hotelRoomPhotos = h.photos.filter((x) => x.tag === "Quartos").map((x) => x.url);
 
   // quartos: avisos repetidos em todas as opções aparecem uma vez só, acima da lista
   const board = (o: (typeof p.options)[number]) => o.attributes?.find((a) => a.label === "Regime")?.value ?? o.description ?? "";
@@ -137,6 +143,7 @@ export default async function HotelDetail({
               <p className="text-[12px] text-muted">
                 total · {nights} noite{nights > 1 ? "s" : ""}
               </p>
+              <CommissionTag c={cheapest?.price?.commission} className="mt-1.5" />
             </div>
             <a href="#quartos" className="inline-flex h-12 items-center gap-2 rounded-full bg-ink px-6 text-[15px] font-semibold text-white transition hover:bg-ink-2">
               Ver quartos <span aria-hidden>↓</span>
@@ -227,7 +234,8 @@ export default async function HotelDetail({
                   const cancel = o.attributes?.find((a) => a.label === "Cancelamento");
                   const notes = (o.notes ?? []).filter((n) => !common.includes(n));
                   const shared = [...new Set((o.notes ?? []).filter((n) => common.includes(n)).map(noteChip))];
-                  const photo = o.room?.photos?.[0];
+                  const own = o.room?.photos ?? [];
+                  const photo = own[0] ?? (hotelRoomPhotos.length ? hotelRoomPhotos[p.options.indexOf(o) % hotelRoomPhotos.length] : undefined);
                   const breakfast = WITH_BREAKFAST.test(board(o));
                   return (
                     <li
@@ -237,14 +245,9 @@ export default async function HotelDetail({
                       data-gratis={o.freeCancellationUntil ? "" : undefined}
                       className={cn("grid overflow-hidden rounded-[1.75rem] bg-white ring-1 ring-inset ring-black/[0.07]", photo ? "sm:grid-cols-[230px_minmax(0,1fr)_auto]" : "sm:grid-cols-[minmax(0,1fr)_auto]")}
                     >
-                      {photo && (
-                        <div className="relative h-48 bg-surface sm:h-auto">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={photo} alt="" className="h-full w-full object-cover" loading="lazy" />
-                          {(o.room?.photos.length ?? 0) > 1 && <span className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-semibold text-white">{o.room!.photos.length} fotos</span>}
-                        </div>
-                      )}
+                      {photo && <RoomPhoto src={photo} own={own.length > 0} count={own.length} urls={own} />}
                       <div className="min-w-0 p-5 sm:p-6">
+                        <SupplierTag name={o.revealSupplier} className="mb-2" />
                         <p className="text-xl font-semibold tracking-[-0.03em] text-ink">{o.title}</p>
                         <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[14px] text-ink/75">
                           <span className="inline-flex items-center gap-1.5">
@@ -296,6 +299,7 @@ export default async function HotelDetail({
                             pix={o.price.pix}
                             plan={o.price.plan}
                             size="sm"
+                            commission={o.price.commission}
                             note={`total da estadia · ${nights} noite${nights > 1 ? "s" : ""}${nights > 1 ? ` · ≈ ${brl(Number(o.price.pix.div(nights).toFixed(0)))}/noite` : ""}`}
                             className="sm:text-right"
                           />

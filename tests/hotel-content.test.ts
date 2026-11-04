@@ -1,7 +1,7 @@
 /** Conteúdo da página do hotel: o que vem dos fornecedores organizado por assunto. */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { formatMeters, groupAmenities, hhmm, issuesDuring, parseDistanceLine, photoTag, roomAmenitiesFrom, splitDescription } from "@/server/suppliers/hotels/content";
+import { formatMeters, groupAmenities, hhmm, issuesDuring, matchRoomPhotos, parseDistanceLine, photoTag, roomAmenitiesFrom, splitDescription } from "@/server/suppliers/hotels/content";
 import { xmlParser } from "@/server/suppliers/ggt/client";
 import { parseHotelInfo } from "@/server/suppliers/ggt/adapter";
 import { parseHotelDetails, type HbHotelDetails } from "@/server/suppliers/hotelbeds/adapter";
@@ -130,6 +130,29 @@ describe("Hotelbeds: detalhe da Content API", () => {
   it("avisos só quando pegam a estadia", () => {
     expect(issuesDuring(c.hotel.issues, "2026-01-15", "2026-01-18").map((i) => i.text)).toEqual(["A piscina externa fica fechada para reforma."]);
     expect(issuesDuring(c.hotel.issues, "2026-03-01", "2026-03-05")).toEqual([]);
+  });
+});
+
+describe("foto de cada quarto pela legenda (GGT)", () => {
+  const photos = [
+    { url: "a", tag: "Quartos", caption: "Family Room, 2 Queen Beds, Lake View" },
+    { url: "b", tag: "Quartos", caption: "Room" },
+    { url: "c", tag: "Quartos", caption: "Deluxe Room, 1 King Bed" },
+    { url: "d", tag: "Piscina", caption: "Outdoor pool" },
+    { url: "e", tag: "Quartos", caption: "Family Room, 2 Queen Beds" },
+  ];
+  it("usa só as fotos cuja legenda cita o quarto; legenda genérica nunca", () => {
+    expect(matchRoomPhotos("Family King Bed Lake View", photos)).toEqual(["a"]); // family + lake + view(não é palavra) → a ganha de c/e
+    expect(matchRoomPhotos("Family Double Queen", photos)).toEqual(["a", "e"]);
+    expect(matchRoomPhotos("Room King Bed", photos)).toEqual(["c"]);
+    expect(matchRoomPhotos("Comfort", photos)).toEqual([]);
+    expect(matchRoomPhotos("Quadruple Standard", photos)).toEqual([]);
+  });
+  it("a GGT de verdade manda legendas genéricas: nenhum quarto ganha foto errada", () => {
+    const doc = xmlParser.parse(readFileSync("tests/fixtures/ggt/hotel-info.xml", "utf8"));
+    const info = parseHotelInfo(doc.Root.Main);
+    expect(info.photos.every((p) => "caption" in p)).toBe(true);
+    expect(matchRoomPhotos("Standard Room, 2 Queen Beds", info.photos)).toEqual([]);
   });
 });
 

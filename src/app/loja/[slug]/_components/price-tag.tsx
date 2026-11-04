@@ -2,6 +2,7 @@ import { brl } from "@/lib/format";
 import type { InstallmentPlan } from "@/server/pricing/engine";
 import type { Decimal } from "@/server/pricing/money";
 import { cn } from "@/components/ui";
+import { CommissionTag, type Commission } from "./reveal";
 
 export function PriceTag({
   pix,
@@ -11,6 +12,7 @@ export function PriceTag({
   note,
   className,
   invert,
+  commission,
 }: {
   pix: Decimal | string;
   plan: InstallmentPlan;
@@ -19,6 +21,8 @@ export function PriceTag({
   note?: string;
   className?: string;
   invert?: boolean;
+  /** Só para o ADMIN da agência (vem nos dados apenas quando ele pode ver). */
+  commission?: Commission | null;
 }) {
   const sub = invert ? "text-white/60" : "text-muted";
   return (
@@ -32,6 +36,7 @@ export function PriceTag({
         ou <span className={invert ? "text-white" : "text-ink"}>{plan.count}x de {brl(plan.installment)}</span> sem juros
       </div>
       {note && <div className={cn("mt-1 text-xs", sub)}>{note}</div>}
+      {commission && <CommissionTag c={commission} className="mt-2" />}
     </div>
   );
 }

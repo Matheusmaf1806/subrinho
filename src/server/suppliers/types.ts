@@ -61,7 +61,7 @@ export type OfferOption = {
 export type RoomContent = { photos: string[]; amenities: string[]; maxPax?: number | null };
 
 /** Foto do hotel com a categoria ("Quartos", "Piscina"…) para os filtros da galeria. */
-export type HotelPhoto = { url: string; tag: string | null };
+export type HotelPhoto = { url: string; tag: string | null; /** legenda original do fornecedor (só no servidor, para achar a foto de cada quarto) */ caption?: string | null };
 
 /**
  * Conteúdo do hotel organizado para a página (o que o fornecedor manda, separado por assunto).

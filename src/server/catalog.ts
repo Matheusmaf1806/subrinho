@@ -11,9 +11,18 @@ import { SupplierError, type HotelContent, type OfferOption, type ProductDetail,
 import type { Decimal } from "@/server/pricing/money";
 import type { InstallmentPlan } from "@/server/pricing/engine";
 
-export type DisplayPrice = { pix: Decimal; installment: Decimal; plan: InstallmentPlan };
-export type PricedSummary = ProductSummary & { price: DisplayPrice; offers: number };
-export type PricedOption = OfferOption & { supplierCode: string; productId: string; price: DisplayPrice | null };
+export type DisplayPrice = { pix: Decimal; installment: Decimal; plan: InstallmentPlan; commission?: { amount: Decimal; pct: Decimal } };
+
+/**
+ * O que a loja mostra a mais para quem está logado com permissão (decidido no servidor, ver
+ * storeInsight): fornecedor de cada oferta (equipe Subrinho) e comissão da agência (ADMIN dela).
+ * Sem permissão, os campos nem entram nos dados da página.
+ */
+export type Reveal = { supplier: boolean; commission: boolean };
+const NO_REVEAL: Reveal = { supplier: false, commission: false };
+/** revealSupplier: nome do fornecedor, só quando Reveal.supplier (equipe Subrinho). */
+export type PricedSummary = ProductSummary & { price: DisplayPrice; offers: number; revealSupplier?: string };
+export type PricedOption = OfferOption & { supplierCode: string; productId: string; price: DisplayPrice | null; revealSupplier?: string };
 /** price = null quando o produto existe mas não há disponibilidade para os parâmetros (ex.: hotel lotado). */
 export type PricedDetail = Omit<ProductDetail, "options"> & { price: DisplayPrice | null; options: PricedOption[] };
 
@@ -22,9 +31,9 @@ export async function activeSupplierCodes(tx: Tx): Promise<Set<string>> {
   return new Set(rows.map((r) => r.code));
 }
 
-function priceOf(ctx: PricingContext, s: { category: Category; supplierCode: string; productId: string }, optionId: string | null, o: Pick<OfferOption, "currency" | "lines" | "minSellPrice">) {
+function priceOf(ctx: PricingContext, s: { category: Category; supplierCode: string; productId: string }, optionId: string | null, o: Pick<OfferOption, "currency" | "lines" | "minSellPrice">, reveal: Reveal = NO_REVEAL) {
   try {
-    return quoteDisplayPrice(ctx, { ...s, optionId }, o.currency, o.lines, o.minSellPrice);
+    return quoteDisplayPrice(ctx, { ...s, optionId }, o.currency, o.lines, o.minSellPrice, { commission: reveal.commission });
   } catch {
     return null;
   }
@@ -35,8 +44,9 @@ export async function searchCatalog(
   ctx: PricingContext,
   category: Category,
   params: SearchParams,
-  opts: { onError?: (supplierCode: string, error: unknown) => void } = {},
+  opts: { onError?: (supplierCode: string, error: unknown) => void; reveal?: Reveal } = {},
 ): Promise<PricedSummary[]> {
+  const reveal = opts.reveal ?? NO_REVEAL;
   const active = await activeSupplierCodes(tx);
   const results = await Promise.all(
     adaptersFor(category, active).map((a) =>
@@ -50,9 +60,9 @@ export async function searchCatalog(
   );
   const priced: PricedSummary[] = [];
   for (const s of results.flat()) {
-    const price = priceOf(ctx, s, null, s);
+    const price = priceOf(ctx, s, null, s, reveal);
     // sem tarifa (preço zero) não dá para vender: fica fora da vitrine e da busca
-    if (price && price.pix.gt(0)) priced.push({ ...s, price, offers: 1 });
+    if (price && price.pix.gt(0)) priced.push({ ...s, price, offers: 1, ...(reveal.supplier ? { revealSupplier: s.supplierName } : {}) });
   }
   // Mesmo hotel em vários fornecedores → mostra o menor preço.
   const grouped = new Map<string, PricedSummary>();
@@ -75,7 +85,10 @@ export async function getProductDetail(
   supplierCode: string,
   productId: string,
   params: SearchParams,
+  opts: { reveal?: Reveal } = {},
 ): Promise<PricedDetail | null> {
+  const reveal = opts.reveal ?? NO_REVEAL;
+  const supplierLabel = (code: string) => (reveal.supplier ? { revealSupplier: getAdapter(code).name } : {});
   const active = await activeSupplierCodes(tx);
   if (!active.has(supplierCode)) return null;
   const adapter = getAdapter(supplierCode);
@@ -86,7 +99,8 @@ export async function getProductDetail(
     ...o,
     supplierCode,
     productId: detail.productId,
-    price: priceOf(ctx, detail, o.optionId, o),
+    price: priceOf(ctx, detail, o.optionId, o, reveal),
+    ...supplierLabel(supplierCode),
   }));
 
   // Hotel vendido por outros fornecedores: junta as opções e mantém a mais barata por quarto/regime.
@@ -99,7 +113,7 @@ export async function getProductDetail(
       const od = await other.getProduct(twin.productId, params).catch(() => null);
       if (!od) continue;
       options.push(
-        ...od.options.map((o) => ({ ...o, supplierCode: other.code, productId: od.productId, price: priceOf(ctx, od, o.optionId, o) })),
+        ...od.options.map((o) => ({ ...o, supplierCode: other.code, productId: od.productId, price: priceOf(ctx, od, o.optionId, o, reveal), ...supplierLabel(other.code) })),
       );
     }
     const byTitle = new Map<string, PricedOption>();
@@ -110,7 +124,7 @@ export async function getProductDetail(
     options = [...byTitle.values()];
   }
   options.sort((a, b) => (a.price && b.price ? a.price.pix.comparedTo(b.price.pix) : a.price ? -1 : 1));
-  const price = detail.lines.length ? priceOf(ctx, detail, null, detail) : null;
+  const price = detail.lines.length ? priceOf(ctx, detail, null, detail, reveal) : null;
   // hospedagem/casa sem disponibilidade nas datas: a página aparece com o motivo (sem preço)
   const unavailable = options.length === 0 || options.every((o) => !o.available);
   if (!price && !((detail.category === "LODGING" || detail.category === "HOUSES" || detail.category === "TICKETS") && unavailable)) return null;
@@ -143,7 +157,7 @@ function hotelForStore(h: HotelContent): HotelContent {
     ...h,
     photos: h.photos.flatMap((p) => {
       const url = mediaUrl(p.url);
-      return url ? [{ ...p, url }] : [];
+      return url ? [{ url, tag: p.tag }] : [];
     }),
     about: h.about.map((a) => ({ ...a, text: stripSupplierMentions(a.text) })).filter((a) => a.text),
     amenities: h.amenities.map((g) => ({ ...g, items: stripSupplierMentionsList(g.items) })).filter((g) => g.items.length),

@@ -11,6 +11,7 @@ import { appUrl, getStore, viewerFor } from "../../_lib/store";
 import { CartItemCard } from "../../_components/cart-item";
 import { CartSummary } from "../../_components/cart-summary";
 import { toItemVMs, totalsVM } from "../../_components/cart-vm";
+import { storeInsight } from "../../_lib/insight";
 import { TrackView } from "../../_components/track-view";
 import {
   acknowledgeNoticesAction,
@@ -33,8 +34,9 @@ export default async function CartPage({ params, searchParams }: { params: Promi
   const [view, viewer, settings] = await Promise.all([loadCartView(db, token, store.id), viewerFor(store), getSettings(db)]);
   if (!view) notFound();
   const adminMode = viewer?.kind === "AFFILIATE" && viewer.adminMode;
-  const items = toItemVMs(view, { adminMode });
-  const t = totalsVM(view);
+  const reveal = await storeInsight(store.id);
+  const items = toItemVMs(view, { adminMode, reveal });
+  const t = totalsVM(view, reveal);
   const open = view.cart.status === "OPEN";
   const shareUrl = `${appUrl()}/loja/${slug}/carrinho/${token}`;
   const waText = encodeURIComponent(`Olha a viagem que montei na ${store.name}: ${shareUrl}`);

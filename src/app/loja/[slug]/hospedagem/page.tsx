@@ -11,6 +11,7 @@ import { daysBetween } from "@/lib/tz";
 import { categoryAvailable } from "../_lib/categories";
 import { ComingSoon } from "../_components/coming-soon";
 import { getStore, getStorePricing } from "../_lib/store";
+import { storeInsight } from "../_lib/insight";
 import { LodgingSearch } from "../_components/search-forms";
 import { lodgingQuery, parseSearch, supplierParams } from "../_components/search-params";
 import { ListingHeader, NoResults } from "../_components/listing";
@@ -61,6 +62,7 @@ export default async function LodgingPage({ params, searchParams }: { params: Pr
   // categoria sem fornecedor com API real: nada de catálogo de exemplo
   if (!(await categoryAvailable("LODGING"))) return <ComingSoon title="Hospedagem" base={`/loja/${store.slug}`} />;
   const ctx = await getStorePricing(store.id);
+  const reveal = await storeInsight(store.id);
   const raw = await searchParams;
   const { d, minDate } = parseSearch(raw);
   const base = `/loja/${store.slug}/hospedagem`;
@@ -70,6 +72,7 @@ export default async function LodgingPage({ params, searchParams }: { params: Pr
   const results =
     searched || !live
       ? await searchCatalog(db, ctx, "LODGING", supplierParams(d, "lodging"), {
+      reveal,
           onError: (code, e) => failures.push({ code, message: e instanceof SupplierError && !("detail" in e) ? e.message : null }),
         })
       : [];

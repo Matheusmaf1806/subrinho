@@ -7,6 +7,7 @@ import { Alert, ButtonLink } from "@/components/ui";
 import { categoryAvailable } from "../_lib/categories";
 import { ComingSoon } from "../_components/coming-soon";
 import { getStore, getStorePricing } from "../_lib/store";
+import { storeInsight } from "../_lib/insight";
 import { TicketsSearch } from "../_components/search-forms";
 import { parseSearch, supplierParams, toQuery } from "../_components/search-params";
 import { ListingHeader, NoResults } from "../_components/listing";
@@ -25,10 +26,12 @@ export default async function TicketsPage({ params, searchParams }: { params: Pr
   // categoria sem fornecedor com API real: nada de catálogo de exemplo
   if (!(await categoryAvailable("TICKETS"))) return <ComingSoon title="Ingressos" base={`/loja/${store.slug}`} />;
   const ctx = await getStorePricing(store.id);
+  const reveal = await storeInsight(store.id);
   const raw = await searchParams;
   const { d, minDate } = parseSearch(raw);
   const failures: { message: string | null }[] = [];
   const results = await searchCatalog(db, ctx, "TICKETS", supplierParams(d, "tickets"), {
+      reveal,
     onError: (_code, e) => failures.push({ message: e instanceof SupplierError && !("detail" in e) ? e.message : null }),
   });
   const base = `/loja/${store.slug}/ingressos`;

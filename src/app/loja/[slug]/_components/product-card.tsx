@@ -3,6 +3,7 @@ import { MapPin, Star } from "lucide-react";
 import type { PricedSummary } from "@/server/catalog";
 import { brl } from "@/lib/format";
 import { Cover } from "./cover";
+import { RevealTags } from "./reveal";
 
 function bathroomsLabel(n: number) {
   const whole = Math.floor(n);
@@ -70,6 +71,7 @@ export function ProductCard({ p, href, note, nights }: { p: PricedSummary; href:
               {note ? ` · ${note}` : ""}
             </p>
             {perNight !== null && <p className="text-xs text-muted tabular">≈ {brl(perNight)} por noite</p>}
+            <RevealTags supplier={p.revealSupplier} commission={p.price.commission} className="mt-2" />
           </div>
           <span className="mb-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface text-ink transition duration-300 group-hover:-rotate-45 group-hover:bg-accent group-hover:text-accent-fg" aria-hidden>
             →

@@ -6,6 +6,8 @@ import { adaptersFor } from "@/server/suppliers/registry";
 import { categoryAvailable } from "../_lib/categories";
 import { ComingSoon } from "../_components/coming-soon";
 import { getStore, getStorePricing } from "../_lib/store";
+import { storeInsight } from "../_lib/insight";
+import { SupplierTag } from "../_components/reveal";
 import { ChipSearch } from "../_components/search-forms";
 import { parseSearch, supplierParams } from "../_components/search-params";
 import { ListingHeader, NoResults } from "../_components/listing";
@@ -23,8 +25,9 @@ export default async function ChipPage({ params, searchParams }: { params: Promi
   // categoria sem fornecedor com API real: nada de catálogo de exemplo
   if (!(await categoryAvailable("CHIP"))) return <ComingSoon title="Chip" base={`/loja/${store.slug}`} />;
   const ctx = await getStorePricing(store.id);
+  const reveal = await storeInsight(store.id);
   const { d } = parseSearch(await searchParams);
-  const results = await searchCatalog(db, ctx, "CHIP", supplierParams(d, "chip"));
+  const results = await searchCatalog(db, ctx, "CHIP", supplierParams(d, "chip"), { reveal });
   const destinations = [...new Set(adaptersFor("CHIP").flatMap((a) => a.destinations().map((x) => x.name)))];
   const add = addToCartAction.bind(null, slug);
   return (
@@ -48,7 +51,8 @@ export default async function ChipPage({ params, searchParams }: { params: Promi
                 <p className="mt-8 text-[3.25rem] font-semibold leading-none tracking-[-0.06em]">{p.title.split(" · ")[1] ?? p.title}</p>
                 <p className="mt-2 text-[15px] text-muted">{p.subtitle}</p>
                 <div className="mt-6">
-                  <PriceTag pix={p.price.pix} plan={p.price.plan} size="sm" note="por chip" />
+                  <PriceTag pix={p.price.pix} plan={p.price.plan} size="sm" note="por chip" commission={p.price.commission} />
+                  <SupplierTag name={p.revealSupplier} className="mt-2" />
                 </div>
                 <AddToCartForm action={add} hidden={{ ref: productRef(p.supplierCode, p.productId), optionId: p.productId }} className="mt-auto pt-5">
                   <div className="rounded-2xl bg-white px-4 py-1">

@@ -212,6 +212,8 @@ export function CartDrawer({
                         <p className="leading-tight">
                           <span className="text-[15px] font-semibold text-ink tabular">{fmt(pixAvailable ? i.pix : i.installment)}</span>
                           {pixAvailable && <span className="ml-1 text-[11px] font-semibold text-accent-ink">Pix</span>}
+                          {i.commission && <span className="block text-[11px] font-semibold text-emerald-700 tabular">comissão {fmt(i.commission)}</span>}
+                          {i.supplier && <span className="mt-0.5 inline-block rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-900">{i.supplier}</span>}
                         </p>
                         <button
                           type="button"
@@ -248,6 +250,7 @@ export function CartDrawer({
                   sem juros{pixAvailable ? ` · ${fmt(cart.installment)}` : ""}
                 </p>
               </div>
+              {cart.commission && <p className="mt-3 rounded-xl bg-emerald-50 px-3 py-2 text-[13px] font-semibold text-emerald-800 tabular">Comissão da agência: {fmt(cart.commission)}</p>}
               <Link
                 href={`${base}/checkout/${cart.token}`}
                 onClick={() => setOpen(false)}

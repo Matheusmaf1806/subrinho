@@ -137,6 +137,7 @@ export function quoteDisplayPrice(
   costCurrency: Currency,
   lines: CostLine[],
   minSellPrice?: MinSellPrice | null,
+  opts: { commission?: boolean } = {},
 ) {
   const { subrinhoMargin, affiliateMargin } = resolveItemMargins(ctx, target);
   const { base } = priceWithFloor(ctx, { costCurrency, lines, minSellPrice }, subrinhoMargin, affiliateMargin.pct);
@@ -144,6 +145,8 @@ export function quoteDisplayPrice(
     pix: base.netAffiliate,
     installment: base.installmentPrice,
     plan: installmentPlan(base.installmentPrice, ctx.maxInstallments),
+    // comissão da agência: só quando quem pede pode ver (ADMIN da própria agência)
+    ...(opts.commission ? { commission: { amount: base.affiliateMarginAmount, pct: affiliateMargin.pct } } : {}),
   };
 }
 

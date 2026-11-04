@@ -4,12 +4,22 @@ import type { PaxRule } from "@/server/suppliers/types";
 import { money } from "@/server/pricing/money";
 import { mediaUrl } from "@/server/media";
 import { noEmDash } from "@/lib/text";
+import { getAdapter } from "@/server/suppliers/registry";
+import type { Reveal } from "@/server/catalog";
 import { stripSupplierMentions, stripSupplierMentionsList } from "@/lib/supplier-names";
 
 type View = NonNullable<Awaited<ReturnType<typeof loadCartView>>>;
 
+const supplierName = (code: string) => {
+  try {
+    return getAdapter(code).name;
+  } catch {
+    return code;
+  }
+};
+
 /** Modelo serializável dos itens do carrinho (sem custo/câmbio/margem Subrinho). */
-export function toItemVMs(view: View, opts: { adminMode: boolean }) {
+export function toItemVMs(view: View, opts: { adminMode: boolean; reveal?: Reveal }) {
   const byId = new Map(view.priced.items.map((p) => [p.id, p]));
   return view.items.map((i) => {
     const p = byId.get(i.id)!;
@@ -31,6 +41,11 @@ export function toItemVMs(view: View, opts: { adminMode: boolean }) {
       pix: money(f.finalPix),
       installment: money(f.finalInstallment),
       discount: money(f.subrinhoDiscount.plus(f.affiliateDiscount)),
+      // Só para quem pode ver (ver _lib/insight.ts): sem permissão, nem entra nos dados.
+      reveal: {
+        supplier: opts.reveal?.supplier ? supplierName(i.supplierCode) : null,
+        commission: opts.reveal?.commission ? { amount: money(f.affiliateCommission), pct: p.affiliateMargin.pct.toString() } : null,
+      },
       // Somente para o ADMIN da agência (modo ADMIN):
       admin: opts.adminMode
         ? {
@@ -65,9 +80,10 @@ function hotelInfo(d: Record<string, unknown>) {
   };
 }
 
-export function totalsVM(view: View) {
+export function totalsVM(view: View, reveal?: Reveal) {
   const t = view.priced.totals;
   return {
+    commission: reveal?.commission ? money(t.affiliateCommission) : null,
     listPix: money(t.netAffiliate),
     discount: money(t.discount),
     pix: money(t.pix),

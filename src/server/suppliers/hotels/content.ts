@@ -5,7 +5,7 @@
  * listas com códigos); aqui ficam as regras que transformam isso no formato da página do hotel:
  * categorias das fotos, grupos de comodidades, seções da descrição, distâncias e horários.
  */
-import type { HotelContent } from "../types";
+import type { HotelContent, HotelPhoto } from "../types";
 
 export const EMPTY_HOTEL_CONTENT: HotelContent = {
   photos: [],
@@ -55,6 +55,40 @@ const HB_IMAGE_TAG: Record<string, string> = {
   CON: "Áreas comuns",
 };
 export const hbImageTag = (code: string | null | undefined) => (code ? (HB_IMAGE_TAG[code.toUpperCase()] ?? null) : null);
+
+// ───────────────────────── Foto de cada quarto ─────────────────────────
+
+/** Palavras que distinguem um tipo de quarto (cama, categoria, vista). */
+const ROOM_WORDS = /^(king|queen|double|twin|single|triple|quadruple|suite|junior|family|deluxe|superior|premier|premium|executive|club|grand|studio|loft|penthouse|villa|bungalow|cabana|accessible|lake|pool|ocean|sea|beach|garden|city|mountain|river|park|balcony|terrace|kitchen|kitchenette|bedroom|bunk|sofa)$/;
+/** Legenda genérica: não diz qual quarto é. */
+const GENERIC_CAPTION = /^(room|rooms|guestroom|guest room|bathroom|private bathroom|in-room amenity|in-room safe|private kitchen|private kitchenette|living area|living room|minibar|view from room|room amenity|primary image)$/i;
+
+const roomTokens = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .split(/[^a-z]+/)
+    .filter((w) => ROOM_WORDS.test(w));
+
+/**
+ * Fotos cuja legenda cita o tipo de quarto ("Family Room, 2 Queen Beds, Lake View" para o quarto
+ * "Family Double Queen"). Precisa de pelo menos uma palavra em comum; fica com as de maior acerto.
+ */
+export function matchRoomPhotos(roomTitle: string, photos: HotelPhoto[], max = 6): string[] {
+  const want = new Set(roomTokens(roomTitle));
+  if (!want.size) return [];
+  let best = 0;
+  const scored = photos
+    .filter((p) => p.caption && !GENERIC_CAPTION.test(p.caption.trim()) && (p.tag === "Quartos" || /room|suite|bed/i.test(p.caption)))
+    .map((p) => {
+      const got = new Set(roomTokens(p.caption!));
+      const score = [...want].filter((w) => got.has(w)).length;
+      best = Math.max(best, score);
+      return { url: p.url, score };
+    });
+  return best ? scored.filter((s) => s.score === best).slice(0, max).map((s) => s.url) : [];
+}
 
 // ───────────────────────── Comodidades ─────────────────────────
 

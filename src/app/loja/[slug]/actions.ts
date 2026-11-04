@@ -34,6 +34,7 @@ import type { ActionState } from "@/components/ui-client";
 import { isValidCpfOrCnpj, onlyDigits } from "@/lib/br";
 import { date, paxSummary } from "@/lib/format";
 import { loadCartView } from "@/server/cart/service";
+import { storeInsight } from "./_lib/insight";
 import { toItemVMs, totalsVM } from "./_components/cart-vm";
 import { categoryLabel } from "./_components/category";
 import { actorOf, currentCartToken, getStore, safeNext, setCurrentCartToken, storePath, viewerFor } from "./_lib/store";
@@ -128,8 +129,11 @@ export type MiniCartItem = {
   pax: string;
   pix: string;
   installment: string;
+  /** Só para quem pode ver (ver _lib/insight.ts). */
+  supplier?: string;
+  commission?: string;
 };
-export type MiniCart = { token: string; items: MiniCartItem[]; pix: string; installment: string; planCount: number; planInstallment: string; discount: string; removed: number };
+export type MiniCart = { token: string; items: MiniCartItem[]; pix: string; installment: string; planCount: number; planInstallment: string; discount: string; removed: number; commission?: string };
 
 /** Itens e totais do carrinho atual (mesmos preços da página do carrinho, sem dados internos). */
 export async function miniCartAction(slug: string): Promise<MiniCart | null> {
@@ -138,10 +142,12 @@ export async function miniCartAction(slug: string): Promise<MiniCart | null> {
   if (!token) return null;
   const view = await loadCartView(db, token, store.id);
   if (!view || view.cart.status !== "OPEN") return null;
-  const t = totalsVM(view);
+  const reveal = await storeInsight(store.id);
+  const t = totalsVM(view, reveal);
   return {
     token,
-    items: toItemVMs(view, { adminMode: false }).map((i) => ({
+    ...(t.commission ? { commission: t.commission } : {}),
+    items: toItemVMs(view, { adminMode: false, reveal }).map((i) => ({
       id: i.id,
       category: categoryLabel(i.category),
       title: i.title,
@@ -151,6 +157,8 @@ export async function miniCartAction(slug: string): Promise<MiniCart | null> {
       pax: paxSummary(i.pax),
       pix: i.pix,
       installment: i.installment,
+      ...(i.reveal.supplier ? { supplier: i.reveal.supplier } : {}),
+      ...(i.reveal.commission ? { commission: i.reveal.commission.amount } : {}),
     })),
     pix: t.pix,
     installment: t.installment,

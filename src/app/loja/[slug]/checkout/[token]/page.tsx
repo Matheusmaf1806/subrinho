@@ -11,6 +11,7 @@ import { getStore, viewerFor } from "../../_lib/store";
 import { CartItemCard } from "../../_components/cart-item";
 import { CartSummary } from "../../_components/cart-summary";
 import { toItemVMs, totalsVM } from "../../_components/cart-vm";
+import { storeInsight } from "../../_lib/insight";
 import { TrackView } from "../../_components/track-view";
 import { CustomerAuth } from "../../_components/auth-forms";
 import { PayerFields, PaymentFields, TravelerFields } from "../../_components/checkout-fields";
@@ -55,8 +56,9 @@ export default async function CheckoutPage({ params }: { params: Promise<{ slug:
   if (view.cart.status !== "OPEN" || view.items.length === 0 || view.removedNotices.length > 0) redirect(`/loja/${slug}/carrinho/${token}`);
 
   const adminMode = viewer?.kind === "AFFILIATE" && viewer.adminMode;
-  const items = toItemVMs(view, { adminMode });
-  const t = totalsVM(view);
+  const reveal = await storeInsight(store.id);
+  const items = toItemVMs(view, { adminMode, reveal });
+  const t = totalsVM(view, reveal);
   const next = `/loja/${slug}/checkout/${token}`;
   // Viajantes: adultos e crianças (hotéis pedem nome de todos, com a idade das crianças).
   const hotelItems = view.items.filter((i) => i.category === "LODGING");

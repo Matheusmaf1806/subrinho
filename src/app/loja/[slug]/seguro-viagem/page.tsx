@@ -8,6 +8,8 @@ import { daysBetween } from "@/lib/tz";
 import { categoryAvailable } from "../_lib/categories";
 import { ComingSoon } from "../_components/coming-soon";
 import { getStore, getStorePricing } from "../_lib/store";
+import { storeInsight } from "../_lib/insight";
+import { SupplierTag } from "../_components/reveal";
 import { InsuranceSearch } from "../_components/search-forms";
 import { parseSearch, supplierParams } from "../_components/search-params";
 import { ListingHeader, NoResults } from "../_components/listing";
@@ -24,10 +26,11 @@ export default async function InsurancePage({ params, searchParams }: { params: 
   // categoria sem fornecedor com API real: nada de catálogo de exemplo
   if (!(await categoryAvailable("INSURANCE"))) return <ComingSoon title="Seguro Viagem" base={`/loja/${store.slug}`} />;
   const ctx = await getStorePricing(store.id);
+  const reveal = await storeInsight(store.id);
   const { d, minDate } = parseSearch(await searchParams);
   const travelers = d.adultos + d.seniores || 1;
   const params2 = supplierParams({ ...d, adultos: d.adultos + d.seniores === 0 ? 1 : d.adultos }, "insurance");
-  const results = await searchCatalog(db, ctx, "INSURANCE", params2);
+  const results = await searchCatalog(db, ctx, "INSURANCE", params2, { reveal });
   const days = daysBetween(d.ida, d.volta) + 1;
   const add = addToCartAction.bind(null, slug);
   return (
@@ -62,7 +65,8 @@ export default async function InsurancePage({ params, searchParams }: { params: 
                 </div>
                 <p className={`text-[15px] leading-relaxed ${i === 1 ? "text-white/70" : "text-muted"}`}>{p.subtitle}</p>
                 <div className="flex flex-col gap-3 sm:items-end">
-                  <PriceTag pix={p.price.pix} plan={p.price.plan} size="sm" note={`${travelers} viajante(s) · ${days} dias`} className="sm:text-right" invert={i === 1} />
+                  <PriceTag pix={p.price.pix} plan={p.price.plan} size="sm" note={`${travelers} viajante(s) · ${days} dias`} className="sm:text-right" invert={i === 1} commission={p.price.commission} />
+                  <SupplierTag name={p.revealSupplier} className="mt-2" />
                   <AddToCartForm
                     action={add}
                     label="Contratar"

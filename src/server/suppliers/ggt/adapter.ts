@@ -24,6 +24,8 @@ import {
   type BookingResult,
   type CancelResult,
   type HotelContent,
+  type HotelPhoto,
+  type RoomContent,
   type OfferOption,
   type PaxRule,
   type ProductDetail,
@@ -36,7 +38,7 @@ import {
   SupplierIntegrationError,
 } from "../types";
 import { cached, cacheSet } from "../hotels/cache";
-import { EMPTY_HOTEL_CONTENT, groupAmenities, photoTag, roomAmenitiesFrom, splitDescription } from "../hotels/content";
+import { EMPTY_HOTEL_CONTENT, groupAmenities, matchRoomPhotos, photoTag, roomAmenitiesFrom, splitDescription } from "../hotels/content";
 import {
   ascii,
   asCurrency,
@@ -321,11 +323,19 @@ export function ggtPhoto(url: string, size: "y" | "z" = "z"): string {
   return url.replace(/^(https:\/\/i\.travelapi\.com\/.+)_[a-z]\.(jpe?g)$/i, `$1_${size}.$2`);
 }
 
+function roomPhotoMatch(title: string, photos: HotelPhoto[]): RoomContent | null {
+  const urls = matchRoomPhotos(title, photos);
+  return urls.length ? { photos: urls, amenities: [], maxPax: null } : null;
+}
+
 /** Resposta do HOTEL_INFO → dados do hotel (descrição em seções, fotos com categoria, mapa). */
 export function parseHotelInfo(m: Record<string, unknown>) {
   const pics = ((m.Pictures as Record<string, unknown> | undefined)?.Picture as unknown[] | undefined) ?? [];
   const photos = pics
-    .map((p) => ({ url: ggtPhoto(text(p)), tag: photoTag(typeof p === "object" && p ? String((p as Record<string, unknown>)["@Description"] ?? "") : "") }))
+    .map((p) => {
+      const caption = typeof p === "object" && p ? String((p as Record<string, unknown>)["@Description"] ?? "").trim() : "";
+      return { url: ggtPhoto(text(p)), tag: photoTag(caption), caption: caption || null };
+    })
     .filter((p) => /^https?:\/\//.test(p.url));
   const geo = (m.GeoCodes ?? {}) as Record<string, unknown>;
   const lat = Number(text(geo.Latitude));
@@ -449,7 +459,7 @@ export function createGgtAdapter(cfg: GgtConfig, opts: { fetch?: typeof fetch } 
 
   async function hotelInfo(id: string) {
     return cached(
-      `ggt:info:v4:${id}:${cfg.language}`,
+      `ggt:info:v5:${id}:${cfg.language}`,
       INFO_TTL,
       async () => parseHotelInfo(await client.xml(GGT_OP.HOTEL_INFO, `<Main Version="2.2"><InfoHotelId>${escapeXml(id)}</InfoHotelId><InfoLanguage>${escapeXml(cfg.language)}</InfoLanguage></Main>`, 20_000)),
       { cacheIf: (v) => !!v.name },
@@ -608,6 +618,8 @@ export function createGgtAdapter(cfg: GgtConfig, opts: { fetch?: typeof fetch } 
         ],
         freeCancellationUntil: freeUntil(o),
         notes: [chargesNote(o.payAtHotel), specialNote(o.special)].filter((x): x is string => !!x),
+        // a GGT não liga foto a tipo de quarto: usa a foto cuja legenda cita o quarto (king, suíte, vista…)
+        room: roomPhotoMatch(roomsTitle(o.rooms), info?.photos ?? []),
         available: true,
       }));
       const base: ProductSummary = h

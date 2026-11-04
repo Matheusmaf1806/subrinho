@@ -7,7 +7,19 @@ import { openCartDrawer } from "./cart-drawer";
 import { cn, Input } from "@/components/ui";
 import { PaxStepper } from "./pax-stepper";
 
-type Opt = { optionId: string; title: string; description?: string; adultPix: number; childPix: number | null; available: boolean };
+type Opt = {
+  optionId: string;
+  title: string;
+  description?: string;
+  adultPix: number;
+  childPix: number | null;
+  available: boolean;
+  /** Só vêm quando quem vê pode (decidido no servidor): fornecedor (Subrinho) e comissão (ADMIN da agência). */
+  supplier?: string;
+  adultCommission?: number;
+  childCommission?: number | null;
+  commissionPct?: number;
+};
 
 const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -37,6 +49,7 @@ export function TicketBooking({
   const [children, setChildren] = useState(defaultChildren);
   const current = options.find((o) => o.optionId === opt);
   const total = current ? adults * current.adultPix + children * (current.childPix ?? 0) : 0;
+  const commission = current?.adultCommission !== undefined ? adults * current.adultCommission + children * (current.childCommission ?? 0) : null;
 
   return (
     <ActionForm action={action} className="space-y-4" onSuccess={() => openCartDrawer({ added: true })}>
@@ -79,10 +92,12 @@ export function TicketBooking({
               <span className="flex-1">
                 <span className="block text-[15px] font-semibold text-ink">{o.title}</span>
                 {o.description && <span className="block text-xs text-muted">{o.description}</span>}
+                {o.supplier && <span className="mt-1 inline-block rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-900">{o.supplier}</span>}
               </span>
               <span className="text-right text-xs leading-tight text-muted tabular">
                 <span className="block text-[15px] font-semibold text-ink">{fmt(o.adultPix)}</span>
                 adulto{o.childPix !== null && <span className="block">{fmt(o.childPix)} criança</span>}
+                {o.adultCommission !== undefined && <span className="mt-1 block font-semibold text-emerald-700">comissão {fmt(o.adultCommission)}</span>}
               </span>
             </label>
           ))}
@@ -98,6 +113,12 @@ export function TicketBooking({
           <span className="text-[1.75rem] font-semibold tracking-[-0.04em] tabular">{fmt(total)} <span className="text-xs font-semibold tracking-normal text-white/60">Pix</span></span>
         </div>
         <p className="mt-1 text-xs text-white/50">Confirmado com o fornecedor ao adicionar. Também em 10x sem juros.</p>
+        {commission !== null && (
+          <p className="mt-2 text-[13px] font-semibold text-emerald-300 tabular">
+            Comissão da agência: {fmt(commission)}
+            {current?.commissionPct !== undefined ? ` · ${current.commissionPct.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%` : ""}
+          </p>
+        )}
       </div>
       <SubmitButton variant="accent" size="lg" className="w-full" pendingText="Consultando o fornecedor…" disabled={adults + children === 0 || !current?.available}>
         Adicionar ao carrinho

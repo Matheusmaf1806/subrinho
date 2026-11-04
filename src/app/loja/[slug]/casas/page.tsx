@@ -10,6 +10,7 @@ import { addDays, daysBetween } from "@/lib/tz";
 import { categoryAvailable } from "../_lib/categories";
 import { ComingSoon } from "../_components/coming-soon";
 import { getStore, getStorePricing } from "../_lib/store";
+import { storeInsight } from "../_lib/insight";
 import { LodgingSearch } from "../_components/search-forms";
 import { parseSearch, supplierParams, toQuery } from "../_components/search-params";
 import { ListingHeader, NoResults } from "../_components/listing";
@@ -49,12 +50,14 @@ export default async function HousesPage({ params, searchParams }: { params: Pro
   // categoria sem fornecedor com API real: nada de catálogo de exemplo
   if (!(await categoryAvailable("HOUSES"))) return <ComingSoon title="Casas" base={`/loja/${store.slug}`} />;
   const ctx = await getStorePricing(store.id);
+  const reveal = await storeInsight(store.id);
   const raw = await searchParams;
   const parsed = parseSearch(raw);
   // Casas: estadia padrão de 7 noites
   const d = { ...parsed.d, checkout: raw.checkout ? parsed.d.checkout : addDays(parsed.d.checkin, 7) };
   const failures: { code: string; message: string | null }[] = [];
   const results = await searchCatalog(db, ctx, "HOUSES", supplierParams(d, "houses"), {
+      reveal,
     onError: (code, e) => failures.push({ code, message: e instanceof SupplierError && !("detail" in e) ? e.message : null }),
   });
   const base = `/loja/${store.slug}/casas`;

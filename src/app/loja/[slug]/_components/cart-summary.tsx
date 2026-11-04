@@ -54,6 +54,11 @@ export function CartSummary({
         <p className="mt-3 text-[14px] text-white/60 tabular">
           ou <span className="text-white">{t.plan.count}x de {brl(t.plan.installment)}</span> sem juros · {brl(t.installment)}
         </p>
+        {t.commission && (
+          <p className="mt-3 rounded-xl bg-emerald-400/15 px-3 py-2 text-[13px] font-semibold text-emerald-200 tabular" title="Só o ADMIN da agência vê">
+            Comissão da agência neste carrinho: {brl(t.commission)}
+          </p>
+        )}
       </div>
       {couponAction && <CouponBox action={couponAction} />}
       {children && <div className="mt-6">{children}</div>}

@@ -3,6 +3,7 @@ import { brl, date, paxSummary } from "@/lib/format";
 import type { ActionState } from "@/components/ui-client";
 import { categoryLabel } from "./category";
 import type { ItemVM } from "./cart-vm";
+import { RevealTags } from "./reveal";
 import { Cover } from "./cover";
 import { MarginModal, PaxModal } from "./item-modals";
 
@@ -36,6 +37,7 @@ export function CartItemCard({
             {hasDiscount && <p className="text-xs text-muted line-through">{brl(item.listPix)}</p>}
             <p data-price className="text-[1.375rem] font-semibold leading-none tracking-[-0.035em] text-ink">{brl(item.pix)}</p>
             <p className="mt-1 text-xs text-muted">Pix · {brl(item.installment)} em 10x</p>
+            <RevealTags supplier={item.reveal.supplier} commission={item.reveal.commission} className="mt-2 justify-end" />
           </div>
         </div>
         <div className="mt-3 flex flex-wrap gap-1.5 text-[12px] font-medium text-ink/80">
