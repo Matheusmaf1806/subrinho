@@ -175,7 +175,8 @@ export function createEsimxAdapter(cfg: EsimxConfig, opts: { transport?: Transpo
 
   // ─────────────── catálogo (cache compartilhado entre instâncias) ───────────────
 
-  const areas = () => cached(`esimx:areas`, 24 * 3600, () => client.get<EsimxArea[]>("/area/list", {}, 30_000), { cacheIf: (v) => Array.isArray(v) && v.length > 0 });
+  // v2: as chaves antigas podem ter guardado lista vazia/incompleta (antes do filtro de vazios)
+  const areas = () => cached(`esimx:v2:areas`, 24 * 3600, () => client.get<EsimxArea[]>("/area/list", {}, 30_000), { cacheIf: (v) => Array.isArray(v) && v.length > 0 });
 
   async function pages(query: Record<string, string>): Promise<Plan[]> {
     const out: Plan[] = [];
@@ -191,7 +192,7 @@ export function createEsimxAdapter(cfg: EsimxConfig, opts: { transport?: Transpo
   // lista vazia não vai para o cache longo: um soluço da API não pode deixar o destino "sem eSIM" por horas
   class NoPlans extends Error {}
   const plansFor = (areaCode: string) =>
-    cachedStale(`esimx:plans:${areaCode}`, 30 * 60, 12 * 3600, async () => {
+    cachedStale(`esimx:v2:plans:${areaCode}`, 30 * 60, 12 * 3600, async () => {
       const list = await pages({ area_code: areaCode });
       if (!list.length) throw new NoPlans();
       return list;
@@ -201,7 +202,7 @@ export function createEsimxAdapter(cfg: EsimxConfig, opts: { transport?: Transpo
     });
 
   /** Catálogo inteiro (para a lista de destinos com cobertura). */
-  const allPlans = () => cachedStale(`esimx:plans:*`, 3600, 24 * 3600, () => pages({}));
+  const allPlans = () => cachedStale(`esimx:v2:plans:*`, 3600, 24 * 3600, () => pages({}));
 
   async function planByCode(code: string, fresh = false): Promise<Plan | null> {
     if (!/^[A-Za-z0-9._~-]{1,120}$/.test(code)) return null;
@@ -224,7 +225,7 @@ export function createEsimxAdapter(cfg: EsimxConfig, opts: { transport?: Transpo
 
   /** Regiões que de fato têm pacote (a lista de áreas traz regiões vazias). */
   const regionsWithPlans = () =>
-    cached(`esimx:regions`, 24 * 3600, async () => {
+    cached(`esimx:v2:regions`, 24 * 3600, async () => {
       const regions = (await areas()).filter((a) => a.type === "REGION");
       // uma chamada por vez (sem rajada contra o servidor do fornecedor)
       const out: string[] = [];
