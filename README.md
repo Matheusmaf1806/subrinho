@@ -64,6 +64,9 @@ e a página do pedido tem o botão “Simular pagamento”; no cartão, qualquer
    | `HB_HOTEIS_API_KEY`, `HB_HOTEIS_SECRET` | Hotelbeds: API key e secret (também aceita `API_KEY_HH` / `SECRET_KEY_HH`) |
    | `HB_HOTEIS_CLIENT_CRT`, `HB_HOTEIS_CLIENT_KEY`, `HB_HOTEIS_CA_CHAIN` | Hotelbeds: certificado mTLS, chave privada e cadeia da CA (PEM) |
    | `HOTELBEDS_ENVIRONMENT` | `production` ou `test` — o mesmo ambiente das credenciais |
+   | `TUEXPERIENCIA_DISTRIBUTOR_ID`, `TUEXPERIENCIA_USERNAME`, `TUEXPERIENCIA_PASSWORD` | Tu Experienza (ingressos, API real) |
+   | `MAPRO_API_TOKEN` | MAPRO (casas de temporada, API real) |
+   | `ESIMX_API_KEY` | eSIMX (chip eSIM): chave da página "API Key" do console. Sem ela, a categoria Chip fica "em breve". Cada eSIM é pago com o saldo pré-pago da conta |
    | `SUPPLIER_BOOKING` | `manual` (padrão — a equipe emite as reservas no Painel Subrinho) ou `auto` (só com gateway real) |
 
    Não defina `SUPPLIERS_MODE=mock` em produção (isso força o catálogo simulado mesmo com credenciais).
