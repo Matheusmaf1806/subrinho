@@ -495,6 +495,8 @@ export const orders = pgTable(
     customerData: jsonb("customer_data").$type<PersonData>().notNull(), // quem tem a conta
     payerData: jsonb("payer_data").$type<PersonData>().notNull(), // quem pagou
     travelers: jsonb("travelers").$type<PersonData[]>().notNull().default([]),
+    /** Pedido especial do cliente ao hotel (ex.: chegada tarde) — enviado na reserva. */
+    specialRequests: text("special_requests"),
 
     // Totais (BRL)
     totalCostBrl: money("total_cost_brl").notNull(),

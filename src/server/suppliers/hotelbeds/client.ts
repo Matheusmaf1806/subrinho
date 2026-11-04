@@ -24,6 +24,8 @@ export type HotelbedsConfig = {
   bookingUrl: string;
   contentUrl: string;
   language: string;
+  /** Mercado de origem do cliente (preços válidos para este país). */
+  sourceMarket: string;
   /** Somente testes: confiar também neste CA ao validar o servidor. */
   extraServerCa?: string;
 };
@@ -37,7 +39,8 @@ export function hotelbedsConfig(env: NodeJS.ProcessEnv = process.env): Hotelbeds
   const key = first(env, "HB_HOTEIS_CLIENT_KEY");
   const caChain = first(env, "HB_HOTEIS_CA_CHAIN") ?? "";
   if (!apiKey || !secret || !cert || !key) return null;
-  const environment = /^prod/i.test(first(env, "HB_HOTEIS_ENVIRONMENT", "HOTELBEDS_ENVIRONMENT") ?? "") ? "production" : "test";
+  // As credenciais da Subrinho são de produção: só usa o ambiente de testes se pedido explicitamente.
+  const environment = /^test/i.test(first(env, "HB_HOTEIS_ENVIRONMENT", "HOTELBEDS_ENVIRONMENT") ?? "") ? "test" : "production";
   const host = environment === "production" ? "hotelbeds.com" : "test.hotelbeds.com";
   return {
     apiKey,
@@ -49,6 +52,7 @@ export function hotelbedsConfig(env: NodeJS.ProcessEnv = process.env): Hotelbeds
     bookingUrl: (first(env, "HOTELBEDS_BOOKING_URL") ?? `https://api-mtls.${host}/hotel-api/1.0`).replace(/\/+$/, ""),
     contentUrl: (first(env, "HOTELBEDS_CONTENT_URL") ?? `https://api.${host}/hotel-content-api/1.0`).replace(/\/+$/, ""),
     language: first(env, "HOTELBEDS_LANGUAGE") ?? "POR",
+    sourceMarket: (first(env, "HOTELBEDS_SOURCE_MARKET") ?? "BR").toUpperCase(),
   };
 }
 

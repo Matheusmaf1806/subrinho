@@ -4,7 +4,19 @@ import { EmptyState } from "@/components/ui";
 import { photo, type PhotoKey } from "@/lib/images";
 
 /** Topo das listagens: bloco chapado na cor da loja com título de cartaz + foto, busca sobreposta. */
-export function ListingHeader({ title, subtitle, children, image, eyebrow }: { title: string; subtitle?: string; children?: ReactNode; image?: PhotoKey; eyebrow?: string }) {
+export function ListingHeader({ title, subtitle, children, image, eyebrow, compact }: { title: string; subtitle?: string; children?: ReactNode; image?: PhotoKey; eyebrow?: string; compact?: boolean }) {
+  if (compact)
+    return (
+      <section className="px-3 pt-3 sm:px-4">
+        <div className="relative mx-auto max-w-[1440px] overflow-hidden rounded-[2rem] bg-accent text-accent-fg sm:rounded-[2.5rem]">
+          <div className="relative px-6 pb-20 pt-7 sm:px-12 sm:pb-24 sm:pt-10">
+            {eyebrow && <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-accent-fg/70">{eyebrow}</p>}
+            <h1 className="display text-[clamp(2rem,4.5vw,3.5rem)]">{title}</h1>
+          </div>
+        </div>
+        {children && <div className="relative mx-auto -mt-14 max-w-[1440px] px-3 sm:-mt-14 sm:px-8">{children}</div>}
+      </section>
+    );
   return (
     <section className="px-3 pt-3 sm:px-4">
       <div className="relative mx-auto max-w-[1440px] overflow-hidden rounded-[2rem] bg-accent text-accent-fg sm:rounded-[2.5rem]">

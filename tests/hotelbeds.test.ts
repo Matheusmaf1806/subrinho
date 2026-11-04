@@ -34,6 +34,9 @@ function rate(p: Partial<Record<string, unknown>> & { key: string; net: string; 
     childrenAges: p.ages,
     cancellationPolicies: (p.cancellationPolicies as { amount: string; from: string }[]) ?? [{ amount: "50.00", from: "2026-12-30T23:59:00+01:00" }],
     taxes: p.taxes as never,
+    rateCommentsId: p.rateCommentsId as string | undefined,
+    sellingRate: p.sellingRate as string | undefined,
+    hotelMandatory: p.hotelMandatory as boolean | undefined,
   };
 }
 
@@ -49,8 +52,8 @@ const HOTEL: HbHotel = {
       code: "DBL.ST",
       name: "DOUBLE STANDARD",
       rates: [
-        rate({ key: "k-dbl-a", net: "300.00", adults: 2, children: 1, ages: "7", taxes: { allIncluded: false, taxes: [{ included: false, amount: "45.50", currency: "USD", type: "FEE", subType: "Resort Fee" }] } }),
-        rate({ key: "k-dbl-b", net: "180.00", adults: 1 }),
+        rate({ key: "k-dbl-a", net: "300.00", adults: 2, children: 1, ages: "7", rateType: "RECHECK", taxes: { allIncluded: false, taxes: [{ included: false, amount: "45.50", currency: "USD", type: "FEE", subType: "Resort Fee" }] } }),
+        rate({ key: "k-dbl-b", net: "180.00", adults: 1, rateCommentsId: "102|555|0", sellingRate: "210.00", hotelMandatory: true }),
         rate({ key: "k-dbl-b2", net: "175.00", adults: 1, paymentType: "AT_HOTEL" }), // não vendemos: paga no hotel
         rate({ key: "k-dbl-b3", net: "170.00", adults: 1, packaging: true }), // só em pacote
         rate({ key: "k-dbl-nrf-a", net: "270.00", adults: 2, children: 1, ages: "7", rateClass: "NRF" }),
@@ -100,7 +103,10 @@ describe("Hotelbeds — credenciais", () => {
     const c = hotelbedsConfig(env as unknown as NodeJS.ProcessEnv)!;
     expect(c.bookingUrl).toBe("https://api-mtls.hotelbeds.com/hotel-api/1.0");
     expect(c.contentUrl).toBe("https://api.hotelbeds.com/hotel-content-api/1.0");
-    expect(hotelbedsConfig({ ...env, HOTELBEDS_ENVIRONMENT: "" } as unknown as NodeJS.ProcessEnv)!.bookingUrl).toBe("https://api-mtls.test.hotelbeds.com/hotel-api/1.0");
+    // credenciais de produção: o padrão é produção; teste só quando pedido
+    expect(hotelbedsConfig({ ...env, HOTELBEDS_ENVIRONMENT: "" } as unknown as NodeJS.ProcessEnv)!.bookingUrl).toBe("https://api-mtls.hotelbeds.com/hotel-api/1.0");
+    expect(hotelbedsConfig({ ...env, HOTELBEDS_ENVIRONMENT: "test" } as unknown as NodeJS.ProcessEnv)!.bookingUrl).toBe("https://api-mtls.test.hotelbeds.com/hotel-api/1.0");
+    expect(c.sourceMarket).toBe("BR");
     expect(hotelbedsConfig({ ...env, API_KEY_HH: "" } as unknown as NodeJS.ProcessEnv)).toBeNull();
   });
 
@@ -119,9 +125,9 @@ describe("Hotelbeds — credenciais", () => {
 });
 
 describe("Hotelbeds — fluxo do adaptador", () => {
-  const cfg: HotelbedsConfig = { apiKey: "k", secret: "s", cert: "", key: "", caChain: "", environment: "test", bookingUrl: "https://hb.test/hotel-api/1.0", contentUrl: "https://hb.test/hotel-content-api/1.0", language: "POR" };
+  const cfg: HotelbedsConfig = { apiKey: "k", secret: "s", cert: "", key: "", caChain: "", environment: "test", bookingUrl: "https://hb.test/hotel-api/1.0", contentUrl: "https://hb.test/hotel-content-api/1.0", language: "POR", sourceMarket: "BR" };
 
-  function fake(opts: { existing?: boolean; bump?: number } = {}) {
+  function fake(opts: { existing?: boolean; bump?: number; bookingStatus?: number; checkRateStatus?: number } = {}) {
     const calls: { method: string; url: string; body?: unknown; mtls: boolean; headers: Record<string, string> }[] = [];
     const transport: Transport = async (req) => {
       const body = req.body ? JSON.parse(req.body) : undefined;
@@ -133,16 +139,23 @@ describe("Hotelbeds — fluxo do adaptador", () => {
         if (opts.bump) for (const r of h.rooms!) for (const x of r.rates!) x.net = (Number(x.net) + opts.bump).toFixed(2);
         return json({ hotels: { hotels: [h], total: 1 } });
       }
+      if (u.pathname.endsWith("/checkrates") && opts.checkRateStatus) return json({ error: { code: "PRODUCT_ERROR", message: "Price has changed" } }, opts.checkRateStatus);
       if (u.pathname.endsWith("/checkrates")) {
         const keys = (body as { rooms: { rateKey: string }[] }).rooms.map((r) => r.rateKey);
         const rates = HOTEL.rooms!.flatMap((r) => r.rates!).filter((r) => keys.includes(r.rateKey));
-        return json({ hotel: { ...HOTEL, rooms: [{ code: "DBL.ST", name: "DOUBLE STANDARD", rates: rates.map((r) => ({ ...r, rateType: "BOOKABLE", rateComments: "Check-in hour 15:00. Resort fee payable on arrival." })) }], totalNet: rates.reduce((s, r) => s + Number(r.net), 0).toFixed(2), paymentDataRequired: false } });
+        return json({ hotel: { ...HOTEL, rooms: [{ code: "DBL.ST", name: "DOUBLE STANDARD", rates: rates.map((r) => ({ ...r, rateKey: `${r.rateKey}-checked`, rateType: "BOOKABLE", rateComments: "Check-in hour 15:00. Resort fee payable on arrival." })) }], totalNet: rates.reduce((s, r) => s + Number(r.net), 0).toFixed(2), paymentDataRequired: false } });
       }
+      if (u.pathname.endsWith("/types/ratecommentdetails")) return json({ rateComments: [{ description: "Car park NO. Minimum check-in age 21." }] });
       if (u.pathname.endsWith("/bookings") && req.method === "GET") {
         return json({ bookings: { bookings: opts.existing ? [{ reference: "102-555", clientReference: "SUB1001-1", status: "CONFIRMED", currency: "USD", totalNet: 480 }] : [] } });
       }
+      if (u.pathname.endsWith("/bookings") && req.method === "POST" && opts.bookingStatus) return json({ error: { code: "PRODUCT_ERROR", message: "Insufficient allotment" } }, opts.bookingStatus);
       if (u.pathname.endsWith("/bookings") && req.method === "POST") {
         return json({ booking: { reference: "102-999", clientReference: (body as { clientReference: string }).clientReference, status: "CONFIRMED", totalNet: 480, currency: "USD", hotel: { ...HOTEL, supplier: { name: "HOTELBEDS USA", vatNumber: "VAT-1" } } } });
+      }
+      if (req.method === "DELETE" && u.pathname.includes("/bookings/")) {
+        const simulate = u.searchParams.get("cancellationFlag") === "SIMULATION";
+        return json({ booking: { reference: "102-999", cancellationReference: simulate ? undefined : "CXL-1", status: simulate ? "CONFIRMED" : "CANCELLED", currency: "USD", hotel: { ...HOTEL, cancellationAmount: 50 } } });
       }
       if (u.pathname.includes("/details"))
         // formato real do detalhe: tipo da foto em type.code; facilities com grupos
@@ -172,7 +185,15 @@ describe("Hotelbeds — fluxo do adaptador", () => {
     return { calls, transport };
   }
 
-  it("detalhe → cotação (checkrate) → reserva com hóspedes por quarto", async () => {
+  const travelers = [
+    { name: "Maria da Silva", type: "ADULT" as const },
+    { name: "João Souza", type: "ADULT" as const },
+    { name: "Ana Lima", type: "ADULT" as const },
+    { name: "Pedro Silva", type: "CHILD" as const, age: 7 },
+  ];
+  const availCalls = (f: ReturnType<typeof fake>) => f.calls.filter((c) => c.method === "POST" && c.url.endsWith("/hotel-api/1.0/hotels")).length;
+
+  it("fluxo certificado: 1 disponibilidade → CheckRate só da tarifa RECHECK → reserva com as tarifas cotadas", async () => {
     const f = fake();
     const a = createHotelbedsAdapter(cfg, { transport: f.transport });
     const detail = await a.getProduct("3424", { destination: "Orlando", ...STAY, pax: PAX });
@@ -180,35 +201,41 @@ describe("Hotelbeds — fluxo do adaptador", () => {
     expect(detail!.highlights).toEqual(["Piscina exterior aquecida", "Restaurante"]);
     const opt = detail!.options.find((o) => o.attributes?.some((x) => x.value.startsWith("Cancelamento grátis")))!;
     expect(opt.notes).toContain("Pago direto no hotel: taxa de resort USD 45,50");
+    expect(opt.notes!.some((n) => n.startsWith("A partir de 30/12/2026 (horário do hotel), multa de cancelamento de USD 100,00"))).toBe(true);
+    // quarto 1 net 300 (sem exigência) + quarto 2 sellingRate obrigatório 210 → mínimo 510
+    expect(opt.minSellPrice).toEqual({ currency: "USD", amount: "510.00" });
 
     const avail = f.calls.find((c) => c.method === "POST" && c.url.endsWith("/hotels"))!;
     expect(avail.mtls).toBe(true);
-    expect(avail.body).toMatchObject({ stay: STAY, hotels: { hotel: [3424] }, occupancies: [{ rooms: 1, adults: 2, children: 1, paxes: [{ type: "CH", age: 7 }] }, { rooms: 1, adults: 1, children: 0 }] });
+    expect(avail.body).toMatchObject({ stay: STAY, hotels: { hotel: [3424] }, sourceMarket: "BR", occupancies: [{ rooms: 1, adults: 2, children: 1, paxes: [{ type: "CH", age: 7 }] }, { rooms: 1, adults: 1, children: 0 }] });
     expect(f.calls.find((c) => c.url.includes("/details"))!.mtls).toBe(false); // Content API sem certificado
 
+    // cotação ao adicionar ao carrinho e de novo no checkout: NENHUMA disponibilidade nova
     const q = await a.quote({ productId: "3424", optionId: opt.optionId, ...STAY, pax: PAX });
+    await a.quote({ productId: "3424", optionId: opt.optionId, ...STAY, pax: PAX });
+    expect(availCalls(f)).toBe(1);
+    const checks = f.calls.filter((c) => c.url.endsWith("/checkrates"));
+    expect(checks).toHaveLength(1); // só a tarifa RECHECK, uma vez (reaproveitada no checkout)
+    expect(checks[0].body).toEqual({ rooms: [{ rateKey: "k-dbl-a" }], language: "ENG" });
     expect(q.lines[0].unitCost).toBe("480.00");
-    expect(q.details).toMatchObject({ rateKeys: ["k-dbl-a", "k-dbl-b"], nonRefundable: false, paymentDataRequired: false });
-    expect(String(q.details.remarks)).toContain("Resort fee payable on arrival");
+    expect(q.details).toMatchObject({ rateKeys: ["k-dbl-a-checked", "k-dbl-b"], rateTypes: ["BOOKABLE", "BOOKABLE"], nonRefundable: false, paymentDataRequired: false, minSellPrice: { currency: "USD", amount: "510.00" } });
+    expect(String(q.details.remarks)).toContain("Resort fee payable on arrival"); // CheckRate
+    expect(String(q.details.remarks)).toContain("Minimum check-in age 21"); // Content API (tarifa BOOKABLE)
 
-    const travelers = [
-      { name: "Maria da Silva", type: "ADULT" as const },
-      { name: "João Souza", type: "ADULT" as const },
-      { name: "Ana Lima", type: "ADULT" as const },
-      { name: "Pedro Silva", type: "CHILD" as const, age: 7 },
-    ];
     const r = await a.book(
-      { quoteRef: null, productId: "3424", optionId: opt.optionId, pax: PAX, serviceDate: STAY.checkIn, serviceEndDate: STAY.checkOut, reference: "SUB1001-1", maxCost: { currency: "USD", amount: "480.0000" } },
+      { quoteRef: null, productId: "3424", optionId: opt.optionId, pax: PAX, serviceDate: STAY.checkIn, serviceEndDate: STAY.checkOut, reference: "SUB1001-1", maxCost: { currency: "USD", amount: "480.0000" }, details: q.details },
       { travelers, holder: { name: "Maria da Silva" } },
     );
     expect(r).toMatchObject({ bookingRef: "102-999", status: "CONFIRMED" });
     expect(r.payload).toMatchObject({ payableThrough: "HOTELBEDS USA", supplierVatNumber: "VAT-1" });
+    expect(availCalls(f)).toBe(1); // a reserva também não repete disponibilidade
+    expect(f.calls.filter((c) => c.url.endsWith("/checkrates"))).toHaveLength(1);
     const post = f.calls.find((c) => c.method === "POST" && c.url.endsWith("/bookings"))!;
     expect(post.body).toEqual({
       holder: { name: "Maria da", surname: "Silva" },
       rooms: [
         {
-          rateKey: "k-dbl-a",
+          rateKey: "k-dbl-a-checked",
           paxes: [
             { roomId: 1, type: "AD", name: "Maria da", surname: "Silva" },
             { roomId: 1, type: "AD", name: "Joao", surname: "Souza" },
@@ -225,28 +252,77 @@ describe("Hotelbeds — fluxo do adaptador", () => {
     expect(f.calls.indexOf(list)).toBeLessThan(f.calls.indexOf(post));
   });
 
+  it("detalhe reaproveita a disponibilidade da busca do destino (sem nova chamada)", async () => {
+    const f = fake();
+    const a = createHotelbedsAdapter(cfg, { transport: f.transport });
+    // simula a busca do destino já em cache
+    const { cacheSet } = await import("@/server/suppliers/hotels/cache");
+    const { paxKey } = await import("@/server/suppliers/hotels/occupancy");
+    await cacheSet(`hb:hotel:3424:${STAY.checkIn}:${STAY.checkOut}:${paxKey(PAX)}`, { hotel: { code: 3424, name: "AS AMERICAS", currency: "USD" }, options: buildOptions(HOTEL, occupancyGroups(PAX)) }, 60);
+    const detail = await a.getProduct("3424", { ...STAY, pax: PAX });
+    expect(detail!.options.length).toBeGreaterThan(0);
+    expect(availCalls(f)).toBe(0);
+  });
+
+  it("quarto que esgota no CheckRate sai da página do hotel — sem nova disponibilidade", async () => {
+    const f = fake({ checkRateStatus: 500 });
+    const a = createHotelbedsAdapter(cfg, { transport: f.transport });
+    const detail = await a.getProduct("3424", { ...STAY, pax: PAX });
+    const opt = detail!.options.find((o) => o.attributes?.some((x) => x.value.startsWith("Cancelamento grátis")))!;
+    await expect(a.quote({ productId: "3424", optionId: opt.optionId, ...STAY, pax: PAX })).rejects.toThrow(/esgotar/);
+    const again = await a.getProduct("3424", { ...STAY, pax: PAX });
+    expect(again!.options.map((o) => o.optionId)).not.toContain(opt.optionId);
+    expect(again!.options.length).toBe(detail!.options.length - 1);
+    expect(availCalls(f)).toBe(1);
+  });
+
   it("não duplica: reserva com a mesma referência já existe", async () => {
     const f = fake({ existing: true });
     const a = createHotelbedsAdapter(cfg, { transport: f.transport });
     const opt = buildOptions(HOTEL, occupancyGroups(PAX)).find((o) => o.refundable)!;
     const r = await a.book(
-      { quoteRef: null, productId: "3424", optionId: opt.optionId, pax: PAX, serviceDate: STAY.checkIn, serviceEndDate: STAY.checkOut, reference: "SUB1001-1" },
-      { travelers: [{ name: "Maria da Silva" }, { name: "João Souza" }, { name: "Ana Lima" }, { name: "Pedro Silva", type: "CHILD" }] },
+      { quoteRef: null, productId: "3424", optionId: opt.optionId, pax: PAX, serviceDate: STAY.checkIn, serviceEndDate: STAY.checkOut, reference: "SUB1001-1", details: { rateKeys: ["k-dbl-a", "k-dbl-b"] } },
+      { travelers },
     );
     expect(r.bookingRef).toBe("102-555");
     expect(f.calls.some((c) => c.method === "POST" && c.url.endsWith("/bookings"))).toBe(false);
   });
 
-  it("não reserva acima do custo vendido", async () => {
-    const f = fake({ bump: 5 });
+  it("tarifa recusada (500): mensagem clara e nova tentativa refaz a consulta — sem passar do custo vendido", async () => {
+    const f = fake({ bookingStatus: 500 });
+    const a = createHotelbedsAdapter(cfg, { transport: f.transport });
+    const opt = buildOptions(HOTEL, occupancyGroups(PAX)).find((o) => o.refundable)!;
+    const item = { quoteRef: null, productId: "3424", optionId: opt.optionId, pax: PAX, serviceDate: STAY.checkIn, serviceEndDate: STAY.checkOut, reference: "SUB1001-1", maxCost: { currency: "USD" as const, amount: "480.0000" }, details: { rateKeys: ["k-dbl-a", "k-dbl-b"] } };
+    await expect(a.book(item, { travelers })).rejects.toThrow(/Tentar de novo/);
+    expect(availCalls(f)).toBe(0);
+    // nova tentativa com o preço do fornecedor mais alto → não reserva
+    const g = fake({ bump: 5 });
+    const b = createHotelbedsAdapter(cfg, { transport: g.transport });
+    await expect(b.book(item, { travelers, retry: true })).rejects.toThrow(/aumentou o preço/);
+    expect(availCalls(g)).toBe(1);
+    expect(g.calls.some((c) => c.method === "POST" && c.url.endsWith("/bookings"))).toBe(false);
+  });
+
+  it("cancelamento: simula a multa (SIMULATION) e depois cancela (CANCELLATION)", async () => {
+    const f = fake();
+    const a = createHotelbedsAdapter(cfg, { transport: f.transport });
+    expect(a.cancelSimulation).toBe(true);
+    const sim = await a.cancelBooking!("102-999", { simulate: true });
+    expect(sim).toMatchObject({ status: "SIMULATED", penalty: { amount: "50.00", currency: "USD" } });
+    const done = await a.cancelBooking!("102-999", { simulate: false });
+    expect(done).toMatchObject({ status: "CANCELLED", reference: "CXL-1" });
+    const dels = f.calls.filter((c) => c.method === "DELETE");
+    expect(dels.map((c) => new URL(c.url).searchParams.get("cancellationFlag"))).toEqual(["SIMULATION", "CANCELLATION"]);
+    expect(dels.every((c) => c.mtls)).toBe(true);
+  });
+
+  it("tarifa que exige cartão no fornecedor não é reservada automaticamente", async () => {
+    const f = fake();
     const a = createHotelbedsAdapter(cfg, { transport: f.transport });
     const opt = buildOptions(HOTEL, occupancyGroups(PAX)).find((o) => o.refundable)!;
     await expect(
-      a.book(
-        { quoteRef: null, productId: "3424", optionId: opt.optionId, pax: PAX, serviceDate: STAY.checkIn, serviceEndDate: STAY.checkOut, reference: "SUB1001-1", maxCost: { currency: "USD", amount: "480.0000" } },
-        { travelers: [{ name: "Maria da Silva" }, { name: "João Souza" }, { name: "Ana Lima" }, { name: "Pedro Silva", type: "CHILD" }] },
-      ),
-    ).rejects.toThrow(/aumentou o preço/);
+      a.book({ quoteRef: null, productId: "3424", optionId: opt.optionId, pax: PAX, serviceDate: STAY.checkIn, serviceEndDate: STAY.checkOut, reference: "SUB1001-1", details: { rateKeys: ["k-dbl-a", "k-dbl-b"], paymentDataRequired: true } }, { travelers }),
+    ).rejects.toThrow(/extranet/);
   });
 
   it("erro de credencial vira mensagem técnica para o painel (não aparece para o cliente)", async () => {
@@ -312,6 +388,7 @@ describe.skipIf(!hasOpenssl)("Hotelbeds — mTLS", () => {
     bookingUrl: `https://localhost:${port}/hotel-api/1.0`,
     contentUrl: `https://localhost:${port}/hotel-content-api/1.0`,
     language: "POR",
+    sourceMarket: "BR",
   });
 
   it("apresenta o certificado do cliente, assina e descompacta gzip", async () => {

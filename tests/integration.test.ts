@@ -49,6 +49,7 @@ import { recordFxRate } from "@/server/fx";
 import { SUPPLIERS } from "@/server/suppliers/registry";
 import { SupplierError, type Quote } from "@/server/suppliers/types";
 import { autoIssueOrder, BookingIssueError, issueItemBooking } from "@/server/bookings/service";
+import { applyDiscounts, priceItem } from "@/server/pricing/engine";
 import { addQuoteToCart, applyCouponToCart, changeItemPax, createCart, loadCartView, setAffiliateMarginOverride, CartError } from "@/server/cart/service";
 import { findOrCreateCustomer, markOrderPaid, placeOrder } from "@/server/checkout/service";
 import { closeFortnight, affiliateFinancials } from "@/server/payouts/service";
@@ -63,6 +64,7 @@ describe.skipIf(!url)("fluxo completo (integração)", () => {
   let db: DB;
   let affiliateId: string;
   let adminUser: { id: string; affiliateId: string; role: string };
+  let staffId: string;
 
   /** Item com preço fixo idêntico ao exemplo da especificação: US$ 100 × 5. */
   const specQuote = (): Quote => ({
@@ -97,6 +99,7 @@ describe.skipIf(!url)("fluxo completo (integração)", () => {
     await recordFxRate(db, { currency: "USD", rate: "4.93", source: "test" });
     await recordFxRate(db, { currency: "EUR", rate: "5.40", source: "test" });
     const staff = await createSubrinhoUser(db, { name: "Staff", email: "staff@test.com", password: "12345678", role: "OWNER" });
+    staffId = staff.id;
     await upsertMarginRule(db, { owner: "SUBRINHO", scope: "DEFAULT", marginPct: "4.5" }, staff.id);
     const aff = await createAffiliate(db, { name: "Agência Teste", slug: "agencia-teste" }, { name: "Admin", email: "admin@agencia.com", password: "12345678" });
     affiliateId = aff.id;
@@ -269,5 +272,96 @@ describe.skipIf(!url)("fluxo completo (integração)", () => {
     liveBook.impl = null;
     const r2 = await issueItemBooking(item.id, { type: "SUBRINHO", name: "Staff" }, db);
     expect(r2.status).toBe("CONFIRMED");
+  });
+
+  /**
+   * Auditoria da cobrança de um hotel com preço mínimo de venda: cotação → carrinho → margem
+   * alterada pelo ADMIN → cupons das duas camadas → pedido → pagamento → repasse, conferindo cada
+   * valor gravado com um recálculo independente.
+   */
+  it("auditoria: hotel com preço mínimo + override de margem + cupons, do carrinho ao banco", async () => {
+    await createCoupon(db, "SUBRINHO", { code: "SUB30", discountType: "FIXED", amountOff: "30", categories: ["LODGING"] }, { type: "SUBRINHO", id: staffId });
+    await createCoupon(db, "AFFILIATE", { code: "HOTEL2", discountType: "PERCENT", percentOff: "2" }, { type: "AFFILIATE", id: adminUser.id, affiliateId });
+    const { customer } = await findOrCreateCustomer(db, affiliateId, { name: "Auditoria", email: "audit@a.com", password: "12345678" });
+
+    async function buy(overridePct: string) {
+      const cart = await createCart(db, affiliateId, { type: "CUSTOMER", id: customer.id });
+      const item = await addQuoteToCart(db, cart, {
+        ...specQuote(),
+        supplierCode: "LIVE_TEST",
+        category: "LODGING",
+        productId: "3424",
+        optionId: "o1",
+        title: "Hotel com piso",
+        serviceDate: addDays(todayLocal(), 50),
+        serviceEndDate: addDays(todayLocal(), 53),
+        lines: [{ type: "STAY", label: "Hospedagem", unitCost: "400.00", quantity: 1 }],
+        pax: { adults: 2, children: 0, rooms: 1 },
+        // US$ 460 × 4,93 = R$ 2.267,80 de preço mínimo
+        details: { minSellPrice: { currency: "USD", amount: "460.00" }, rateKeys: ["k1"] },
+      });
+      await setAffiliateMarginOverride(db, cart, item.id, overridePct, adminUser);
+      // cupom que não tem o que descontar (sem folga até o piso) é recusado com mensagem clara
+      const coupons: Record<string, string> = {};
+      for (const code of ["sub30", "hotel2"])
+        coupons[code] = await applyCouponToCart(db, cart, code).then(
+          () => "ok",
+          (e: Error) => e.message,
+        );
+      const view = (await loadCartView(db, cart.token, affiliateId))!;
+      const { order } = await placeOrder(db, { cart, customer, payer: { name: "Auditoria Teste", email: "audit@a.com" }, travelers: [{ name: "Auditoria Teste" }, { name: "Outra Pessoa" }], paymentMethod: "PIX", installments: 1, revalidate: false });
+      const paid = await markOrderPaid(db, order.id, { paidAt: new Date("2026-11-20T10:00:00-03:00") });
+      const [oi] = await db.select().from(schema.orderItems).where(eq(schema.orderItems.orderId, order.id));
+      return { view, paid, oi, coupons };
+    }
+
+    const check = (oi: typeof schema.orderItems.$inferSelect) => {
+      // recálculo independente a partir do que foi gravado
+      const base = priceItem({ costCurrency: oi.costCurrency, lines: oi.lines, fxRate: oi.fxRate, subrinhoMarginPct: oi.subrinhoMarginPct, affiliateMarginPct: oi.affiliateMarginPct, installmentFeePct: oi.installmentFeePct });
+      const f = applyDiscounts(base, { subrinho: oi.subrinhoDiscount, affiliate: oi.affiliateDiscount });
+      expect(f.costBrl.toFixed(2)).toBe(oi.costBrl);
+      expect(f.netSubrinho.toFixed(2)).toBe(oi.netSubrinho);
+      expect(f.netAffiliate.toFixed(2)).toBe(oi.netAffiliate);
+      expect(f.finalPix.toFixed(2)).toBe(oi.finalPix);
+      expect(f.finalInstallment.toFixed(2)).toBe(oi.finalInstallment);
+      expect(f.subrinhoRevenue.toFixed(2)).toBe(oi.subrinhoRevenue);
+      expect(f.affiliateCommission.toFixed(2)).toBe(oi.affiliateCommission);
+      expect(oi.chargedAmount).toBe(oi.finalPix); // Pix
+      expect(Number(oi.finalPix)).toBeGreaterThanOrEqual(2267.8); // nunca abaixo do preço mínimo
+    };
+
+    // 1) ADMIN sobe a margem para 10%: o piso não prende; cupons limitados à folga até o piso
+    const a = await buy("10");
+    expect(a.oi.costBrl).toBe("1972.00");
+    expect(a.oi.subrinhoMarginPct).toBe("4.5000"); // margem da regra
+    expect(a.oi.affiliateMarginPct).toBe("10.0000");
+    expect(a.oi.affiliateMarginSource).toBe("OVERRIDE");
+    expect(a.oi.netAffiliate).toBe("2294.36");
+    expect(a.oi.subrinhoDiscount).toBe("26.56"); // R$ 30 pedidos, folga de R$ 26,56 até o piso
+    expect(a.oi.affiliateDiscount).toBe("0.00"); // sem folga para o cupom do afiliado
+    expect(a.coupons).toEqual({ sub30: "ok", hotel2: "Este cupom não tem desconto disponível para os itens deste carrinho" });
+    expect(a.oi.finalPix).toBe("2267.80");
+    check(a.oi);
+    expect(a.oi.details).toMatchObject({ priceFloor: { minPixBrl: "2267.80", applied: false } });
+    expect(a.paid.totalPix).toBe(a.oi.finalPix);
+    expect(a.paid.amountCharged).toBe("2267.80");
+    expect(a.paid.payoutDate).toBeTruthy();
+    expect(a.view.priced.totals.pix.toFixed(2)).toBe("2267.80"); // o carrinho mostrou o que foi cobrado
+
+    // 2) ADMIN zera a própria margem: a margem Subrinho sobe só o necessário para respeitar o piso
+    const b = await buy("0");
+    expect(Number(b.oi.subrinhoMarginPct)).toBeGreaterThan(4.5);
+    expect(b.oi.affiliateCommission).toBe("0.00");
+    expect(b.oi.subrinhoDiscount).toBe("0.00");
+    expect(b.coupons.sub30).toBe("Este cupom não tem desconto disponível para os itens deste carrinho");
+    expect(b.oi.finalPix).toBe("2267.80");
+    expect(b.oi.details).toMatchObject({ priceFloor: { minPixBrl: "2267.80", applied: true, ruleSubrinhoPct: "4.5000" } });
+    check(b.oi);
+
+    // 3) a agência não vê custo, margem Subrinho, piso nem dados internos do fornecedor
+    const view = await getOrderForAffiliate(db, affiliateId, b.paid.id);
+    const json = JSON.stringify(view);
+    for (const forbidden of ["costBrl", "fxRate", "netSubrinho", "subrinhoMargin", "priceFloor", "minSellPrice", "rateKeys", "supplierCode", "supplierPayload"]) expect(json).not.toContain(forbidden);
+    expect(view!.items[0].commission).toBe("0.00");
   });
 });

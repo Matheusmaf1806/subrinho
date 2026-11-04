@@ -20,6 +20,7 @@ import { db } from "@/server/db";
 import { requireSubrinhoUser } from "@/server/auth/session";
 import { listOrdersForSubrinho } from "@/server/orders/queries";
 import { getCurrentFx, FOREIGN_CURRENCIES } from "@/server/fx";
+import { BOOKING_STATUS_LABEL, bookingsNeedingAction } from "@/server/bookings/service";
 import { lastClosedFortnight } from "@/server/payouts/calendar";
 import {
   currentPeriods,
@@ -61,7 +62,7 @@ export default async function SubrinhoDashboardPage() {
   const p = currentPeriods();
   const lastClosed = lastClosedFortnight(p.today);
 
-  const [fortnightK, monthK, fx, recent, upcoming, forecast, lastReport, pending] = await Promise.all([
+  const [fortnightK, monthK, fx, recent, upcoming, forecast, lastReport, pending, toIssue] = await Promise.all([
     paidKpis(db, p.fortnight.start, p.fortnight.end),
     paidKpis(db, p.month.start, p.month.end),
     getCurrentFx(db),
@@ -70,7 +71,9 @@ export default async function SubrinhoDashboardPage() {
     openPayoutForecast(db),
     fortnightReportFor(db, lastClosed.start),
     pendingPaymentCount(db),
+    bookingsNeedingAction(db),
   ]);
+  const staleFx = FOREIGN_CURRENCIES.map((c) => ({ c, r: fx[c] })).filter((x) => x.r && Date.now() - new Date(x.r.fetchedAt).getTime() > 24 * 3_600_000);
   const monthName = new Date(`${p.month.start}T12:00:00Z`).toLocaleDateString("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" });
 
   return (
@@ -98,6 +101,30 @@ export default async function SubrinhoDashboardPage() {
           ) : (
             <p className="mt-1 text-xs">Peça ao financeiro para fechar a quinzena.</p>
           )}
+        </Alert>
+      )}
+      {toIssue.total > 0 && (
+        <Alert tone="warning" className="mb-6" title={`${toIssue.total} reserva(s) de hotel aguardando a equipe`}>
+          <p>Pedidos pagos com reserva ainda não emitida (ou com falha) no fornecedor:</p>
+          <ul className="mt-2 space-y-1">
+            {toIssue.items.map((x) => (
+              <li key={x.itemId}>
+                <Link href={`/subrinho/pedidos/${x.orderId}`} className="font-semibold underline-offset-2 hover:underline">
+                  #{x.number} · {x.title}
+                </Link>{" "}
+                <span className="text-xs">({BOOKING_STATUS_LABEL[x.status ?? ""] ?? x.status}{x.serviceDate ? ` · check-in ${date(x.serviceDate)}` : ""})</span>
+              </li>
+            ))}
+          </ul>
+        </Alert>
+      )}
+      {staleFx.length > 0 && (
+        <Alert tone="warning" className="mb-6" title="Câmbio desatualizado">
+          {staleFx.map((x) => `${x.c} R$ ${Number(x.r!.rate).toLocaleString("pt-BR", { minimumFractionDigits: 4 })} desde ${dateTime(new Date(x.r!.fetchedAt))}`).join(" · ")}. Os preços em
+          moeda estrangeira (hotéis, ingressos) usam essa cotação.{" "}
+          <Link href="/subrinho/cambio" className="font-semibold underline-offset-2 hover:underline">
+            Atualizar câmbio
+          </Link>
         </Alert>
       )}
       {pending > 0 && (

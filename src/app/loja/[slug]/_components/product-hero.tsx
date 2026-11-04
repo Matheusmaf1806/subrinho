@@ -3,7 +3,7 @@ import { Check, MapPin, Star } from "lucide-react";
 import type { PricedDetail } from "@/server/catalog";
 import { CATEGORY_PHOTO, galleryFor, photo } from "@/lib/images";
 
-export function ProductHero({ p, back, cta }: { p: PricedDetail; back: { href: string; label: string }; cta?: { href: string; label: string } }) {
+export function ProductHero({ p, back, cta }: { p: PricedDetail; back: { href: string; label: string }; cta?: { href: string; label: string; note?: string } }) {
   const main = p.gallery?.[0] ?? p.imageUrl ?? photo(CATEGORY_PHOTO[p.category] ?? "colosseum", 1600);
   const [stockA, stockB] = galleryFor(p.category, p.destination);
   // fotos reais do fornecedor quando houver; completa com fotos ilustrativas
@@ -30,9 +30,12 @@ export function ProductHero({ p, back, cta }: { p: PricedDetail; back: { href: s
         <h1 className="display mt-3 text-[clamp(2.5rem,5vw,4.75rem)] text-ink">{p.title}</h1>
         {p.subtitle && <p className="mt-4 max-w-2xl text-[17px] text-muted">{p.subtitle}</p>}
         {cta && (
-          <a href={cta.href} className="mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-ink px-6 text-[15px] font-semibold text-white transition hover:bg-ink-2">
-            {cta.label} <span aria-hidden>↓</span>
-          </a>
+          <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <a href={cta.href} className="inline-flex h-12 items-center gap-2 rounded-full bg-ink px-6 text-[15px] font-semibold text-white transition hover:bg-ink-2">
+              {cta.label} <span aria-hidden>↓</span>
+            </a>
+            {cta.note && <span className="text-[15px] text-muted">{cta.note}</span>}
+          </div>
         )}
       </div>
 

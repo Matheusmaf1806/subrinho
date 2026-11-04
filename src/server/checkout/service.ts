@@ -11,7 +11,8 @@ import { CartError, loadCartView, priceCartById, sweepExpiredItems, type Cart } 
 import { money } from "@/server/pricing/money";
 import { getSettings } from "@/server/settings";
 import { getAdapter } from "@/server/suppliers/registry";
-import { SupplierError } from "@/server/suppliers/types";
+import { SupplierError, SupplierIntegrationError } from "@/server/suppliers/types";
+import { minSellPriceOf } from "@/server/pricing/cart-pricing";
 import { payoutDateFor } from "@/server/payouts/service";
 import { paymentProvider, type CardInput } from "@/server/payments/provider";
 import { hashPassword } from "@/server/auth/password";
@@ -55,8 +56,9 @@ async function revalidateItems(tx: Tx, cart: Cart) {
   const items = await tx.select().from(cartItems).where(and(eq(cartItems.cartId, cart.id), eq(cartItems.status, "ACTIVE")));
   const changed: string[] = [];
   for (const it of items) {
+    let q;
     try {
-      const q = await getAdapter(it.supplierCode).quote({
+      q = await getAdapter(it.supplierCode).quote({
         productId: it.productId,
         optionId: it.optionId,
         date: it.serviceDate ?? undefined,
@@ -66,19 +68,34 @@ async function revalidateItems(tx: Tx, cart: Cart) {
         endDate: it.serviceEndDate ?? undefined,
         pax: it.pax,
       });
-      if (linesSignature(q.lines) !== linesSignature(it.lines) || q.currency !== it.costCurrency) {
-        console.warn(`[checkout] preço mudou no fornecedor ${it.supplierCode} (${it.title}): ${it.costCurrency} ${linesSignature(it.lines)} → ${q.currency} ${linesSignature(q.lines)}`);
-        await tx.update(cartItems).set({ lines: q.lines, costCurrency: q.currency, supplierQuoteRef: q.quoteRef, quotedAt: new Date() }).where(eq(cartItems.id, it.id));
-        changed.push(it.title);
-      }
     } catch (e) {
+      // Fornecedor fora do ar / erro técnico: NÃO remove o item — só não deixa pagar agora.
+      if (e instanceof SupplierIntegrationError) {
+        console.error(`[checkout] fornecedor ${it.supplierCode}:`, e.message, e.detail ?? "");
+        throw new CheckoutError(`Não conseguimos confirmar o preço de “${it.title}” com o fornecedor agora. Tente novamente em instantes.`);
+      }
       if (!(e instanceof SupplierError)) throw e;
       await tx
         .update(cartItems)
         .set({ status: "UNAVAILABLE", statusReason: e.message, statusChangedAt: new Date(), noticeAcknowledged: false })
         .where(eq(cartItems.id, it.id));
       changed.push(it.title);
+      continue;
     }
+    const details = { ...q.details, paxRules: q.paxRules };
+    const priceChanged =
+      linesSignature(q.lines) !== linesSignature(it.lines) ||
+      q.currency !== it.costCurrency ||
+      JSON.stringify(minSellPriceOf(details)) !== JSON.stringify(minSellPriceOf(it.details));
+    if (priceChanged) {
+      console.warn(`[checkout] preço mudou no fornecedor ${it.supplierCode} (${it.title}): ${it.costCurrency} ${linesSignature(it.lines)} → ${q.currency} ${linesSignature(q.lines)}`);
+      changed.push(it.title);
+    }
+    // Sempre guarda a cotação mais recente (ex.: novas chaves de tarifa), mesmo com o preço igual.
+    await tx
+      .update(cartItems)
+      .set({ lines: q.lines, costCurrency: q.currency, details, supplierQuoteRef: q.quoteRef, quotedAt: new Date() })
+      .where(eq(cartItems.id, it.id));
   }
   if (changed.length) throw new CheckoutError(`O fornecedor atualizou preço/disponibilidade de: ${changed.join(", ")}. Revise o carrinho antes de pagar.`);
 }
@@ -94,6 +111,8 @@ export type PlaceOrderInput = {
   placedByAffiliateUserId?: string | null;
   ip?: string | null;
   userAgent?: string | null;
+  /** Pedido especial ao hotel (ex.: chegada tarde) — vai na reserva. */
+  specialRequests?: string | null;
   /** Desligue para testes que não querem consultar o fornecedor. */
   revalidate?: boolean;
   /** Relógio (para seed/testes). */
@@ -167,6 +186,7 @@ export async function placeOrder(tx: Tx, input: PlaceOrderInput) {
       },
       payerData: input.payer,
       travelers: input.travelers,
+      specialRequests: input.specialRequests?.trim().slice(0, 500) || null,
       totalCostBrl: money(t.costBrl),
       totalSubrinhoMargin: money(t.subrinhoMargin),
       totalNetSubrinho: money(t.netSubrinho),
@@ -232,6 +252,14 @@ export async function placeOrder(tx: Tx, input: PlaceOrderInput) {
         affiliateCommission: money(f.affiliateCommission),
         subrinhoRevenue: money(f.subrinhoRevenue),
         supplierQuoteRef: it.supplierQuoteRef,
+        ...(p.floor
+          ? {
+              details: {
+                ...it.details,
+                priceFloor: { minPixBrl: money(p.floor.minPix), ruleSubrinhoPct: p.floor.ruleSubrinhoPct?.toFixed(4) ?? null, applied: !!p.floor.ruleSubrinhoPct },
+              },
+            }
+          : {}),
       };
     }),
   );

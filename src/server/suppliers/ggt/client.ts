@@ -41,6 +41,7 @@ export function ggtConfig(env: NodeJS.ProcessEnv = process.env): GgtConfig | nul
 /** Códigos de requisição da API (MakeRequest.requestType). */
 export const GGT_OP = {
   BOOKING_INSERT: { type: 2, name: "BOOKING_INSERT_REQUEST" },
+  BOOKING_CANCEL: { type: 3, name: "BOOKING_CANCEL_REQUEST" },
   BOOKING_SEARCH: { type: 4, name: "BOOKING_SEARCH_REQUEST" },
   BOOKING_STATUS: { type: 5, name: "BOOKING_STATUS_REQUEST" },
   VOUCHER_DETAILS: { type: 8, name: "VOUCHER_DETAILS_REQUEST" },

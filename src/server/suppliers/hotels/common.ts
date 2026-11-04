@@ -47,6 +47,11 @@ export function titleCase(s: string): string {
 }
 
 /** HTML simples dos fornecedores → texto com parágrafos. Remove tags/scripts e decodifica entidades. */
+/** Texto corrido de fornecedor: espaço depois de "." e ":" colados ("arrival.Check-in" → "arrival. Check-in"). */
+export function tidySupplierText(text: string): string {
+  return text.replace(/([a-z0-9)])\.(?=[A-Z])/g, "$1. ").replace(/([a-zA-Z]):(?=[0-9A-Za-z])/g, "$1: ");
+}
+
 export function htmlToText(html: string | null | undefined): string {
   if (!html) return "";
   return decodeEntities(

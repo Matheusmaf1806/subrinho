@@ -73,6 +73,11 @@ function fakeGgt(opts: { valuationFails?: Set<string>; existingBooking?: boolean
         `<Root><Header><Operation>BOOKING_INSERT_RESPONSE</Operation><OperationType>Response</OperationType></Header><Main><GoBookingCode>12345678</GoBookingCode><GoReference>GO-12345678</GoReference><ClientBookingCode>${ref}</ClientBookingCode><BookingStatus>${opts.insertStatus ?? "C"}</BookingStatus><TotalPrice>184.88</TotalPrice><Currency>USD</Currency><HotelId>862326</HotelId><HotelName>OYO HOTEL ORLANDO AIRPORT</HotelName><HotelConfirmation>HC-778</HotelConfirmation><ArrivalDate>2027-01-03</ArrivalDate><CancellationDeadline>2026-12-30</CancellationDeadline><Nights>3</Nights></Main></Root>`,
       );
     }
+    if (type === 3) return soap(`<Root><Header><OperationType>Response</OperationType></Header><Main><GoBookingCode>12345678</GoBookingCode><BookingStatus>X</BookingStatus></Main></Root>`);
+    if (type === 8)
+      return soap(
+        `<Root><Header><OperationType>Response</OperationType></Header><Main><GoBookingCode>12345678</GoBookingCode><HotelName><![CDATA[OYO HOTEL ORLANDO AIRPORT]]></HotelName><Address><![CDATA[7100 S Orange Blossom Trl]]></Address><Phone>1-347-7524172</Phone><CheckInDate>03/Jan/27</CheckInDate><RoomBasis>RO</RoomBasis><Nights>3</Nights><VoucherDownloadURL><![CDATA[https://vouchers.example/abc.pdf]]></VoucherDownloadURL><BookedAndPayableBy><![CDATA[GoGlobal Travel]]></BookedAndPayableBy><SupplierReferenceNumber>SR-9</SupplierReferenceNumber><EmergencyPhone>+1 800 000</EmergencyPhone></Main></Root>`,
+      );
     if (type === 4) return soap(`<Root><Header><OperationType>Response</OperationType></Header><Main><GoBookingCode>12345678</GoBookingCode><BookingStatus>RQ</BookingStatus><TotalPrice>184.88</TotalPrice><Currency>USD</Currency></Main></Root>`);
     throw new Error(`requestType inesperado ${type}`);
   }) as typeof fetch;
@@ -225,6 +230,17 @@ describe("GGT | Best Buy — reserva", () => {
     const a = createGgtAdapter(cfg, { fetch: fakeGgt().fetchImpl });
     await expect(a.book(await itemFor(a), { travelers: travelers.slice(0, 2) })).rejects.toThrow(/crianças/);
     await expect(a.book(await itemFor(a), { travelers: [{ name: "Maria", type: "ADULT" }, travelers[1], travelers[2]] })).rejects.toThrow(/sobrenome/);
+  });
+
+  it("cancela na GGT (BOOKING_CANCEL) e lê o voucher oficial (PDF)", async () => {
+    const g = fakeGgt();
+    const a = createGgtAdapter(cfg, { fetch: g.fetchImpl });
+    expect(a.cancelSimulation).toBe(false);
+    expect((await a.cancelBooking!("12345678", { simulate: true })).status).toBe("SIMULATED");
+    expect(g.calls.some((c) => c.type === 3)).toBe(false); // simulação não chama a GGT
+    expect((await a.cancelBooking!("12345678", { simulate: false })).status).toBe("CANCELLED");
+    expect(g.calls.find((c) => c.type === 3)!.inner).toContain("<GoBookingCode>12345678</GoBookingCode>");
+    expect(await a.voucher!("12345678")).toMatchObject({ voucherUrl: "https://vouchers.example/abc.pdf", emergencyPhone: "+1 800 000", bookedAndPayableBy: "GoGlobal Travel", phone: "1-347-7524172" });
   });
 
   it("status RQ = pedido enviado, aguardando confirmação", async () => {

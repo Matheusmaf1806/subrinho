@@ -79,7 +79,12 @@ export function MarginModal({ item, action, maxPct }: { item: ItemVM; action: (p
   const [val, setVal] = useState(Number(admin.marginPct));
   const valid = Number.isFinite(val) && val >= 0 && val <= Number(maxPct);
   const base = Number(admin.base);
-  const pix = valid ? Math.round((base / (1 - val / 100)) * 100) / 100 : NaN;
+  const minPix = admin.minPix ? Number(admin.minPix) : null;
+  const raw = valid ? Math.round((base / (1 - val / 100)) * 100) / 100 : NaN;
+  // preço mínimo de venda do fornecedor: o preço não fica abaixo dele (a Subrinho completa a diferença)
+  const floored = minPix !== null && raw < minPix;
+  const pix = floored ? minPix! : raw;
+  const commission = valid ? (floored ? Math.round(pix * val) / 100 : pix - base) : NaN;
   const installment = valid ? Math.round((pix / (1 - Number(admin.installmentFeePct) / 100)) * 100) / 100 : NaN;
   return (
     <Modal
@@ -115,9 +120,14 @@ export function MarginModal({ item, action, maxPct }: { item: ItemVM; action: (p
               </div>
               <div className="flex justify-between">
                 <span className="text-muted">Sua comissão</span>
-                <strong className="tabular text-emerald-300">{valid ? fmt(pix - base) : "—"}</strong>
+                <strong className="tabular text-emerald-300">{valid ? fmt(commission) : "—"}</strong>
               </div>
             </div>
+            {minPix !== null && (
+              <p className="text-xs text-muted">
+                Este hotel tem preço mínimo de venda de <strong className="text-ink">{fmt(minPix)}</strong> (regra do fornecedor) — o preço não fica abaixo disso.
+              </p>
+            )}
             <SubmitButton variant="accent" className="w-full" disabled={!valid}>
               Aplicar neste carrinho
             </SubmitButton>

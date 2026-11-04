@@ -5,7 +5,7 @@ import type { ActionState } from "@/components/ui-client";
 import { db } from "@/server/db";
 import { requireSubrinhoUser } from "@/server/auth/session";
 import { cancelPendingOrder, confirmPaymentManually } from "@/server/subrinho/orders";
-import { autoIssueOrder, issueItemBooking, refreshItemBooking } from "@/server/bookings/service";
+import { autoIssueOrder, cancelItemBooking, issueItemBooking, refreshItemBooking } from "@/server/bookings/service";
 import { after } from "next/server";
 import { date, orderNumber } from "@/lib/format";
 import { actionError, optText, uuid } from "../../../_lib/form";
@@ -64,6 +64,20 @@ export async function refreshBookingAction(_prev: ActionState, fd: FormData): Pr
     const orderId = uuid(fd, "orderId", "Pedido");
     const r = await refreshItemBooking(itemId);
     revalidateOrder(orderId);
+    return { ok: true, message: r.message };
+  } catch (e) {
+    return actionError(e);
+  }
+}
+
+export async function cancelBookingAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  try {
+    const user = await requireSubrinhoUser(PERMS.orders);
+    const itemId = uuid(fd, "itemId", "Item");
+    const orderId = uuid(fd, "orderId", "Pedido");
+    const simulate = fd.get("simulate") === "1";
+    const r = await cancelItemBooking(itemId, { id: user.id, name: user.name }, { simulate });
+    if (!simulate) revalidateOrder(orderId);
     return { ok: true, message: r.message };
   } catch (e) {
     return actionError(e);

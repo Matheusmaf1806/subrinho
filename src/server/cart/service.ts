@@ -10,12 +10,12 @@ import { and, asc, eq, inArray, lte, sql } from "drizzle-orm";
 import type { Tx } from "@/server/db";
 import { cartCoupons, cartItems, carts, cartViews, coupons, type CouponIssuer, type PaxConfig, type UserType } from "@/server/db/schema";
 import { checkCouponValidity, computeCoupon, type CouponDef } from "@/server/coupons/engine";
-import { priceCart, type PricedCart } from "@/server/pricing/cart-pricing";
+import { minSellPriceOf, priceCart, type PricedCart } from "@/server/pricing/cart-pricing";
 import { loadPricingContext } from "@/server/pricing/context";
 import { d } from "@/server/pricing/money";
 import { getSettings } from "@/server/settings";
 import { getAdapter } from "@/server/suppliers/registry";
-import { SupplierError, type Quote } from "@/server/suppliers/types";
+import { SupplierError, SupplierIntegrationError, type Quote } from "@/server/suppliers/types";
 import { shortCode, sha256 } from "@/lib/random";
 
 export class CartError extends Error {}
@@ -153,6 +153,10 @@ export async function changeItemPax(tx: Tx, cart: Cart, itemId: string, pax: Pax
       pax,
     });
   } catch (e) {
+    if (e instanceof SupplierIntegrationError) {
+      console.error("[carrinho] fornecedor:", e.message, e.detail ?? "");
+      throw new CartError("Não conseguimos consultar o fornecedor agora. Tente novamente em instantes.");
+    }
     if (e instanceof SupplierError) throw new CartError(e.message);
     throw e;
   }
@@ -302,6 +306,7 @@ export async function priceCartById(
       costCurrency: i.costCurrency,
       lines: i.lines,
       affiliateMarginOverridePct: i.affiliateMarginOverridePct,
+      minSellPrice: minSellPriceOf(i.details),
     })),
     activeCoupons,
   );

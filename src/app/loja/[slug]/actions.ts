@@ -27,13 +27,19 @@ import { after } from "next/server";
 import { isMockPayments } from "@/server/payments/provider";
 import { PricingError } from "@/server/pricing/engine";
 import { getAdapter } from "@/server/suppliers/registry";
-import { SupplierError } from "@/server/suppliers/types";
+import { SupplierError, SupplierIntegrationError } from "@/server/suppliers/types";
 import type { ActionState } from "@/components/ui-client";
 import { isValidCpfOrCnpj, onlyDigits } from "@/lib/br";
 import { actorOf, currentCartToken, getStore, safeNext, setCurrentCartToken, storePath, viewerFor } from "./_lib/store";
 
-const userError = (e: unknown): string | null =>
-  e instanceof CartError || e instanceof CheckoutError || e instanceof SupplierError || e instanceof PricingError ? e.message : null;
+/** Mensagem para o cliente. Falha técnica de fornecedor (credencial, rede) nunca aparece crua. */
+const userError = (e: unknown): string | null => {
+  if (e instanceof SupplierIntegrationError) {
+    console.error("[loja] fornecedor:", e.message, e.detail ?? "");
+    return "Não conseguimos consultar o fornecedor agora. Tente novamente em instantes.";
+  }
+  return e instanceof CartError || e instanceof CheckoutError || e instanceof SupplierError || e instanceof PricingError ? e.message : null;
+};
 
 const int = (v: FormDataEntryValue | null, def = 0) => {
   const n = Number(v);
@@ -361,6 +367,7 @@ export async function placeOrderAction(slug: string, token: string, _prev: Actio
         installments: int(fd.get("installments"), 1),
         card,
         placedByAffiliateUserId: viewer.kind === "AFFILIATE" ? viewer.user.id : null,
+        specialRequests: str(fd.get("specialRequests")) ?? null,
         ip: meta.ip,
         userAgent: meta.userAgent,
       }),

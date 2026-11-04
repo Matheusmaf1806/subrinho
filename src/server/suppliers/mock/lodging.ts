@@ -203,6 +203,9 @@ export function createHotelsMock(cfg: { code: string; name: string; currency: Cu
       currency: cfg.currency,
       lines: lines(h, room, BOARDS[0], { ...pax, adults: Math.min(pax.adults, room.maxGuests) }, checkIn, checkOut),
       groupKey: h.key,
+      stars: h.stars,
+      perks: { breakfast: true, refundable: true },
+      area: h.location.split(",")[0],
     };
   }
 

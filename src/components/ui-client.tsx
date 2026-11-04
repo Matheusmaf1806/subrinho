@@ -51,6 +51,7 @@ export function ActionForm({
   resetOnSuccess,
   onSuccess,
   showMessages = true,
+  errorExtra,
 }: {
   action: (prev: ActionState, fd: FormData) => Promise<ActionState>;
   children: ReactNode;
@@ -58,6 +59,8 @@ export function ActionForm({
   resetOnSuccess?: boolean;
   onSuccess?: () => void;
   showMessages?: boolean;
+  /** Conteúdo extra mostrado junto da mensagem de erro (ex.: botão para atualizar a página). */
+  errorExtra?: ReactNode;
 }) {
   const [state, formAction, isPending] = useActionState(action, null);
   const ref = useRef<HTMLFormElement>(null);
@@ -84,6 +87,7 @@ export function ActionForm({
       {showMessages && state?.error && (
         <Alert tone="danger" className="mb-3">
           {state.error}
+          {errorExtra}
         </Alert>
       )}
       {showMessages && state?.ok && state.message && (

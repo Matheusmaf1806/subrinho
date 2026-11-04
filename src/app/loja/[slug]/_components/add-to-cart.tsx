@@ -1,7 +1,20 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useTransition, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { RefreshCw } from "lucide-react";
 import { ActionForm, SubmitButton, type ActionState } from "@/components/ui-client";
+
+/** Recarrega preços e disponibilidade da página (sem perder a busca). */
+function RefreshOptions() {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  return (
+    <button type="button" onClick={() => start(() => router.refresh())} disabled={pending} className="mt-1.5 flex items-center gap-1.5 font-semibold underline underline-offset-2 disabled:opacity-60">
+      <RefreshCw className={`h-3.5 w-3.5 ${pending ? "animate-spin" : ""}`} /> {pending ? "Atualizando…" : "Atualizar opções"}
+    </button>
+  );
+}
 
 /** Formulário "adicionar ao carrinho": cota no fornecedor (preço certo) e leva ao carrinho. */
 export function AddToCartForm({
@@ -20,7 +33,7 @@ export function AddToCartForm({
   buttonClassName?: string;
 }) {
   return (
-    <ActionForm action={action} className={className}>
+    <ActionForm action={action} className={className} errorExtra={<RefreshOptions />}>
       {Object.entries(hidden).map(([k, v]) => (v === null || v === undefined ? null : <input key={k} type="hidden" name={k} value={String(v)} />))}
       {children}
       <SubmitButton variant="accent" size="lg" pendingText="Consultando o fornecedor…" className={buttonClassName ?? "mt-4 w-full"}>

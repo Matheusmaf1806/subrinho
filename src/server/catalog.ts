@@ -19,9 +19,9 @@ export async function activeSupplierCodes(tx: Tx): Promise<Set<string>> {
   return new Set(rows.map((r) => r.code));
 }
 
-function priceOf(ctx: PricingContext, s: { category: Category; supplierCode: string; productId: string }, optionId: string | null, o: Pick<OfferOption, "currency" | "lines">) {
+function priceOf(ctx: PricingContext, s: { category: Category; supplierCode: string; productId: string }, optionId: string | null, o: Pick<OfferOption, "currency" | "lines" | "minSellPrice">) {
   try {
-    return quoteDisplayPrice(ctx, { ...s, optionId }, o.currency, o.lines);
+    return quoteDisplayPrice(ctx, { ...s, optionId }, o.currency, o.lines, o.minSellPrice);
   } catch {
     return null;
   }

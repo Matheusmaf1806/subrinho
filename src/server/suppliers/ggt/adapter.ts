@@ -22,6 +22,7 @@ import {
   type BookContext,
   type BookItem,
   type BookingResult,
+  type CancelResult,
   type OfferOption,
   type PaxRule,
   type ProductDetail,
@@ -33,7 +34,7 @@ import {
   SupplierError,
   SupplierIntegrationError,
 } from "../types";
-import { cached } from "../hotels/cache";
+import { cached, cacheSet } from "../hotels/cache";
 import {
   ascii,
   asCurrency,
@@ -41,6 +42,7 @@ import {
   brDate,
   hotelGroupKey,
   htmlToText,
+  tidySupplierText,
   money2,
   parseStars,
   parseSupplierDate,
@@ -159,7 +161,7 @@ export function normalizeOffer(o: RawOffer): GgtOffer | null {
     total,
     currency,
     stars: parseStars(o.Category),
-    remark: htmlToText(o.Remark),
+    remark: tidySupplierText(htmlToText(o.Remark)),
     special: special || null,
     payAtHotel: [...charges(o.Tax), ...charges(o.Fee)],
   };
@@ -332,7 +334,7 @@ function parseValuation(main: Record<string, unknown>): Valuation {
   return {
     searchCode: text(main.HotelSearchCode),
     cancellationDeadline: parseSupplierDate(text(main.CancellationDeadline)),
-    remarks: htmlToText(text(main.Remarks)),
+    remarks: tidySupplierText(htmlToText(text(main.Remarks))),
     policies: pol.map((p) => ({ from: parseSupplierDate(text(p["@Starting"])), mode: text(p["@Mode"]), basedOn: text(p["@BasedOn"]), value: text(p) })),
     total: rateText && Number(rateText) > 0 ? money2(rateText) : null,
     currency: rateCur || null,
@@ -380,8 +382,13 @@ export function createGgtAdapter(cfg: GgtConfig, opts: { fetch?: typeof fetch } 
   async function searchHotels(p: { codes?: string[]; hotels?: string[]; checkIn: string; nights: number; pax: PaxConfig }, o: { fresh?: boolean } = {}): Promise<GgtHotel[]> {
     const stayKey = `${p.checkIn}:${p.nights}:${paxKey(p.pax)}`;
     if (p.hotels?.length) {
+      const key = `ggt:search:h${p.hotels.join(",")}:${stayKey}`;
       const load = () => searchOnce({ hotels: p.hotels }, p);
-      return o.fresh ? load() : cached(`ggt:search:h${p.hotels.join(",")}:${stayKey}`, 5 * 60, load);
+      if (!o.fresh) return cached(key, 5 * 60, load);
+      // consulta nova (ao reservar): atualiza o cache da página do hotel, para um quarto esgotado sumir
+      const fresh = await load();
+      await cacheSet(key, fresh, 5 * 60).catch(() => {});
+      return fresh;
     }
     const codes = [...new Set(p.codes ?? [])];
     const settled = await Promise.allSettled(codes.map((city) => (o.fresh ? searchOnce({ city }, p) : cached(`ggt:search:c${city}:${stayKey}`, SEARCH_TTL, () => searchOnce({ city }, p)))));
@@ -414,6 +421,7 @@ export function createGgtAdapter(cfg: GgtConfig, opts: { fetch?: typeof fetch } 
             .map((s) => s.trim())
             .filter((s) => s && !/^may include:?$/i.test(s)),
           category: parseStars(text(m.Category)),
+          phone: text(m.Phone) || null,
           pictures: pics.map((p) => text(p)).filter((u) => /^https?:\/\//.test(u)),
         };
       },
@@ -463,6 +471,9 @@ export function createGgtAdapter(cfg: GgtConfig, opts: { fetch?: typeof fetch } 
       currency: best.currency,
       lines: [stayLine(best, nights, pax)],
       groupKey: hotelGroupKey(h.name),
+      stars: h.stars,
+      perks: { breakfast, refundable },
+      area: h.location ? titleCase(h.location) : null,
     };
   }
 
@@ -639,7 +650,10 @@ export function createGgtAdapter(cfg: GgtConfig, opts: { fetch?: typeof fetch } 
         details: {
           supplierHotelId: req.productId,
           hotelName: titleCase(hotel.name),
-          address: info?.address ?? null,
+          hotelCategory: starsText(hotel.stars ?? info?.category) || null,
+          address: info?.address ? titleCase(info.address) : null,
+          destinationName: hotel.cityId ? await cityLabel(hotel.cityId) : null,
+          hotelPhone: info?.phone ?? null,
           rooms: o.rooms.map(titleCase),
           board: boardLabel(o.basis),
           boardCode: o.basis,
@@ -712,6 +726,41 @@ export function createGgtAdapter(cfg: GgtConfig, opts: { fetch?: typeof fetch } 
       const result = bookingResult(main);
       if (!result.bookingRef) throw new SupplierIntegrationError("A GGT não devolveu o código da reserva", { response: main });
       return { ...result, payload: { ...result.payload, agentReference: item.reference, bookedPrice: offer.total, currency: offer.currency } };
+    },
+
+    cancelSimulation: false,
+
+    /** Cancela na GGT (sem simulação: a multa vem da política gravada na cotação). */
+    async cancelBooking(bookingRef: string, opts: { simulate: boolean }): Promise<CancelResult> {
+      if (opts.simulate) return { status: "SIMULATED", penalty: null, reference: null, payload: {} };
+      const m = await client.xml(GGT_OP.BOOKING_CANCEL, `<Main Version="2.0"><GoBookingCode>${escapeXml(bookingRef)}</GoBookingCode></Main>`, 60_000);
+      const raw = text(m.BookingStatus);
+      return { status: STATUS[raw] ?? (raw || "CANCEL_REQUESTED"), penalty: null, reference: null, payload: { supplierStatus: raw, cancelledWithPenalty: raw === "XP" } };
+    },
+
+    /** Voucher oficial da GGT (link do PDF, telefone de emergência, observações). */
+    async voucher(bookingRef: string): Promise<Record<string, unknown> | null> {
+      try {
+        const m = await client.xml(GGT_OP.VOUCHER_DETAILS, `<Main Version="2.3"><GoBookingCode>${escapeXml(bookingRef)}</GoBookingCode><GetEmergencyPhone>true</GetEmergencyPhone></Main>`, 30_000);
+        const remarks = (((m.BookingRemarks as Record<string, unknown> | undefined)?.Remark as unknown[] | undefined) ?? []).map((r) => tidySupplierText(htmlToText(text(r)))).filter(Boolean);
+        return {
+          voucherUrl: /^https?:\/\//.test(text(m.VoucherDownloadURL)) ? text(m.VoucherDownloadURL) : null,
+          hotelName: text(m.HotelName) || null,
+          address: text(m.Address) || null,
+          phone: text(m.Phone) || null,
+          checkInDate: parseSupplierDate(text(m.CheckInDate)),
+          roomBasis: text(m.RoomBasis) || null,
+          nights: text(m.Nights) || null,
+          rooms: htmlToText(text(m.Rooms)) || null,
+          remarks: [tidySupplierText(htmlToText(text(m.Remarks))), ...remarks].filter(Boolean).join("\n\n") || null,
+          bookedAndPayableBy: text(m.BookedAndPayableBy) || null,
+          supplierReference: text(m.SupplierReferenceNumber) || null,
+          emergencyPhone: text(m.EmergencyPhone) || null,
+        };
+      } catch (e) {
+        if (isNotFound(e)) return null;
+        throw e;
+      }
     },
 
     async bookingStatus(bookingRef: string): Promise<BookingResult> {

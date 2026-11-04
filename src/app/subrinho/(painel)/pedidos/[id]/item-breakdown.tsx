@@ -63,10 +63,11 @@ export function ItemBreakdown({
   index: number;
   rules: Map<string, Rule>;
   paymentMethod: string;
-  booking?: { live: boolean; orderPaid: boolean; canAct: boolean };
+  booking?: { live: boolean; orderPaid: boolean; canAct: boolean; canSimulateCancel?: boolean };
 }) {
   const cur = i.costCurrency;
   const check = verify(i);
+  const floor = (i.details as { priceFloor?: { minPixBrl: string; ruleSubrinhoPct: string | null; applied: boolean } } | null)?.priceFloor;
   const rows: Row[] = [
     ...i.lines.map<Row>((l) => ({
       step: <span className="font-semibold">{l.label}</span>,
@@ -95,6 +96,15 @@ export function ItemBreakdown({
       formula: ruleInfo(i.subrinhoMarginRuleId, rules),
       value: `+ ${brl(i.subrinhoMarginAmount)}`,
     },
+    ...(floor?.applied
+      ? [
+          {
+            step: <span className="text-amber-800">Preço mínimo do fornecedor</span>,
+            formula: `PIX não pode ficar abaixo de ${brl(floor.minPixBrl)} — margem Subrinho subiu de ${pct(floor.ruleSubrinhoPct ?? "0")} (regra) para ${pct(i.subrinhoMarginPct)}`,
+            value: `≥ ${brl(floor.minPixBrl)}`,
+          } as Row,
+        ]
+      : []),
     { step: "NET Subrinho", formula: `${brl(i.costBrl)} ÷ (1 − ${pct(i.subrinhoMarginPct)})`, value: brl(i.netSubrinho), kind: "strong" },
     {
       step: (
@@ -248,7 +258,7 @@ export function ItemBreakdown({
             </dd>
           </div>
         </dl>
-        {booking && <SupplierBookingPanel item={i} live={booking.live} orderPaid={booking.orderPaid} canAct={booking.canAct} />}
+        {booking && <SupplierBookingPanel item={i} live={booking.live} orderPaid={booking.orderPaid} canAct={booking.canAct} canSimulateCancel={booking.canSimulateCancel} />}
         <div className="grid gap-2 md:grid-cols-2">
           <JsonDetails label="Resposta do fornecedor (payload)" value={i.supplierPayload} />
           <JsonDetails label="Detalhes do item" value={i.details} />

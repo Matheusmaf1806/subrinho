@@ -187,11 +187,11 @@ export function TravelerFields({
               />
             </label>
             <label className="block">
-              <span className={lab}>Documento</span>
+              <span className={lab}>Documento{hotel && <span className="font-normal normal-case tracking-normal"> · opcional</span>}</span>
               <Input name="travelerDocument" placeholder="CPF ou passaporte" />
             </label>
             <label className="block">
-              <span className={lab}>Nascimento</span>
+              <span className={lab}>Nascimento{hotel && <span className="font-normal normal-case tracking-normal"> · opcional</span>}</span>
               <Input name="travelerBirthDate" type="date" />
             </label>
           </div>

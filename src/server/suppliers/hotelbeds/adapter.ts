@@ -22,6 +22,7 @@ import {
   type BookContext,
   type BookItem,
   type BookingResult,
+  type CancelResult,
   type OfferOption,
   type PaxRule,
   type ProductDetail,
@@ -44,8 +45,10 @@ export const HB_CODE = "HOTELBEDS";
 export const HB_NAME = "Hotelbeds";
 const PHOTO_BASE = "https://photos.hotelbeds.com/giata/bigger/"; // ~800 px (cards)
 const PHOTO_BASE_XL = "https://photos.hotelbeds.com/giata/xl/"; // ~1024 px (galeria do hotel)
-const SEARCH_TTL = 10 * 60;
-const CONTENT_TTL = 30 * 24 * 3600;
+/** Disponibilidade reaproveitada da busca para o hotel e a cotação (a Hotelbeds não quer repetição). */
+const SEARCH_TTL = 20 * 60;
+/** A Hotelbeds recomenda atualizar o conteúdo pelo menos uma vez por semana. */
+const CONTENT_TTL = 7 * 24 * 3600;
 
 // ───────────────────────── Tipos da API ─────────────────────────
 
@@ -58,6 +61,8 @@ export type HbRate = {
   net: string;
   sellingRate?: string;
   hotelMandatory?: boolean;
+  /** Presente no modelo comissionado (preço final = sellingRate). */
+  commission?: string;
   rateComments?: string;
   rateCommentsId?: string;
   paymentType?: string;
@@ -92,8 +97,12 @@ export type HbHotel = {
 type AvailabilityRS = { hotels?: { hotels?: HbHotel[]; total?: number } };
 type CheckRateRS = { hotel?: HbHotel & { totalNet?: string | number; modificationPolicies?: { cancellation?: boolean; modification?: boolean } } };
 type BookingRS = { booking?: HbBooking };
+/** Hotel da disponibilidade sem a lista crua de quartos (as opções já montadas vão junto no cache). */
+type HbHotelLite = Pick<HbHotel, "code" | "name" | "categoryCode" | "categoryName" | "destinationName" | "zoneName" | "currency" | "paymentDataRequired">;
+export type HbHotelOffer = { hotel: HbHotelLite; options: HbOption[] };
 type HbBooking = {
   reference: string;
+  cancellationReference?: string;
   clientReference?: string;
   status?: string;
   creationDate?: string;
@@ -102,7 +111,7 @@ type HbBooking = {
   currency?: string;
   holder?: { name?: string; surname?: string };
   invoiceCompany?: { code?: string; name?: string; registrationNumber?: string };
-  hotel?: HbHotel & { supplier?: { name?: string; vatNumber?: string }; checkIn?: string; checkOut?: string };
+  hotel?: HbHotel & { supplier?: { name?: string; vatNumber?: string }; checkIn?: string; checkOut?: string; cancellationAmount?: string | number };
   modificationPolicies?: { cancellation?: boolean; modification?: boolean };
 };
 
@@ -237,6 +246,51 @@ function chargesNote(list: Charge[]): string | null {
   return `Pago direto no hotel: ${list.map((c) => `${c.label.toLowerCase().includes("resort") ? "taxa de resort" : c.label.toLowerCase().includes("city") ? "taxa municipal" : "taxas locais"} ${fmt(c)}`).join(" + ")}`;
 }
 
+/**
+ * Preço mínimo de venda: tarifa com hotelMandatory (modelo net) ou comissionada (preço final =
+ * sellingRate). Para cada quarto vale o sellingRate quando exigido; senão, o net.
+ */
+export function minSellPriceFor(o: Pick<HbOption, "rates" | "currency">): { currency: HbOption["currency"]; amount: string } | null {
+  const required = (r: HbRate) => !!r.sellingRate && Number(r.sellingRate) > 0 && (r.hotelMandatory === true || (r.commission != null && r.commission !== ""));
+  if (!o.rates.some(required)) return null;
+  const amount = o.rates.reduce((s, r) => s.plus(required(r) ? r.sellingRate! : r.net), new Decimal(0));
+  return { currency: o.currency, amount: amount.toFixed(2) };
+}
+
+const PROMO_PT: [RegExp, string][] = [
+  [/non-?refundable/i, "Tarifa não reembolsável — não permite alterações"],
+  [/early booking/i, "Desconto de compra antecipada"],
+  [/long stay/i, "Desconto de estadia longa"],
+  [/last minute/i, "Oferta de última hora"],
+  [/free night/i, "Noite grátis incluída"],
+];
+
+/** Avisos da opção: taxas no hotel, multa de cancelamento e promoções da tarifa. */
+export function optionNotes(o: Pick<HbOption, "rates" | "refundable" | "currency">): string[] {
+  const notes: string[] = [];
+  const charges = chargesNote(payAtHotel(o.rates));
+  if (charges) notes.push(charges);
+  const penalty = penaltyNote(o);
+  if (penalty) notes.push(penalty);
+  for (const name of new Set(o.rates.flatMap((r) => (r.promotions ?? []).map((p) => (p.name ?? "").trim())).filter(Boolean))) {
+    const pt = PROMO_PT.find(([re]) => re.test(name))?.[1];
+    if (pt && /não reembolsável/.test(pt) && !o.refundable) continue; // já aparece no selo de cancelamento
+    const text = pt ?? `Promoção da tarifa: ${name}`;
+    if (!notes.includes(text)) notes.push(text);
+  }
+  return notes;
+}
+
+/** "A partir de 29/12/2026 (horário do hotel), multa de cancelamento de USD 120,00" (1ª data, somando os quartos). */
+function penaltyNote(o: Pick<HbOption, "rates" | "refundable" | "currency">): string | null {
+  if (!o.refundable) return null;
+  const pols = o.rates.flatMap((r) => (r.cancellationPolicies ?? []).filter((c) => c.from && c.amount));
+  if (!pols.length) return null;
+  const first = pols.map((c) => c.from!.slice(0, 10)).sort()[0];
+  const amount = pols.filter((c) => c.from!.slice(0, 10) === first).reduce((s, c) => s.plus(c.amount!), new Decimal(0));
+  return `A partir de ${brDate(first)} (horário do hotel), multa de cancelamento de ${o.currency} ${amount.toNumber().toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 function roomsTitle(o: HbOption, pax: PaxConfig): string {
   const rooms = pax.rooms ?? 1;
   return rooms > 1 ? `${rooms}× ${o.roomName}` : o.roomName;
@@ -244,7 +298,7 @@ function roomsTitle(o: HbOption, pax: PaxConfig): string {
 
 // ───────────────────────── Adaptador ─────────────────────────
 
-type Content = { name: string; description: string; address: string; city: string; images: string[]; facilities: string[]; stars?: number };
+type Content = { name: string; description: string; address: string; city: string; images: string[]; facilities: string[]; stars?: number; phone?: string | null };
 
 export function createHotelbedsAdapter(cfg: HotelbedsConfig, opts: { transport?: Transport } = {}): SupplierAdapter & {
   client: HotelbedsClient;
@@ -279,18 +333,84 @@ export function createHotelbedsAdapter(cfg: HotelbedsConfig, opts: { transport?:
     await syncing;
   }
 
-  async function availability(body: Record<string, unknown>): Promise<HbHotel[]> {
-    const r = await client.booking<AvailabilityRS>("POST", "/hotels", body, 30_000);
-    return r.hotels?.hotels ?? [];
-  }
-
-  function availabilityBody(p: { destination?: string; hotels?: number[]; checkIn: string; checkOut: string; groups: OccGroup[] }) {
-    return {
+  /** UMA chamada de disponibilidade (por destino ou por hotel) → hotéis com as opções vendáveis. */
+  async function availability(p: { destination?: string; hotels?: number[]; checkIn: string; checkOut: string; groups: OccGroup[] }): Promise<HbHotelOffer[]> {
+    const body = {
       stay: { checkIn: p.checkIn, checkOut: p.checkOut },
       occupancies: occupanciesBody(p.groups),
       ...(p.hotels ? { hotels: { hotel: p.hotels } } : { destination: { code: p.destination } }),
-      filter: { maxRatesPerRoom: 20 },
+      // mercado de origem do cliente: preços válidos para o Brasil
+      sourceMarket: cfg.sourceMarket,
     };
+    const r = await client.booking<AvailabilityRS>("POST", "/hotels", body, 30_000);
+    return (r.hotels?.hotels ?? [])
+      .map((h) => ({
+        hotel: { code: h.code, name: h.name, categoryCode: h.categoryCode, categoryName: h.categoryName, destinationName: h.destinationName, zoneName: h.zoneName, currency: h.currency, paymentDataRequired: h.paymentDataRequired },
+        options: buildOptions(h, p.groups),
+      }))
+      .filter((x) => x.options.length);
+  }
+
+  const stayKeyOf = (checkIn: string, checkOut: string, pax: PaxConfig) => `${checkIn}:${checkOut}:${paxKey(pax)}`;
+
+  /**
+   * Ofertas do hotel SEM repetir disponibilidade: usa a busca do destino (ou a do próprio hotel) que
+   * ainda está no cache; só consulta a Hotelbeds se não houver nenhuma recente (nova sessão).
+   */
+  async function hotelOffers(productId: string, p: { checkIn: string; checkOut: string; pax: PaxConfig; groups: OccGroup[]; destination?: string; destinationKey?: string }): Promise<HbHotelOffer | null> {
+    const stayKey = stayKeyOf(p.checkIn, p.checkOut, p.pax);
+    const hotelKey = `hb:hotel:${productId}:${stayKey}`;
+    const own = await cacheGet<HbHotelOffer | null>(hotelKey);
+    if (own !== undefined) return own;
+    if (p.destination || p.destinationKey) {
+      const dest = await resolveDestination(p.destination, p.destinationKey).catch(() => null);
+      const codes = dest ? await supplierCodesFor(HB_CODE, dest).catch(() => [] as string[]) : [];
+      for (const code of codes) {
+        const list = await cacheGet<HbHotelOffer[]>(`hb:search:${code}:${stayKey}`);
+        const hit = list?.find((x) => String(x.hotel.code) === productId);
+        if (hit) {
+          await cacheSet(hotelKey, hit, SEARCH_TTL);
+          return hit;
+        }
+      }
+    }
+    return cached(hotelKey, SEARCH_TTL, async () => (await availability({ hotels: [Number(productId)], checkIn: p.checkIn, checkOut: p.checkOut, groups: p.groups }))[0] ?? null);
+  }
+
+  /** CheckRate de UMA tarifa por chamada (boa prática da Hotelbeds). Resultado reaproveitado por 20 min. */
+  async function checkRate(rate: HbRate, opts: { fresh?: boolean } = {}): Promise<{ rate: HbRate; paymentDataRequired: boolean; currency: string | null }> {
+    const run = async () => {
+      let r: CheckRateRS;
+      try {
+        r = await client.booking<CheckRateRS>("POST", "/checkrates", { rooms: [{ rateKey: rate.rateKey }], language: "ENG" }, 30_000);
+      } catch (e) {
+        // 500 = tarifa não está mais disponível; 4xx de negócio = mudou/esgotou (não repetir a mesma chamada)
+        if (e instanceof HotelbedsApiError && e.status !== 401 && e.status !== 403) throw new SupplierError("Este quarto acabou de esgotar ou mudou de preço. Escolha outra opção no hotel.");
+        throw e;
+      }
+      const h = r.hotel;
+      const n = (h?.rooms ?? []).flatMap((room) => room.rates ?? [])[0];
+      if (!h || !n) throw new SupplierError("O fornecedor não confirmou este quarto. Escolha outra opção.");
+      return { rate: { ...rate, ...n, taxes: n.taxes ?? rate.taxes, promotions: n.promotions ?? rate.promotions }, paymentDataRequired: h.paymentDataRequired === true, currency: h.currency ?? null };
+    };
+    return opts.fresh ? run() : cached(`hb:checkrate:${stableId(rate.rateKey)}`, SEARCH_TTL, run);
+  }
+
+  /** Comentários da tarifa (obrigatório mostrar antes de confirmar) pela Content API — sem CheckRate. */
+  async function rateComments(rate: HbRate, checkIn: string): Promise<string> {
+    if (rate.rateComments?.trim()) return rate.rateComments.trim();
+    if (!rate.rateCommentsId) return "";
+    return cached(
+      `hb:ratecomments:${rate.rateCommentsId}:${checkIn}:${cfg.language}`,
+      24 * 3600,
+      async () => {
+        const r = await client.content<{ rateComments?: { description?: string; dateStart?: string; dateEnd?: string }[] }>(
+          `/types/ratecommentdetails?date=${checkIn}&code=${encodeURIComponent(rate.rateCommentsId!)}&language=${encodeURIComponent(cfg.language)}&useSecondaryLanguage=true`,
+          20_000,
+        );
+        return [...new Set((r.rateComments ?? []).map((c) => (c.description ?? "").trim()).filter(Boolean))].join("\n\n");
+      },
+    ).catch(() => "");
   }
 
   /** Fotos de capa (1ª imagem geral) por hotel — cache por destino, busca só o que falta. */
@@ -329,7 +449,9 @@ export function createHotelbedsAdapter(cfg: HotelbedsConfig, opts: { transport?:
           category?: { code?: string; description?: { content?: string } };
           images?: HbImage[];
           facilities?: { description?: { content?: string }; indLogic?: boolean; indYesOrNo?: boolean; facilityGroupCode?: number; number?: number }[];
+          phones?: { phoneNumber?: string; phoneType?: string }[];
         };
+        const phone = (h.phones ?? []).find((p) => /hotel/i.test(p.phoneType ?? "")) ?? (h.phones ?? []).find((p) => /book/i.test(p.phoneType ?? "")) ?? h.phones?.[0];
         return {
           name: h.name?.content?.trim() ?? "",
           description: htmlToText(h.description?.content),
@@ -345,6 +467,7 @@ export function createHotelbedsAdapter(cfg: HotelbedsConfig, opts: { transport?:
               .map((f) => f.description!.content!.trim()),
           ),
           stars: parseStars(h.category?.code ?? h.category?.description?.content),
+          phone: phone?.phoneNumber?.trim() || null,
         };
       },
       { cacheIf: (v) => !!v.name },
@@ -370,7 +493,7 @@ export function createHotelbedsAdapter(cfg: HotelbedsConfig, opts: { transport?:
     ];
   }
 
-  function summary(h: HbHotel, options: HbOption[], image: string | null | undefined, destinationLabel: string, nights: number, pax: PaxConfig): ProductSummary {
+  function summary(h: HbHotelLite, options: HbOption[], image: string | null | undefined, destinationLabel: string, nights: number, pax: PaxConfig): ProductSummary {
     const best = options[0];
     const stars = parseStars(h.categoryCode ?? h.categoryName);
     const breakfast = options.some((o) => !["RO", "SC", "OB"].includes(o.boardCode));
@@ -390,35 +513,27 @@ export function createHotelbedsAdapter(cfg: HotelbedsConfig, opts: { transport?:
       currency: best.currency,
       lines: [stayLine(best, nights, pax)],
       groupKey: hotelGroupKey(h.name),
+      minSellPrice: minSellPriceFor(best),
+      stars,
+      perks: { breakfast, refundable },
+      area: zone,
     };
   }
 
-  async function freshOption(hotelCode: string, optionId: string, stay: { checkIn: string; checkOut: string }, groups: OccGroup[]) {
-    const hotels = await availability(availabilityBody({ hotels: [Number(hotelCode)], checkIn: stay.checkIn, checkOut: stay.checkOut, groups }));
-    const hotel = hotels.find((h) => String(h.code) === hotelCode);
-    const option = hotel ? buildOptions(hotel, groups).find((o) => o.optionId === optionId) : undefined;
-    return { hotel, option };
-  }
-
-  /** CheckRate: preço final e comentários da tarifa. Substitui as tarifas pelas devolvidas. */
-  async function checkRates(o: HbOption): Promise<{ option: HbOption; comments: string; paymentDataRequired: boolean; modification: { cancellation?: boolean; modification?: boolean } | null }> {
-    let r: CheckRateRS;
-    try {
-      r = await client.booking<CheckRateRS>("POST", "/checkrates", { rooms: o.rates.map((x) => ({ rateKey: x.rateKey })), language: "ENG" }, 30_000);
-    } catch (e) {
-      if (e instanceof HotelbedsApiError && e.status < 500 && e.status !== 401 && e.status !== 403) throw new SupplierError("Este quarto acabou de esgotar ou mudou de preço. Escolha outra opção no hotel.");
-      throw e;
+  /** Tarifas finais da opção: CheckRate só para RECHECK (1 por chamada); BOOKABLE vai direto. */
+  async function finalizeRates(o: HbOption, checkIn: string, fresh = false) {
+    let paymentDataRequired = false;
+    const rates: HbRate[] = [];
+    for (const r of o.rates) {
+      if (r.rateType === "RECHECK") {
+        const c = await checkRate(r, { fresh });
+        paymentDataRequired ||= c.paymentDataRequired;
+        rates.push(c.rate);
+      } else rates.push(r);
     }
-    const h = r.hotel;
-    const rates = (h?.rooms ?? []).flatMap((room) => room.rates ?? []);
-    if (!h || rates.length !== o.rates.length) throw new SupplierError("O fornecedor não confirmou este quarto. Escolha outra opção.");
-    const currency = asCurrency(h.currency) ?? o.currency;
-    const total = h.totalNet != null ? money2(h.totalNet) : money2(rates.reduce((s, x) => s.plus(x.net), new Decimal(0)).toFixed(2));
-    // mantém a ordem dos grupos: casa cada tarifa nova com a antiga pela ocupação
-    const ordered = o.rates.map((old) => rates.find((n) => n.rateKey === old.rateKey) ?? rates.find((n) => Number(n.adults) === Number(old.adults) && Number(n.children) === Number(old.children) && Number(n.rooms) === Number(old.rooms)) ?? old);
-    const merged = ordered.map((n, i) => ({ ...o.rates[i], ...n, taxes: n.taxes ?? o.rates[i].taxes }));
-    const comments = [...new Set(merged.map((x) => (x.rateComments ?? "").trim()).filter(Boolean))].join("\n\n");
-    return { option: { ...o, rates: merged, total, currency }, comments, paymentDataRequired: h.paymentDataRequired === true, modification: h.modificationPolicies ?? null };
+    const comments = (await Promise.all(rates.map((r) => rateComments(r, checkIn)))).filter(Boolean);
+    const total = money2(rates.reduce((s, r) => s.plus(r.net), new Decimal(0)).toFixed(2));
+    return { option: { ...o, rates, total }, comments: [...new Set(comments)].join("\n\n"), paymentDataRequired };
   }
 
   async function findBooking(item: BookItem): Promise<BookingResult | null> {
@@ -455,38 +570,33 @@ export function createHotelbedsAdapter(cfg: HotelbedsConfig, opts: { transport?:
       if (!dest) return [];
       const codes = await supplierCodesFor(HB_CODE, dest);
       if (!codes.length) return [];
-      const stayKey = `${checkIn}:${checkOut}:${paxKey(pax)}`;
+      const stayKey = stayKeyOf(checkIn, checkOut, pax);
       const perCode = await Promise.allSettled(
-        codes.map((code) =>
-          cached(`hb:search:${code}:${stayKey}`, SEARCH_TTL, async () => {
-            const hotels = await availability(availabilityBody({ destination: code, checkIn, checkOut, groups }));
-            return hotels.map((h) => ({ h, options: buildOptions(h, groups) })).filter((x) => x.options.length);
-          }),
-        ),
+        codes.map((code) => cached(`hb:search:${code}:${stayKey}`, SEARCH_TTL, () => availability({ destination: code, checkIn, checkOut, groups }))),
       );
-      const ok = perCode.filter((r): r is PromiseFulfilledResult<{ h: HbHotel; options: HbOption[] }[]> => r.status === "fulfilled");
+      const ok = perCode.filter((r): r is PromiseFulfilledResult<HbHotelOffer[]> => r.status === "fulfilled");
       if (!ok.length && perCode.length) throw (perCode[0] as PromiseRejectedResult).reason;
-      const byCode = new Map<number, { h: HbHotel; options: HbOption[] }>();
-      for (const x of ok.flatMap((r) => r.value)) if (!byCode.has(x.h.code)) byCode.set(x.h.code, x);
+      const byCode = new Map<number, HbHotelOffer>();
+      for (const x of ok.flatMap((r) => r.value)) if (!byCode.has(x.hotel.code)) byCode.set(x.hotel.code, x);
       const list = [...byCode.values()];
-      const thumbs = await thumbnails(codes.join(","), list.map((x) => x.h.code)).catch(() => ({}) as Record<string, string | null>);
-      return list.map((x) => summary(x.h, x.options, thumbs[String(x.h.code)], dest.label, nights, pax));
+      const thumbs = await thumbnails(codes.join(","), list.map((x) => x.hotel.code)).catch(() => ({}) as Record<string, string | null>);
+      return list.map((x) => summary(x.hotel, x.options, thumbs[String(x.hotel.code)], dest.label, nights, pax));
     },
 
     async getProduct(productId: string, params: SearchParams): Promise<ProductDetail | null> {
       if (!/^\d+$/.test(productId)) return null;
       const { pax, groups, checkIn, checkOut, nights } = defaults(params);
-      const [hotels, info] = await Promise.all([
-        cached(`hb:hotel:${productId}:${checkIn}:${checkOut}:${paxKey(pax)}`, 5 * 60, () => availability(availabilityBody({ hotels: [Number(productId)], checkIn, checkOut, groups }))),
+      const [offer, info] = await Promise.all([
+        hotelOffers(productId, { checkIn, checkOut, pax, groups, destination: params.destination, destinationKey: params.destinationKey }),
         content(productId),
       ]);
-      const h = hotels.find((x) => String(x.code) === productId);
-      if (!h && !info) return null;
-      const options = h ? buildOptions(h, groups) : [];
+      if (!offer && !info) return null;
+      const options = offer?.options ?? [];
+      const h = offer?.hotel;
       const destination = params.destination?.split(",")[0]?.trim() || (h?.destinationName ? parseCityName(h.destinationName, "HOTELBEDS").city : info?.city) || "";
       const name = h?.name ?? info?.name ?? "";
       const stars = parseStars(h?.categoryCode ?? h?.categoryName) ?? info?.stars;
-      const gallery = info?.images?.length ? info.images.slice(0, 30) : [];
+      const gallery = info?.images?.length ? info.images.slice(0, 40) : [];
       const base: ProductSummary =
         h && options.length
           ? summary(h, options, gallery[0], destination, nights, pax)
@@ -510,7 +620,8 @@ export function createHotelbedsAdapter(cfg: HotelbedsConfig, opts: { transport?:
               { label: "Cancelamento", value: cancellationText(o) },
             ],
             freeCancellationUntil: freeCancellationUntil(o),
-            notes: [chargesNote(payAtHotel(o.rates))].filter((x): x is string => !!x),
+            minSellPrice: minSellPriceFor(o),
+            notes: optionNotes(o),
             available: true,
           }),
         ),
@@ -519,6 +630,7 @@ export function createHotelbedsAdapter(cfg: HotelbedsConfig, opts: { transport?:
           ...(stars ? [{ label: "Categoria", value: `${stars.toLocaleString("pt-BR")} estrela${stars > 1 ? "s" : ""}` }] : []),
           { label: "Estadia", value: `${nights} noite${nights > 1 ? "s" : ""}` },
           { label: "Hóspedes", value: occupancyLabel(pax) },
+          ...(info?.phone ? [{ label: "Telefone do hotel", value: info.phone }] : []),
           { label: "Fornecedor", value: HB_NAME },
         ],
       };
@@ -529,21 +641,32 @@ export function createHotelbedsAdapter(cfg: HotelbedsConfig, opts: { transport?:
       const pax = normalizeHotelPax(req.pax);
       const groups = occupancyGroups(pax);
       const stay = validateStay(req.checkIn, req.checkOut);
-      const { hotel, option } = await freshOption(req.productId, req.optionId, stay, groups);
-      if (!hotel || !option) throw new SupplierError("Este quarto não está mais disponível para estas datas e hóspedes. Escolha outra opção no hotel.");
-      const checked = await checkRates(option);
-      const o = checked.option;
+      const offer = await hotelOffers(req.productId, { checkIn: stay.checkIn, checkOut: stay.checkOut, pax, groups });
+      const option = offer?.options.find((o) => o.optionId === req.optionId);
+      if (!offer || !option) throw new SupplierError("Este quarto não está mais disponível para estas datas e hóspedes. Escolha outra opção no hotel.");
+      let fin: Awaited<ReturnType<typeof finalizeRates>>;
+      try {
+        fin = await finalizeRates(option, stay.checkIn);
+      } catch (e) {
+        // esgotou no CheckRate: tira o quarto da página do hotel (sem nova disponibilidade)
+        if (e instanceof SupplierError && !(e instanceof SupplierIntegrationError)) {
+          const rest = { ...offer, options: offer.options.filter((x) => x.optionId !== req.optionId) };
+          await cacheSet(`hb:hotel:${req.productId}:${stayKeyOf(stay.checkIn, stay.checkOut, pax)}`, rest, SEARCH_TTL).catch(() => {});
+        }
+        throw e;
+      }
+      const o = fin.option;
       const info = await content(req.productId);
       const charges = payAtHotel(o.rates);
-      const sellingFloor = o.rates.every((r) => r.hotelMandatory && r.sellingRate) ? money2(o.rates.reduce((s, r) => s.plus(r.sellingRate!), new Decimal(0)).toFixed(2)) : null;
+      const paymentDataRequired = fin.paymentDataRequired || offer.hotel.paymentDataRequired === true;
       return {
         supplierCode: HB_CODE,
         category: "LODGING",
         productId: req.productId,
         optionId: req.optionId,
-        title: titleCase(hotel.name),
+        title: titleCase(offer.hotel.name),
         subtitle: `${roomsTitle(o, pax)} · ${boardLabel(o.boardCode, o.boardName)} · ${stay.nights} noite${stay.nights > 1 ? "s" : ""}`,
-        location: info?.address || (hotel.zoneName ? titleCase(hotel.zoneName) : null),
+        location: info?.address || (offer.hotel.zoneName ? titleCase(offer.hotel.zoneName) : null),
         imageUrl: info?.images[0] ?? null,
         serviceDate: stay.checkIn,
         serviceEndDate: stay.checkOut,
@@ -554,8 +677,11 @@ export function createHotelbedsAdapter(cfg: HotelbedsConfig, opts: { transport?:
         paxRules: paxRules(),
         details: {
           supplierHotelId: req.productId,
-          hotelName: titleCase(hotel.name),
+          hotelName: titleCase(offer.hotel.name),
+          hotelCategory: starsText(parseStars(offer.hotel.categoryCode ?? offer.hotel.categoryName)) || null,
           address: info?.address ?? null,
+          destinationName: offer.hotel.destinationName ? parseCityName(offer.hotel.destinationName, "HOTELBEDS").city : (info?.city ?? null),
+          hotelPhone: info?.phone ?? null,
           rooms: [roomsTitle(o, pax)],
           roomCode: o.roomCode,
           board: boardLabel(o.boardCode, o.boardName),
@@ -567,11 +693,12 @@ export function createHotelbedsAdapter(cfg: HotelbedsConfig, opts: { transport?:
           freeCancellationUntil: freeCancellationUntil(o),
           cancellationPolicies: o.rates.flatMap((r) => r.cancellationPolicies ?? []),
           payAtHotel: charges,
-          notes: [chargesNote(charges)].filter(Boolean),
-          remarks: checked.comments,
+          notes: optionNotes(o),
+          remarks: fin.comments,
           rateKeys: o.rates.map((r) => r.rateKey),
-          paymentDataRequired: checked.paymentDataRequired,
-          recommendedSellingPrice: sellingFloor,
+          rateTypes: o.rates.map((r) => r.rateType ?? "BOOKABLE"),
+          paymentDataRequired,
+          minSellPrice: minSellPriceFor(o),
           valuatedAt: new Date().toISOString(),
         },
         quoteRef: stableId(...o.rates.map((r) => r.rateKey)),
@@ -580,6 +707,10 @@ export function createHotelbedsAdapter(cfg: HotelbedsConfig, opts: { transport?:
 
     findBooking,
 
+    /**
+     * Reserva com as tarifas cotadas (fluxo Disponibilidade → CheckRate se RECHECK → Reserva, sem
+     * repetir disponibilidade). Só numa NOVA tentativa depois de falha é feita uma consulta nova.
+     */
     async book(item: BookItem, ctx: BookContext): Promise<BookingResult> {
       if (!item.optionId) throw new SupplierError("Reserva sem quarto definido");
       if (!item.reference) throw new SupplierIntegrationError("Reserva sem referência interna");
@@ -588,23 +719,35 @@ export function createHotelbedsAdapter(cfg: HotelbedsConfig, opts: { transport?:
       const stay = validateStay(item.serviceDate ?? undefined, item.serviceEndDate ?? undefined);
       const rooms = distributeRooms(pax);
       const guests = assignGuests(rooms, ctx.travelers, ctx.holder);
+      const d = (item.details ?? {}) as { rateKeys?: string[]; paymentDataRequired?: boolean };
 
       const existing = await findBooking(item);
       if (existing && existing.status !== "CANCELLED") return { ...existing, payload: { ...existing.payload, recoveredExisting: true } };
 
-      const { option } = await freshOption(item.productId, item.optionId, stay, groups);
-      if (!option) throw new SupplierError("O quarto vendido não está mais disponível no fornecedor");
-      let o = option;
-      if (o.rates.some((r) => r.rateType === "RECHECK")) o = (await checkRates(o)).option;
-      if (item.maxCost) {
-        if (item.maxCost.currency !== o.currency) throw new SupplierError(`O fornecedor mudou a moeda da tarifa (${o.currency})`);
-        if (new Decimal(o.total).gt(item.maxCost.amount)) throw new SupplierError(`O fornecedor aumentou o preço: ${o.currency} ${o.total} (vendido por ${item.maxCost.amount})`);
+      let rateKeys = Array.isArray(d.rateKeys) && d.rateKeys.length === groups.length && !ctx.retry ? d.rateKeys : null;
+      let paymentDataRequired = d.paymentDataRequired === true;
+      let expected: string | null = null;
+      if (!rateKeys) {
+        // nova tentativa: novo fluxo completo (uma disponibilidade + CheckRate se RECHECK)
+        const fresh = (await availability({ hotels: [Number(item.productId)], checkIn: stay.checkIn, checkOut: stay.checkOut, groups }))[0];
+        const option = fresh?.options.find((o) => o.optionId === item.optionId);
+        if (!fresh || !option) throw new SupplierError("O quarto vendido não está mais disponível no fornecedor");
+        const fin = await finalizeRates(option, stay.checkIn, true);
+        paymentDataRequired = fin.paymentDataRequired || fresh.hotel.paymentDataRequired === true;
+        if (item.maxCost) {
+          if (item.maxCost.currency !== fin.option.currency) throw new SupplierError(`O fornecedor mudou a moeda da tarifa (${fin.option.currency})`);
+          if (new Decimal(fin.option.total).gt(item.maxCost.amount)) throw new SupplierError(`O fornecedor aumentou o preço: ${fin.option.currency} ${fin.option.total} (vendido por ${item.maxCost.amount})`);
+        }
+        rateKeys = fin.option.rates.map((r) => r.rateKey);
+        expected = fin.option.total;
       }
+      if (paymentDataRequired) throw new SupplierError("Esta tarifa exige pagamento com cartão diretamente na Hotelbeds — emita pelo extranet da Hotelbeds");
+
       const holderName = splitName(ctx.holder?.name || ctx.travelers.find((t) => t.type !== "CHILD")?.name || "");
       const body = {
         holder: { name: holderName.first, surname: holderName.last },
         rooms: groups.map((g, gi) => ({
-          rateKey: o.rates[gi].rateKey,
+          rateKey: rateKeys![gi],
           paxes: g.roomIndexes.flatMap((ri, k) => [
             ...guests.adults[ri].map((a) => ({ roomId: k + 1, type: "AD", name: a.first, surname: a.last })),
             ...guests.children[ri].map((c) => ({ roomId: k + 1, type: "CH", age: c.age, name: c.first, surname: c.last })),
@@ -616,17 +759,47 @@ export function createHotelbedsAdapter(cfg: HotelbedsConfig, opts: { transport?:
       };
       let r: BookingRS;
       try {
+        // tempo mínimo de resposta exigido pela Hotelbeds: 60 s
         r = await client.booking<BookingRS>("POST", "/bookings", body, 75_000);
       } catch (e) {
-        if (e instanceof SupplierIntegrationError && (e.detail?.timeout || (e instanceof HotelbedsApiError && e.status >= 500))) {
+        if (e instanceof SupplierIntegrationError && e.detail?.timeout) {
           const again = await findBooking(item).catch(() => null);
           if (again) return { ...again, payload: { ...again.payload, recoveredAfterError: true } };
+          throw e;
+        }
+        if (e instanceof HotelbedsApiError && e.status >= 500) {
+          const again = await findBooking(item).catch(() => null);
+          if (again) return { ...again, payload: { ...again.payload, recoveredAfterError: true } };
+          // 500 = produto não está mais disponível: refazer o processo do começo (nunca repetir a mesma chamada)
+          throw new SupplierError(`A Hotelbeds recusou a tarifa (não está mais disponível${e.message ? `: ${e.message.replace(/^Hotelbeds [^:]*: /, "")}` : ""}). Use “Tentar de novo” para refazer a consulta.`);
         }
         throw e;
       }
       if (!r.booking?.reference) throw new SupplierIntegrationError("A Hotelbeds não devolveu a referência da reserva", { response: r as Record<string, unknown> });
       const res = bookingResult(r.booking);
-      return { ...res, payload: { ...res.payload, bookedPrice: o.total, currency: o.currency } };
+      const total = r.booking.totalNet != null ? String(r.booking.totalNet) : expected;
+      const above = !!(item.maxCost && total && new Decimal(total).gt(item.maxCost.amount));
+      return { ...res, payload: { ...res.payload, bookedPrice: total, currency: r.booking.currency ?? null, ...(above ? { costAboveSold: true } : {}) } };
+    },
+
+    cancelSimulation: true,
+
+    async cancelBooking(bookingRef: string, opts: { simulate: boolean }): Promise<CancelResult> {
+      const r = await client.booking<BookingRS>(
+        "DELETE",
+        `/bookings/${encodeURIComponent(bookingRef)}?cancellationFlag=${opts.simulate ? "SIMULATION" : "CANCELLATION"}&language=ENG`,
+        undefined,
+        75_000,
+      );
+      if (!r.booking) throw new SupplierIntegrationError("A Hotelbeds não devolveu a reserva cancelada");
+      const amount = r.booking.hotel?.cancellationAmount ?? null;
+      const res = bookingResult(r.booking);
+      return {
+        status: opts.simulate ? "SIMULATED" : res.status,
+        penalty: amount != null ? { amount: new Decimal(String(amount)).toFixed(2), currency: r.booking.currency ?? "" } : null,
+        reference: r.booking.cancellationReference ?? null,
+        payload: res.payload,
+      };
     },
 
     async bookingStatus(bookingRef: string): Promise<BookingResult> {

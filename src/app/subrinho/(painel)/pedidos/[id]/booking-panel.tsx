@@ -1,12 +1,12 @@
 /** Reserva no fornecedor (hotéis com API real): status, localizador e emissão controlada. */
-import { Building2, RefreshCw, Send } from "lucide-react";
+import { Ban, Building2, RefreshCw, Send } from "lucide-react";
 import { Alert, Badge, buttonClass } from "@/components/ui";
 import { ActionForm, Modal, SubmitButton } from "@/components/ui-client";
 import type { orderItems } from "@/server/db/schema";
 import { BOOKING_STATUS_LABEL } from "@/server/bookings/service";
 import { dateTime, money } from "@/lib/format";
 import { supplierName } from "../../../_lib/rules";
-import { issueBookingAction, refreshBookingAction } from "./actions";
+import { cancelBookingAction, issueBookingAction, refreshBookingAction } from "./actions";
 
 type Item = typeof orderItems.$inferSelect;
 
@@ -19,12 +19,16 @@ function tone(status: string | null): "success" | "warning" | "danger" | "info" 
   return "neutral";
 }
 
-export function SupplierBookingPanel({ item: i, live, orderPaid, canAct }: { item: Item; live: boolean; orderPaid: boolean; canAct: boolean }) {
+export function SupplierBookingPanel({ item: i, live, orderPaid, canAct, canSimulateCancel = false }: { item: Item; live: boolean; orderPaid: boolean; canAct: boolean; canSimulateCancel?: boolean }) {
   const p = (i.supplierPayload ?? {}) as Record<string, unknown>;
   const s = i.supplierStatus;
   const str = (k: string) => (typeof p[k] === "string" && (p[k] as string).trim() ? (p[k] as string) : null);
   const canIssue = live && orderPaid && canAct && CAN_ISSUE.has(s);
   const canRefresh = live && canAct && (!!i.supplierBookingRef || (!!str("reference") && s !== "AWAITING_ISSUE"));
+  const canCancel = live && canAct && !!i.supplierBookingRef && (s === "CONFIRMED" || s === "PENDING");
+  const det = (i.details ?? {}) as { cancellation?: string; notes?: string[]; nonRefundable?: boolean };
+  const voucher = p.voucher as { voucherUrl?: string | null; emergencyPhone?: string | null } | undefined;
+  const cancellation = p.cancellation as { at?: string; by?: string | null; penalty?: { amount: string; currency: string } | null } | undefined;
   return (
     <div className="rounded-xl border border-line p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -48,6 +52,22 @@ export function SupplierBookingPanel({ item: i, live, orderPaid, canAct }: { ite
             </p>
           )}
           {str("bookedPrice") && <p className="text-muted">Custo reservado: {money(str("bookedPrice")!, (str("currency") ?? i.costCurrency) as "USD")}</p>}
+          {p.costAboveSold === true && <p className="font-semibold text-red-700">Atenção: o custo confirmado ficou acima do custo vendido.</p>}
+          {voucher?.voucherUrl && (
+            <p>
+              <a href={voucher.voucherUrl} target="_blank" rel="noreferrer" className="font-semibold text-brand-ink underline">
+                Voucher oficial do fornecedor (PDF)
+              </a>
+              {voucher.emergencyPhone ? <span className="text-muted"> · emergência {voucher.emergencyPhone}</span> : null}
+            </p>
+          )}
+          {cancellation?.at && (
+            <p className="text-red-700">
+              Cancelada em {dateTime(new Date(cancellation.at))}
+              {cancellation.by ? ` por ${cancellation.by}` : ""}
+              {cancellation.penalty ? ` · multa ${cancellation.penalty.currency} ${cancellation.penalty.amount}` : ""}
+            </p>
+          )}
           {str("issuedAt") && (
             <p className="text-xs text-muted">
               Emitida em {dateTime(new Date(str("issuedAt")!))}
@@ -56,7 +76,7 @@ export function SupplierBookingPanel({ item: i, live, orderPaid, canAct }: { ite
             </p>
           )}
         </div>
-        {(canIssue || canRefresh) && (
+        {(canIssue || canRefresh || canCancel) && (
           <div className="flex flex-wrap gap-2">
             {canRefresh && (
               <ActionForm action={refreshBookingAction}>
@@ -66,6 +86,50 @@ export function SupplierBookingPanel({ item: i, live, orderPaid, canAct }: { ite
                   <RefreshCw className="h-3.5 w-3.5" aria-hidden /> Consultar no fornecedor
                 </SubmitButton>
               </ActionForm>
+            )}
+            {canCancel && (
+              <Modal
+                title="Cancelar reserva no fornecedor"
+                triggerClassName={buttonClass("danger", "sm")}
+                trigger={
+                  <>
+                    <Ban className="h-3.5 w-3.5" aria-hidden /> Cancelar reserva
+                  </>
+                }
+              >
+                <div className="space-y-4">
+                  <Alert tone="warning" title="Cancelamento real no fornecedor">
+                    A reserva <strong className="font-mono">{i.supplierBookingRef}</strong> será cancelada na <strong>{supplierName(i.supplierCode)}</strong>. Pode haver multa
+                    conforme a política da tarifa. O estorno ao cliente é feito pelo financeiro.
+                  </Alert>
+                  <div className="rounded-xl bg-surface p-3 text-sm">
+                    <p className="font-semibold text-ink">Política vendida ao cliente</p>
+                    <p className="mt-1 text-muted">{det.cancellation ?? (det.nonRefundable ? "Não reembolsável" : "Consulte a política da tarifa")}</p>
+                    {det.notes?.filter((n) => /multa|reembols/i.test(n)).map((n) => (
+                      <p key={n} className="mt-1 text-muted">
+                        {n}
+                      </p>
+                    ))}
+                  </div>
+                  {canSimulateCancel && (
+                    <ActionForm action={cancelBookingAction}>
+                      <input type="hidden" name="itemId" value={i.id} />
+                      <input type="hidden" name="orderId" value={i.orderId} />
+                      <input type="hidden" name="simulate" value="1" />
+                      <SubmitButton variant="outline" pendingText="Consultando a multa…">
+                        Consultar a multa agora (sem cancelar)
+                      </SubmitButton>
+                    </ActionForm>
+                  )}
+                  <ActionForm action={cancelBookingAction}>
+                    <input type="hidden" name="itemId" value={i.id} />
+                    <input type="hidden" name="orderId" value={i.orderId} />
+                    <SubmitButton variant="danger" pendingText="Cancelando no fornecedor…">
+                      Confirmar cancelamento
+                    </SubmitButton>
+                  </ActionForm>
+                </div>
+              </Modal>
             )}
             {canIssue && (
               <Modal

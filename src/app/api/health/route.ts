@@ -6,6 +6,7 @@
 import { sql } from "drizzle-orm";
 import { getDb, resolveDatabaseUrl } from "@/server/db";
 import { hotelIntegrations, testHotelIntegration } from "@/server/suppliers/hotels/admin";
+import { getCurrentFx } from "@/server/fx";
 
 type Check = { ok: boolean; detalhe: string; o_que_fazer?: string };
 
@@ -95,8 +96,31 @@ export async function GET(request: Request) {
     }
   }
 
+  // Câmbio usado nos preços (crítico com fornecedores reais em dólar/euro)
+  let cambio: Record<string, unknown> | undefined;
+  if (checks.tabelas?.ok) {
+    try {
+      const fx = await getCurrentFx(getDb());
+      const provider = process.env.FX_PROVIDER?.trim() || "manual";
+      const ages = Object.values(fx).map((r) => (Date.now() - new Date(r!.fetchedAt).getTime()) / 3_600_000);
+      const oldest = ages.length ? Math.max(...ages) : Infinity;
+      cambio = {
+        provedor: provider,
+        cotacoes: Object.fromEntries(Object.entries(fx).map(([c, r]) => [c, `${r!.rate} (${r!.source}, ${new Date(r!.fetchedAt).toISOString()})`])),
+        ...(oldest > 24
+          ? {
+              atencao: `Cotação com mais de ${Math.floor(oldest)} h${provider === "manual" ? " (modo manual)" : ""} — os preços em dólar/euro usam esse valor.`,
+              o_que_fazer: provider === "manual" ? "Atualize a cotação no Painel Subrinho → Câmbio todo dia, ou defina FX_PROVIDER=awesomeapi (ou poolvo) na Vercel." : "Confira se o provedor de câmbio está respondendo (Painel Subrinho → Câmbio).",
+            }
+          : {}),
+      };
+    } catch {
+      cambio = undefined;
+    }
+  }
+
   const ok = Object.values(checks).every((c) => c.ok);
-  return new Response(JSON.stringify({ status: ok ? "tudo certo" : "atenção", ambiente: process.env.VERCEL_ENV ?? "local", checks, hoteis }, null, 2), {
+  return new Response(JSON.stringify({ status: ok ? "tudo certo" : "atenção", ambiente: process.env.VERCEL_ENV ?? "local", checks, cambio, hoteis }, null, 2), {
     status: ok ? 200 : 503,
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
   });

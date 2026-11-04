@@ -3,8 +3,10 @@
  * funciona em QUALQUER estado do banco (vazio, só com tabelas, parcialmente ou já instalado):
  *  - cria tipos/tabelas/índices/colunas que faltarem (sem erro se já existirem);
  *  - registra as migrações (os deploys na Vercel não tentam recriar nada);
- *  - insere os dados de exemplo ignorando o que já existir (ON CONFLICT DO NOTHING) — sem sessões,
- *    sem cache de fornecedores e sem a lista de destinos (baixada pela própria aplicação);
+ *  - insere fornecedores/configurações/feriados que faltarem (chave natural, ON CONFLICT DO NOTHING);
+ *  - insere os dados de exemplo SÓ num banco sem lojas/usuários/pedidos (os IDs do seed mudam a
+ *    cada geração; num banco em uso nada é misturado) — sem sessões, sem cache de fornecedores e
+ *    sem a lista de destinos (baixada pela própria aplicação);
  *  - ajusta as sequências e mostra uma contagem no final.
  *
  * Uso: npm run db:reset (banco local com o seed) && npm run neon:sql
@@ -48,17 +50,30 @@ for (const e of journal.entries) {
 
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error("DATABASE_URL não definida (banco local com o seed)");
-const dump = execFileSync(
-  "pg_dump",
-  ["--dbname", url, "--schema=public", "--data-only", "--no-owner", "--no-privileges", "--column-inserts", "--rows-per-insert=200", "--on-conflict-do-nothing", "--exclude-table=public.sessions", "--exclude-table-data=public.hotel_destinations", "--exclude-table-data=public.supplier_cache"],
-  { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
+/** Tabelas de referência com chave natural (código/data/chave): entram sempre, sem duplicar. */
+const BASE_TABLES = ["suppliers", "settings", "holidays"];
+const pgDump = (args: string[]) =>
+  execFileSync("pg_dump", ["--dbname", url, "--schema=public", "--data-only", "--no-owner", "--no-privileges", "--column-inserts", "--rows-per-insert=200", "--on-conflict-do-nothing", ...args], {
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+  });
+const clean = (dump: string) =>
+  dump
+    .split("\n")
+    .filter((l) => !l.startsWith("\\") && !/^SET |^SELECT pg_catalog\.set_config|^SELECT pg_catalog\.setval/.test(l))
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+const baseData = clean(pgDump(BASE_TABLES.map((t) => `--table=public.${t}`)));
+const sampleData = clean(
+  pgDump([
+    "--exclude-table=public.sessions",
+    "--exclude-table-data=public.hotel_destinations",
+    "--exclude-table-data=public.supplier_cache",
+    ...BASE_TABLES.map((t) => `--exclude-table-data=public.${t}`),
+  ]),
 );
-const data = dump
-  .split("\n")
-  .filter((l) => !l.startsWith("\\") && !/^SET |^SELECT pg_catalog\.set_config|^SELECT pg_catalog\.setval/.test(l))
-  .join("\n")
-  .replace(/\n{3,}/g, "\n\n")
-  .trim();
+if (sampleData.includes("$seed$")) throw new Error("Os dados de exemplo contêm o delimitador $seed$");
 
 const sequences: [string, string, string][] = [
   ["cart_views_id_seq", "cart_views", "id"],
@@ -96,10 +111,23 @@ CREATE SCHEMA IF NOT EXISTS drizzle;
 CREATE TABLE IF NOT EXISTS drizzle.__drizzle_migrations (id SERIAL PRIMARY KEY, hash text NOT NULL, created_at bigint);
 ${migrationRows.join("\n")}
 
--- ───────── 3. Dados de exemplo (o que já existir é ignorado) ─────────
-${data}
+-- ───────── 3. Dados de referência (fornecedores, configurações, feriados — o que existir é mantido) ─────────
+${baseData}
 
--- ───────── 4. Sequências ─────────
+-- ───────── 4. Dados de exemplo — SÓ num banco sem lojas e sem usuários ─────────
+-- (num banco já em uso, nada é inserido: os dados reais nunca se misturam com os de exemplo)
+DO $seed$
+BEGIN
+  IF EXISTS (SELECT 1 FROM public.affiliates) OR EXISTS (SELECT 1 FROM public.subrinho_users) OR EXISTS (SELECT 1 FROM public.orders) THEN
+    RAISE NOTICE 'Banco já em uso: dados de exemplo não foram inseridos (estrutura atualizada).';
+    RETURN;
+  END IF;
+
+${sampleData}
+END
+$seed$;
+
+-- ───────── 5. Sequências ─────────
 ${sequences.map(([seq, table, col]) => `SELECT setval('public.${seq}', COALESCE((SELECT max(${col}) FROM public.${table}), 0) + 1, false);`).join("\n")}
 
 COMMIT;

@@ -195,7 +195,7 @@ export function computeCoupon(c: CouponDef, items: CouponItem[]): CouponResult {
     total,
     limitedByMargin: total.lt(requested),
     allocations,
-    notApplied: total.isZero() ? "Não há margem disponível para aplicar o desconto" : undefined,
+    notApplied: total.isZero() ? "Este cupom não tem desconto disponível para os itens deste carrinho" : undefined,
   };
 }
 

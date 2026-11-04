@@ -149,4 +149,27 @@ A visão do afiliado é montada por **lista branca** de campos (`getOrderForAffi
   resolver. Com pagamento simulado nunca há emissão automática.
 - **Vitrine:** numa categoria com fornecedor real, os fornecedores simulados saem da vitrine (o cliente nunca vê um
   hotel fictício ao lado de um real).
+- **Preço mínimo de venda (Hotelbeds):** quando a tarifa traz `sellingRate` com `hotelMandatory=true`, esse valor
+  é o piso de venda. O motor calcula o preço normal; se ficar abaixo do piso, **só a margem Subrinho sobe** — o mínimo
+  necessário para o Pix alcançar o piso (`subrinhoPctForFloor` em `src/server/pricing/engine.ts`). A margem do
+  afiliado (inclusive a alterada no checkout) e os cupons nunca levam o preço abaixo do piso: o desconto é limitado
+  à folga até ele. O pedido grava o piso usado (`details.priceFloor`). Testes: `tests/price-floor.test.ts`.
+- **Hotelbeds — fluxo certificado:** 1 disponibilidade por estadia (página do hotel e cotação reaproveitam a busca);
+  *CheckRate* somente da tarifa `RECHECK`, uma por chamada; comentários da tarifa exibidos antes do pagamento;
+  `sourceMarket=BR`; tarifas de pagamento no hotel e de pacote ficam fora. Erro 500 na reserva = tarifa não está mais
+  disponível → a equipe usa “Tentar de novo”, que refaz o fluxo do começo e só reserva se o custo não passar do vendido.
+- **Pedido especial:** campo opcional no checkout (ex.: “chegada após 22h”), gravado em `orders.special_requests`,
+  enviado ao hotel junto com a reserva e mostrado no pedido, no voucher e no Painel Subrinho — sempre como
+  “sujeito à disponibilidade”.
+- **Voucher:** disponível no pedido para cada hospedagem confirmada (imprimir/salvar PDF). Mostra hotel, endereço,
+  telefone, datas, quarto, regime, localizadores (fornecedor, hotel e agência), hóspedes por quarto, observações da
+  tarifa e, na Hotelbeds, o texto obrigatório *“Payable through …, acting as agent for the service operating company,
+  details of which can be provided upon request. VAT: … Reference: …”*. Não mostra preço.
+- **Cancelamento no fornecedor:** no Painel Subrinho (item do pedido). Antes de confirmar, o sistema simula a multa
+  no fornecedor (Hotelbeds `cancellationFlag=SIMULATION`); o cancelamento é registrado na linha do tempo. O estorno ao
+  cliente segue a política da tarifa e é tratado no gateway de pagamento.
+- **Quarto esgotado na hora de reservar:** a mensagem orienta escolher outra opção e oferece “Atualizar opções”; o
+  quarto esgotado sai da página do hotel sem nova busca no fornecedor.
+- **Câmbio desatualizado:** com `FX_PROVIDER=manual`, a cotação precisa ser atualizada no Painel Subrinho. Se a
+  mais recente tiver mais de 24 h, o Painel mostra um alerta na Visão geral e o `/api/health` avisa.
 

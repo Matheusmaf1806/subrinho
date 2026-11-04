@@ -140,6 +140,19 @@ export default async function CheckoutPage({ params }: { params: Promise<{ slug:
 
               <Step n={4} title="Viajantes">
                 <TravelerFields adults={travelerAdults} childAges={travelerChildAges} hotel={hotelItems.length > 0} firstName={viewer.kind === "CUSTOMER" ? viewer.customer.name : undefined} />
+                {hotelItems.length > 0 && (
+                  <label className="mt-4 block">
+                    <span className={lab}>Pedido especial ao hotel (opcional)</span>
+                    <textarea
+                      name="specialRequests"
+                      maxLength={500}
+                      rows={2}
+                      placeholder="Ex.: chegada após as 22h, cama de casal, andar alto…"
+                      className="block w-full rounded-2xl border-0 bg-surface px-4 py-3 text-[15px] text-ink ring-1 ring-inset ring-transparent placeholder:text-muted/70 focus:ring-2 focus:ring-ink"
+                    />
+                    <span className="mt-1 block text-xs text-muted">Repassamos ao hotel junto com a reserva. Pedidos especiais dependem de disponibilidade e não são garantidos.</span>
+                  </label>
+                )}
               </Step>
 
               <Step n={5} title="Pagamento">

@@ -162,8 +162,10 @@ login do painel: marina@solemar.com.br / afiliado123).
 | API | GoGlobal (SOAP/XML), `src/server/suppliers/ggt/` | APItude (JSON) com **mTLS**, `src/server/suppliers/hotelbeds/` |
 | Busca | por cidade (uma consulta por área, em paralelo) | por destino + fotos da Content API |
 | Hotel | disponibilidade do hotel + descrição/fotos em português | disponibilidade + Content API (descrição, fotos, comodidades) |
-| Cotação (ao reservar e no checkout) | busca de novo + *valuation* | busca de novo + *checkrate* |
-| Reserva | `BOOKING_INSERT` | `POST /bookings` |
+| Cotação (ao reservar e no checkout) | busca de novo + *valuation* | reaproveita a disponibilidade + *CheckRate* só da tarifa `RECHECK` |
+| Reserva | `BOOKING_INSERT` | `POST /bookings` (timeout de 60 s; procura antes pela nossa referência) |
+| Voucher / cancelamento | `VOUCHER_DETAILS` / `BOOKING_CANCEL` | dados da reserva + texto *Payable through* / `DELETE` com simulação da multa |
+| Ambiente | produção (credenciais da agência) | produção (`api-mtls.hotelbeds.com`), `sourceMarket=BR` |
 
 **Como funciona na loja:** o campo Destino sugere cidades (destinos populares em português + as listas oficiais
 dos fornecedores, baixadas sozinhas na primeira busca e atualizáveis no Painel Subrinho). Hóspedes: quartos,
@@ -175,6 +177,22 @@ aparecem as observações da tarifa; no checkout é pedido **nome e sobrenome de
 clica em **Emitir reserva** no pedido (Painel Subrinho). Antes de reservar, o sistema procura uma reserva já feita
 com a nossa referência (`SUB<pedido>-<item>`) — **nunca reserva duas vezes** — e **não reserva se o fornecedor pedir
 mais que o custo vendido**. Com `SUPPLIER_BOOKING=auto` e gateway de pagamento real, a emissão é automática.
+
+**Regras de certificação da Hotelbeds seguidas:** uma disponibilidade por estadia (a página do hotel e a cotação
+reaproveitam a busca); *CheckRate* só quando a tarifa é `RECHECK`, uma tarifa por chamada; comentários da tarifa
+mostrados antes de pagar; **preço mínimo de venda** (`sellingRate` com `hotelMandatory`) respeitado pelo motor de
+preço — a margem Subrinho sobe o mínimo necessário e cupons/margem do afiliado nunca vendem abaixo dele; tarifas
+“pagamento no hotel” e de pacote ficam fora (decisão comercial — **informe a Hotelbeds**); erro 500 = tarifa não
+disponível → recomeçar o fluxo (“Tentar de novo”), nunca repetir a mesma chamada; voucher com o texto obrigatório
+*“Payable through … acting as agent … VAT … Reference …”*.
+
+**Depois da reserva:** o cliente vê **“Ver voucher”** no pedido (imprimível/PDF, sem preço, com localizadores,
+hóspedes por quarto, regime, observações e o pedido especial). O pedido especial digitado no checkout vai para o
+hotel junto com a reserva. No Painel Subrinho, cada item tem **Atualizar status**, **Cancelar** (com simulação
+da multa antes de confirmar) e o histórico completo na linha do tempo.
+
+**Quarto que esgota na hora:** a loja mostra a mensagem com **“Atualizar opções”** e o quarto esgotado sai da
+página do hotel, sem gastar uma nova busca no fornecedor.
 
 **Diagnóstico:** Painel Subrinho → Fornecedores (modo de cada fornecedor, validade do certificado, “Testar conexão”,
 “Atualizar destinos”) e `GET /api/health?fornecedores` (testa as conexões, somente leitura).

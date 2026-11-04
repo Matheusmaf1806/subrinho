@@ -3,12 +3,13 @@ import { BadgeCheck, Info } from "lucide-react";
 import { db } from "@/server/db";
 import { getProductDetail } from "@/server/catalog";
 import { Badge } from "@/components/ui";
-import { date, paxSummary } from "@/lib/format";
+import { brl, date, paxSummary } from "@/lib/format";
 import { daysBetween } from "@/lib/tz";
 import { getStore, getStorePricing } from "../../../_lib/store";
 import { lodgingQuery, parseSearch, supplierParams } from "../../../_components/search-params";
 import { ProductHero } from "../../../_components/product-hero";
 import { LodgingSearch } from "../../../_components/search-forms";
+import { MobileSearchToggle } from "../../../_components/search-toggle";
 import { AddToCartForm } from "../../../_components/add-to-cart";
 import { PriceTag } from "../../../_components/price-tag";
 import { addToCartAction } from "../../../actions";
@@ -37,13 +38,24 @@ export default async function HotelDetail({
   const base = `/loja/${slug}/hospedagem`;
   const pax = paxSummary({ rooms: d.quartos, adults: d.adultos, children: d.criancas });
   const ages = d.criancas ? d.idades.slice(0, d.criancas) : [];
+  const cheapest = p.options
+    .filter((o) => o.available && o.price)
+    .reduce<(typeof p.options)[number] | null>((min, o) => (!min || o.price!.pix.lt(min.price!.pix) ? o : min), null);
 
   return (
     <main className="mx-auto max-w-[1440px] space-y-14 px-4 py-8 sm:px-8">
       <ProductHero
         p={p}
         back={{ href: `${base}?${lodgingQuery(d)}`, label: "Voltar para hotéis" }}
-        cta={p.options.length ? { href: "#quartos", label: `Ver ${p.options.length} opç${p.options.length > 1 ? "ões" : "ão"} de quarto` } : undefined}
+        cta={
+          p.options.length
+            ? {
+                href: "#quartos",
+                label: `Ver ${p.options.length} opç${p.options.length > 1 ? "ões" : "ão"} de quarto`,
+                note: cheapest?.price ? `a partir de ${brl(cheapest.price.pix)} no Pix · ${nights} noite${nights > 1 ? "s" : ""}` : undefined,
+              }
+            : undefined
+        }
       />
       <section id="quartos" className="scroll-mt-28">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
@@ -55,7 +67,11 @@ export default async function HotelDetail({
             </p>
           </div>
         </div>
-        <LodgingSearch action={`${base}/${supplier}/${productId}`} d={{ ...d, destino: d.destino || p.destination }} destinations={[p.destination]} minDate={minDate} className="mb-6" />
+        <div className="mb-6">
+          <MobileSearchToggle summary="Alterar datas ou hóspedes" detail={`${date(d.checkin)} a ${date(d.checkout)} · ${pax}`}>
+            <LodgingSearch action={`${base}/${supplier}/${productId}`} d={{ ...d, destino: d.destino || p.destination }} destinations={[p.destination]} minDate={minDate} />
+          </MobileSearchToggle>
+        </div>
         {p.options.length === 0 ? (
           <div className="rounded-[2rem] bg-surface p-8 text-center">
             <p className="text-xl font-semibold tracking-[-0.03em] text-ink">Sem quartos disponíveis para estas datas e hóspedes.</p>
@@ -97,7 +113,15 @@ export default async function HotelDetail({
                     )}
                   </div>
                   <div className="flex flex-col items-stretch gap-3 sm:items-end">
-                    {o.price && <PriceTag pix={o.price.pix} plan={o.price.plan} size="sm" note={`total da estadia · ${nights} noite${nights > 1 ? "s" : ""}`} className="sm:text-right" />}
+                    {o.price && (
+                      <PriceTag
+                        pix={o.price.pix}
+                        plan={o.price.plan}
+                        size="sm"
+                        note={`total da estadia · ${nights} noite${nights > 1 ? "s" : ""}${nights > 1 ? ` · ≈ ${brl(Number(o.price.pix.div(nights).toFixed(0)))}/noite` : ""}`}
+                        className="sm:text-right"
+                      />
+                    )}
                     {o.available && o.price && (
                       <AddToCartForm
                         action={add}

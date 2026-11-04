@@ -35,6 +35,9 @@ export type SearchParams = {
   pax?: Partial<PaxConfig>;
 };
 
+/** Preço mínimo de venda exigido pelo fornecedor (na moeda dele). */
+export type MinSellPrice = { currency: Currency; amount: string };
+
 export type OfferOption = {
   optionId: string;
   title: string;
@@ -46,6 +49,8 @@ export type OfferOption = {
   notes?: string[];
   /** Cancelamento grátis até esta data (yyyy-mm-dd); null = não reembolsável. */
   freeCancellationUntil?: string | null;
+  /** Não vender abaixo deste valor (ex.: Hotelbeds hotelMandatory / tarifa comissionada). */
+  minSellPrice?: MinSellPrice | null;
   available: boolean;
 };
 
@@ -66,6 +71,13 @@ export type ProductSummary = {
   lines: PriceLine[];
   /** Identidade do produto entre fornecedores (ex.: mesmo hotel em 2 fornecedores) */
   groupKey?: string;
+  /** Preço mínimo de venda da opção mais barata (quando o fornecedor exige). */
+  minSellPrice?: MinSellPrice | null;
+  /** Hotéis: estrelas e diferenciais (filtros da listagem). */
+  stars?: number;
+  perks?: { breakfast: boolean; refundable: boolean };
+  /** Hotéis: bairro/área (selo do card). */
+  area?: string | null;
 };
 
 export type ProductDetail = ProductSummary & {
@@ -127,6 +139,8 @@ export type BookItem = {
 };
 
 export type BookContext = {
+  /** Nova tentativa depois de falha: refaz a consulta no fornecedor em vez de usar a cotação gravada. */
+  retry?: boolean;
   travelers: PersonData[];
   /** Quem responde pela reserva (pagador/cliente). */
   holder?: PersonData | null;
@@ -138,6 +152,14 @@ export type BookContext = {
  * CONFIRMED (confirmada), PENDING (pedido recebido, aguardando confirmação), REJECTED, CANCELLED.
  */
 export type BookingResult = { bookingRef: string; status: string; payload: Record<string, unknown> };
+
+/** Cancelamento no fornecedor (simulação mostra a multa sem cancelar). */
+export type CancelResult = {
+  status: string;
+  penalty: { amount: string; currency: string } | null;
+  reference: string | null;
+  payload: Record<string, unknown>;
+};
 
 export class SupplierError extends Error {}
 
@@ -168,6 +190,12 @@ export interface SupplierAdapter {
   bookingStatus?(bookingRef: string): Promise<BookingResult>;
   /** Procura uma reserva feita com a nossa referência (evita reservar duas vezes). */
   findBooking?(item: BookItem): Promise<BookingResult | null>;
+  /** Cancela a reserva no fornecedor (ou simula, quando suportado, para mostrar a multa). */
+  cancelBooking?(bookingRef: string, opts: { simulate: boolean }): Promise<CancelResult>;
+  /** O fornecedor consegue simular a multa antes de cancelar? */
+  cancelSimulation?: boolean;
+  /** Dados oficiais do voucher no fornecedor (ex.: link do PDF), quando houver. */
+  voucher?(bookingRef: string): Promise<Record<string, unknown> | null>;
 }
 
 export const CATEGORY_LABEL: Record<Category, string> = {

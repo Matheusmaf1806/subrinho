@@ -16,6 +16,11 @@
  *
  * Descontos (cupons) entram DEPOIS da formação do preço e saem da margem da camada que
  * emitiu o cupom (Subrinho ou Afiliado), nunca deixando essa margem negativa.
+ *
+ * Preço mínimo de venda (ex.: Hotelbeds "hotelMandatory"/tarifa comissionada): quando o fornecedor
+ * exige vender a partir de um valor, a margem Subrinho do item sobe só o necessário para o PIX
+ * (NET Afiliado) não ficar abaixo do piso — a fórmula continua a mesma, só muda a porcentagem — e os
+ * cupons não podem baixar o preço abaixo dele.
  */
 import type { Currency } from "@/server/db/schema";
 import { Decimal, type DecimalInput, d, grossUp, round2, round4, sum, ZERO, HUNDRED } from "./money";
@@ -110,6 +115,32 @@ export function priceItem(input: ItemPricingInput): ItemPricing {
     installmentFeePct,
     installmentPrice,
   };
+}
+
+/**
+ * Menor margem Subrinho (pontos percentuais, 4 casas) que faz o NET Afiliado (PIX sem desconto)
+ * alcançar `floorBrl`, nunca abaixo de `minPct` (a margem da regra). Considera os arredondamentos
+ * de cada etapa (confere e ajusta de 0,0001 em 0,0001 pp).
+ */
+export function subrinhoPctForFloor(input: Omit<ItemPricingInput, "subrinhoMarginPct">, minPct: DecimalInput, floorBrl: DecimalInput): Decimal {
+  const floor = round2(floorBrl);
+  const min = d(minPct);
+  const at = (pct: Decimal) => priceItem({ ...input, subrinhoMarginPct: pct });
+  const base = at(min);
+  if (base.netAffiliate.gte(floor)) return min;
+  // NET Afiliado = custo / (1 − ms) / (1 − ma) ≥ piso  →  ms ≥ 1 − custo / ((1 − ma) × piso)
+  const oneMinusMa = new Decimal(1).minus(d(input.affiliateMarginPct).div(HUNDRED));
+  let pct = new Decimal(1).minus(base.costBrl.div(oneMinusMa.times(floor))).times(HUNDRED).toDecimalPlaces(4, Decimal.ROUND_UP);
+  if (pct.lt(min)) pct = min;
+  for (let i = 0; i < 1000 && at(pct).netAffiliate.lt(floor); i++) pct = pct.plus("0.0001");
+  if (pct.gte(100) || at(pct).netAffiliate.lt(floor)) throw new PricingError("Não foi possível atingir o preço mínimo de venda do fornecedor");
+  // menor porcentagem que ainda atinge o piso (os arredondamentos podem deixar folga)
+  for (let i = 0; i < 1000; i++) {
+    const lower = pct.minus("0.0001");
+    if (lower.lt(min) || at(lower).netAffiliate.lt(floor)) break;
+    pct = lower;
+  }
+  return pct;
 }
 
 /** Margem "por dentro" efetiva: lucro / preço de venda da camada, em pontos percentuais. */

@@ -47,7 +47,7 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
 
       {order.status === "PAID" && (
         <Alert tone="success" title="Tudo certo com a sua compra">
-          <CircleCheck className="mr-1 inline h-4 w-4" /> Pago em {dateTime(order.paidAt)}. Você receberá os vouchers por e-mail ({order.customerData.email}).
+          <CircleCheck className="mr-1 inline h-4 w-4" /> Pago em {dateTime(order.paidAt)}. Os vouchers ficam disponíveis nesta página assim que cada reserva for confirmada.
         </Alert>
       )}
 
@@ -102,7 +102,16 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
                   {paxSummary(i.pax)}
                 </p>
                 {i.supplierStatus === "CONFIRMED" && i.supplierBookingRef ? (
-                  <p className="mt-1 text-xs font-semibold text-success">Reserva confirmada · localizador {i.supplierBookingRef}</p>
+                  <p className="mt-1 flex flex-wrap items-center gap-2 text-xs font-semibold text-success">
+                    Reserva confirmada · localizador {i.supplierBookingRef}
+                    {i.category === "LODGING" && (
+                      <a href={`/loja/${slug}/pedido/${order.id}/voucher/${i.id}`} className="rounded-full bg-ink px-3 py-1 text-[11px] font-semibold text-white hover:bg-ink-2">
+                        Ver voucher
+                      </a>
+                    )}
+                  </p>
+                ) : i.supplierStatus === "CANCELLED" ? (
+                  <p className="mt-1 text-xs font-semibold text-red-700">Reserva cancelada</p>
                 ) : order.status === "PAID" ? (
                   <p className="mt-1 text-xs font-semibold text-muted">Reserva em processamento — você recebe a confirmação em breve</p>
                 ) : null}
@@ -155,6 +164,12 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
                 </li>
               ))}
             </ul>
+            {order.specialRequests && (
+              <p className="mt-4 rounded-2xl bg-surface px-4 py-3 text-[13px] text-ink/80">
+                <span className="font-semibold text-ink">Pedido especial ao hotel:</span> {order.specialRequests}
+                <span className="block text-muted">Sujeito à disponibilidade do hotel.</span>
+              </p>
+            )}
           </CardBody>
         </Card>
       )}

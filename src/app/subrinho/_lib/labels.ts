@@ -60,6 +60,7 @@ export const EVENT_LABEL: Record<string, string> = {
   BOOKING_CONFIRMED: "Reserva emitida no fornecedor",
   BOOKING_RECOVERED: "Reserva encontrada no fornecedor",
   BOOKING_STATUS_CHANGED: "Status da reserva atualizado",
+  BOOKING_CANCELLED: "Reserva cancelada no fornecedor",
   PAID_AFTER_CANCEL: "Pagamento recebido após cancelamento",
   CANCELLED: "Pedido cancelado",
   MANUAL_PAYMENT: "Pagamento confirmado manualmente",

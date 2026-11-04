@@ -34,7 +34,9 @@ export function toItemVMs(view: View, opts: { adminMode: boolean }) {
             marginPct: p.affiliateMargin.pct.toString(),
             source: p.affiliateMargin.source,
             defaultPct: p.affiliateDefaultMargin.pct.toString(),
-            base: money(f.netSubrinho),
+            // base sem o piso: o modal recalcula ao vivo e aplica o piso por cima
+            base: money(p.floor ? p.floor.withoutFloor.netSubrinho : f.netSubrinho),
+            minPix: p.floor ? money(p.floor.minPix) : null,
             commission: money(f.affiliateCommission),
             installmentFeePct: f.installmentFeePct.toString(),
           }

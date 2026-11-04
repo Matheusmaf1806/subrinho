@@ -35,6 +35,7 @@ export const BOOKING_STATUS_LABEL: Record<string, string> = {
   CONFIRMED: "Reserva confirmada",
   PENDING: "Pedido enviado — aguardando confirmação do fornecedor",
   CANCEL_REQUESTED: "Cancelamento solicitado",
+  SIMULATED: "Simulação",
   REJECTED: "Recusada pelo fornecedor",
   CANCELLED: "Cancelada no fornecedor",
   BOOKING_FAILED: "Falha na emissão",
@@ -112,7 +113,10 @@ export async function issueItemBooking(
   await db.insert(orderEvents).values({ orderId: order.id, type: "BOOKING_REQUESTED", data: { itemId, reference, by: actor.name ?? actor.type, byId: actor.id ?? null } });
 
   const travelers = order.travelers ?? [];
-  const holder = order.payerData ?? null;
+  // titular da reserva = viajante principal (exigência dos fornecedores); pagador como reserva
+  const holder = travelers.find((t) => t.type !== "CHILD" && t.name?.trim()) ?? order.payerData ?? null;
+  // depois de uma falha, a nova tentativa refaz a consulta no fornecedor (não repete a chamada recusada)
+  const retry = item.supplierStatus === BOOKING_STATUS.BOOKING_FAILED || item.supplierStatus === BOOKING_STATUS.REJECTED;
   let status: string;
   let bookingRef: string | null = null;
   let payload: Record<string, unknown>;
@@ -131,11 +135,15 @@ export async function issueItemBooking(
         reference,
         maxCost: { currency: item.costCurrency, amount: item.costForeign },
       },
-      { travelers, holder },
+      { travelers, holder, retry, remark: order.specialRequests },
     );
     status = r.status === "CONFIRMED" || r.status === "PENDING" || r.status === "REJECTED" || r.status === "CANCELLED" ? r.status : BOOKING_STATUS.PENDING;
     bookingRef = r.bookingRef || null;
     payload = { ...r.payload, reference, issuedAt: new Date().toISOString(), issuedBy: actor.name ?? actor.type };
+    if (status === "CONFIRMED" && bookingRef && adapter.voucher) {
+      const voucher = await adapter.voucher(bookingRef).catch(() => null);
+      if (voucher) payload.voucher = voucher;
+    }
     message = status === "CONFIRMED" ? `Reserva confirmada (${bookingRef})` : status === "PENDING" ? `Pedido enviado ao fornecedor (${bookingRef}) — aguardando confirmação` : `Fornecedor respondeu: ${BOOKING_STATUS_LABEL[status] ?? status}`;
   } catch (e) {
     const timeout = e instanceof SupplierIntegrationError && e.detail?.timeout === true;
@@ -169,7 +177,12 @@ export async function refreshItemBooking(itemId: string, db: DB = getDb()): Prom
   }
   if (!adapter.bookingStatus) throw new BookingIssueError("Este fornecedor não informa status");
   const r = await adapter.bookingStatus(item.supplierBookingRef);
-  await db.update(orderItems).set({ supplierStatus: r.status, supplierPayload: { ...prev, ...r.payload, checkedAt: new Date().toISOString() } }).where(eq(orderItems.id, itemId));
+  const next: Record<string, unknown> = { ...prev, ...r.payload, checkedAt: new Date().toISOString() };
+  if (r.status === "CONFIRMED" && adapter.voucher && !(prev.voucher as { voucherUrl?: string } | undefined)?.voucherUrl) {
+    const voucher = await adapter.voucher(item.supplierBookingRef).catch(() => null);
+    if (voucher) next.voucher = voucher;
+  }
+  await db.update(orderItems).set({ supplierStatus: r.status, supplierPayload: next }).where(eq(orderItems.id, itemId));
   if (r.status !== item.supplierStatus) await db.insert(orderEvents).values({ orderId: item.orderId, type: "BOOKING_STATUS_CHANGED", data: { itemId, from: item.supplierStatus, to: r.status } });
   return { itemId, status: r.status, bookingRef: item.supplierBookingRef, message: `Status no fornecedor: ${BOOKING_STATUS_LABEL[r.status] ?? r.status}` };
 }
@@ -189,4 +202,51 @@ export async function autoIssueOrder(orderId: string, db?: DB): Promise<void> {
   } catch {
     /* a equipe ainda pode emitir pelo painel */
   }
+}
+
+/**
+ * Cancela a reserva no fornecedor. Com `simulate`, só consulta a multa (Hotelbeds); a GGT não
+ * simula — a multa segue a política gravada na cotação. O estorno ao cliente é feito pelo financeiro.
+ */
+export async function cancelItemBooking(
+  itemId: string,
+  actor: { id?: string | null; name?: string | null },
+  opts: { simulate: boolean },
+  db: DB = getDb(),
+): Promise<{ status: string; message: string; penalty: { amount: string; currency: string } | null }> {
+  const [item] = await db.select().from(orderItems).where(eq(orderItems.id, itemId));
+  if (!item) throw new BookingIssueError("Item não encontrado");
+  if (!item.supplierBookingRef) throw new BookingIssueError("Este item não tem reserva no fornecedor");
+  if (item.supplierStatus === BOOKING_STATUS.CANCELLED) throw new BookingIssueError("A reserva já está cancelada");
+  const adapter = getAdapter(item.supplierCode);
+  if (!adapter.cancelBooking) throw new BookingIssueError("Este fornecedor não permite cancelar pelo sistema");
+  const r = await adapter.cancelBooking(item.supplierBookingRef, opts);
+  const money = r.penalty ? `${r.penalty.currency} ${Number(r.penalty.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : null;
+  if (opts.simulate) {
+    return { status: "SIMULATED", penalty: r.penalty, message: money ? `Se cancelar agora, a multa do fornecedor é de ${money}.` : "Sem multa informada pelo fornecedor para cancelar agora." };
+  }
+  const prev = (item.supplierPayload ?? {}) as Record<string, unknown>;
+  const status = r.status === "CANCELLED" ? BOOKING_STATUS.CANCELLED : r.status;
+  await db
+    .update(orderItems)
+    .set({ supplierStatus: status, supplierPayload: { ...prev, cancellation: { at: new Date().toISOString(), by: actor.name ?? null, penalty: r.penalty, reference: r.reference, ...r.payload } } })
+    .where(eq(orderItems.id, itemId));
+  await db.insert(orderEvents).values({ orderId: item.orderId, type: "BOOKING_CANCELLED", data: { itemId, status, penalty: r.penalty, reference: r.reference, by: actor.name ?? null, byId: actor.id ?? null } });
+  return {
+    status,
+    penalty: r.penalty,
+    message: status === BOOKING_STATUS.CANCELLED ? `Reserva cancelada no fornecedor${money ? ` (multa ${money})` : ""}. Faça o estorno ao cliente pelo financeiro.` : `Cancelamento solicitado ao fornecedor (${BOOKING_STATUS_LABEL[status] ?? status}).`,
+  };
+}
+
+/** Itens pagos que precisam de ação da equipe (emitir / resolver falha / conferir). */
+export async function bookingsNeedingAction(db: DB = getDb(), limit = 6) {
+  const rows = await db
+    .select({ itemId: orderItems.id, orderId: orders.id, number: orders.number, title: orderItems.title, status: orderItems.supplierStatus, serviceDate: orderItems.serviceDate })
+    .from(orderItems)
+    .innerJoin(orders, eq(orders.id, orderItems.orderId))
+    .where(and(eq(orders.status, "PAID"), inArray(orderItems.supplierStatus, [BOOKING_STATUS.AWAITING_ISSUE, BOOKING_STATUS.BOOKING_FAILED, BOOKING_STATUS.ISSUE_UNKNOWN, BOOKING_STATUS.REJECTED])))
+    .orderBy(asc(orderItems.serviceDate))
+    .limit(100);
+  return { total: rows.length, items: rows.slice(0, limit) };
 }

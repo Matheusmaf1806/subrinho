@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { distributeRooms, groupRooms, normalizeHotelPax, occupancyLabel, paxKey } from "@/server/suppliers/hotels/occupancy";
-import { boardLabel, hotelGroupKey, htmlToText, parseStars, parseSupplierDate, splitName, stableId, titleCase } from "@/server/suppliers/hotels/common";
+import { boardLabel, hotelGroupKey, htmlToText, parseStars, parseSupplierDate, splitName, stableId, tidySupplierText, titleCase } from "@/server/suppliers/hotels/common";
 import { parseCityName, searchKeyOf } from "@/server/suppliers/hotels/destinations";
 import { POPULAR_DESTINATIONS } from "@/server/suppliers/hotels/popular";
 import { SupplierError } from "@/server/suppliers/types";
@@ -95,5 +95,14 @@ describe("destinos", () => {
       for (const k of p.keys) expect(k).toBe(searchKeyOf(k));
       for (const c of p.ggt ?? []) expect(c).toMatch(/^\d+$/);
     }
+  });
+});
+
+describe("texto de fornecedor", () => {
+  it("separa frases coladas sem mexer em horários, valores e endereços", () => {
+    expect(tidySupplierText("booking:68.44 US Dollar payable on arrival.Check-in hour 16:00-02:00.Car park YES (No debit).Check-out 11:00")).toBe(
+      "booking: 68.44 US Dollar payable on arrival. Check-in hour 16:00-02:00. Car park YES (No debit). Check-out 11:00",
+    );
+    expect(tidySupplierText("Visite www.hotel.com ou https://x.com/a")).toBe("Visite www.hotel.com ou https://x.com/a");
   });
 });

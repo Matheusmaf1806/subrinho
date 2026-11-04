@@ -37,6 +37,15 @@ import { canDo, EVENT_LABEL, PAYMENT_METHOD_LABEL, PERMS, USER_TYPE_LABEL, VIEW_
 import { cancelOrderAction, confirmPaymentAction } from "./actions";
 import { ItemBreakdown } from "./item-breakdown";
 import { needsControlledIssue } from "@/server/bookings/service";
+import { getAdapter } from "@/server/suppliers/registry";
+
+function cancelSimulation(code: string): boolean {
+  try {
+    return getAdapter(code).cancelSimulation === true;
+  } catch {
+    return false;
+  }
+}
 
 export const metadata = { title: "Detalhe do pedido" };
 
@@ -181,7 +190,7 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
             index={idx}
             rules={extras.rules}
             paymentMethod={o.paymentMethod}
-            booking={{ live: needsControlledIssue(it.supplierCode), orderPaid: o.status === "PAID", canAct }}
+            booking={{ live: needsControlledIssue(it.supplierCode), orderPaid: o.status === "PAID", canAct, canSimulateCancel: cancelSimulation(it.supplierCode) }}
           />
         ))}
       </div>
@@ -362,6 +371,11 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
                   <Person p={t} />
                 </div>
               ))
+            )}
+            {o.specialRequests && (
+              <p className="rounded-xl bg-surface px-3 py-2 text-[13px]">
+                <span className="font-semibold">Pedido especial ao hotel:</span> {o.specialRequests}
+              </p>
             )}
           </CardBody>
         </Card>
