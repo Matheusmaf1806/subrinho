@@ -207,8 +207,8 @@ export function createEsimxAdapter(cfg: EsimxConfig, opts: { transport?: Transpo
 
   async function resolve(text: string | undefined): Promise<ResolvedArea | null> {
     if (!text?.trim()) return null;
-    const list = await areas().catch(() => [] as EsimxArea[]);
-    return resolveArea(text, list);
+    // sem a lista de áreas (API fora do ar/bloqueada) a falha sobe: a loja diz "indisponível", não "não temos"
+    return resolveArea(text, await areas());
   }
 
   /** Regiões que de fato têm pacote (a lista de áreas traz regiões vazias). */

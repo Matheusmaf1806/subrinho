@@ -13,7 +13,8 @@ export type EsimxConfig = { apiKey: string; baseUrl: string };
 const DEFAULT_BASE = "https://enterprise.esimx.com/api/api/v1";
 
 export function esimxConfig(env: NodeJS.ProcessEnv = process.env): EsimxConfig | null {
-  const apiKey = env.ESIMX_API_KEY?.trim();
+  // aceita a chave colada com aspas ou espaços na Vercel
+  const apiKey = env.ESIMX_API_KEY?.trim().replace(/^["']|["']$/g, "").trim();
   if (!apiKey) return null;
   return { apiKey, baseUrl: (env.ESIMX_API_URL?.trim() || DEFAULT_BASE).replace(/\/+$/, "") };
 }
@@ -115,6 +116,9 @@ export class EsimxClient {
       env = null;
     }
     if (!env || typeof env.code !== "number") {
+      // página de verificação do Cloudflare (o servidor da eSIMX barrou o nosso servidor antes da API)
+      if (/just a moment|cf-chl|challenge-platform|cloudflare/i.test(res.body))
+        throw new EsimxApiError(res.status, res.status, "bloqueado pelo Cloudflare da eSIMX antes de chegar na API; peça à eSIMX para liberar o acesso da Wholesale API para servidores (Vercel)", label);
       throw new EsimxApiError(res.status, res.status, res.status >= 500 ? "serviço indisponível" : `resposta inválida (${res.body.slice(0, 120) || "vazia"})`, label);
     }
     if (env.code !== ESIMX_CODE.OK) throw new EsimxApiError(res.status, env.code, env.message || "erro sem descrição", label, env.data ?? null);

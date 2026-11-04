@@ -5,7 +5,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { clearMemoryCache } from "@/server/suppliers/hotels/cache";
 import { createEsimxAdapter, appleInstallLink, customerOrderId, orderStatus } from "@/server/suppliers/esimx/adapter";
-import { EsimxApiError, EsimxClient, type Transport } from "@/server/suppliers/esimx/client";
+import { EsimxApiError, EsimxClient, esimxConfig, type Transport } from "@/server/suppliers/esimx/client";
 import { coverageLabel, curatePlans, dataLabel, planArea, resolveArea, sellablePlan, slimPackage, throttleNote, type EsimxPackage } from "@/server/suppliers/esimx/catalog";
 import { SupplierError } from "@/server/suppliers/types";
 
@@ -98,6 +98,12 @@ describe("cliente", () => {
   it("401, página do Cloudflare e corpo vazio viram erro de integração", async () => {
     await expect(client("", 401).get("/area/list")).rejects.toBeInstanceOf(EsimxApiError);
     await expect(client("<!DOCTYPE html><title>Just a moment...</title>", 403).get("/area/list")).rejects.toMatchObject({ status: 403 });
+    await expect(client("<!DOCTYPE html><title>Just a moment...</title>", 403).get("/area/list")).rejects.toThrow(/Cloudflare/);
+  });
+
+  it("aceita a chave colada com aspas ou espaços", () => {
+    expect(esimxConfig({ ESIMX_API_KEY: ' "abc123" ' } as NodeJS.ProcessEnv)?.apiKey).toBe("abc123");
+    expect(esimxConfig({ ESIMX_API_KEY: "  " } as NodeJS.ProcessEnv)).toBeNull();
   });
 });
 

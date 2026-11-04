@@ -49,7 +49,14 @@ export default async function ChipPage({ params, searchParams }: { params: Promi
   const reveal = await storeInsight(store.id);
   const raw = await searchParams;
   const { d } = parseSearch(raw);
-  const results = d.destino ? await searchCatalog(db, ctx, "CHIP", supplierParams(d, "chip"), { reveal }).catch(() => [] as PricedSummary[]) : [];
+  // falha do fornecedor ≠ destino sem cobertura: a mensagem para o cliente é outra
+  let failed = false;
+  const results = d.destino
+    ? await searchCatalog(db, ctx, "CHIP", supplierParams(d, "chip"), { reveal, onError: () => (failed = true) }).catch(() => {
+        failed = true;
+        return [] as PricedSummary[];
+      })
+    : [];
   const destinations = [...new Set(adaptersFor("CHIP").flatMap((a) => a.destinations().map((x) => x.name)))];
   const add = addToCartAction.bind(null, slug);
   const base = `/loja/${slug}/chip`;
@@ -83,6 +90,15 @@ export default async function ChipPage({ params, searchParams }: { params: Promi
                 </Link>
               ))}
             </div>
+          </section>
+        ) : results.length === 0 && failed ? (
+          <section className="rounded-[2rem] bg-surface p-8 text-center sm:p-12" role="status">
+            <Globe2 className="mx-auto h-10 w-10 text-muted" aria-hidden />
+            <h2 className="mt-4 text-xl font-semibold text-ink">Não conseguimos consultar os planos agora</h2>
+            <p className="mx-auto mt-1 max-w-md text-[15px] text-muted">Tente de novo em alguns minutos. Se precisar, fale com a agência pelo WhatsApp.</p>
+            <Link href={`${base}?${toQuery({ destino: d.destino, dias: d.dias || undefined })}`} className="mt-6 inline-flex h-11 items-center rounded-full bg-ink px-5 text-[14px] font-semibold text-white transition hover:bg-ink-2">
+              Tentar de novo
+            </Link>
           </section>
         ) : results.length === 0 ? (
           <section className="rounded-[2rem] bg-surface p-8 text-center sm:p-12">
