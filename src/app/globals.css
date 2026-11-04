@@ -539,6 +539,25 @@ dialog::backdrop {
 .slide img {
   animation: kenburns 12s ease-out infinite alternate;
 }
+/* barrinhas de andamento do banner: cada uma enche enquanto a sua foto está na tela */
+@keyframes slide-bar {
+  0% {
+    transform: scaleX(0);
+  }
+  25% {
+    transform: scaleX(1);
+  }
+  25.01%,
+  100% {
+    transform: scaleX(0);
+  }
+}
+.slide-bar > span {
+  transform: scaleX(0);
+  transform-origin: left;
+  animation: slide-bar 24s linear infinite;
+  animation-delay: var(--slide-delay, 0s);
+}
 /* ───────── Topo "noturno": estrelas piscando ───────── */
 @keyframes twinkle {
   0%,
@@ -562,6 +581,7 @@ dialog::backdrop {
 @media (prefers-reduced-motion: reduce) {
   .slide,
   .slide img,
+  .slide-bar > span,
   .stars {
     animation: none !important;
   }

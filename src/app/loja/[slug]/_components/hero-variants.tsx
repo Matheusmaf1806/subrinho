@@ -1,7 +1,7 @@
 /**
  * Quatro propostas de topo para a página inicial (prévia em ?topo=1..4). Todas recebem as mesmas
  * informações da agência (título, fotos, WhatsApp, categorias) e a mesma busca.
- *   1 · Cinemático   — fotos de destino em tela cheia trocando sozinhas, busca flutuando por cima.
+ *   1 · Cinemático   — só o banner: fotos de destino trocando sozinhas, busca flutuando na base.
  *   2 · Editorial    — título gigante de revista com fotos dentro das palavras e colunas numeradas.
  *   3 · Noturno      — fundo escuro com brilho na cor da marca, estrelas e fotos flutuando em 3D.
  *   4 · Centrado     — tudo no centro: busca grande em pílula, atalhos e destinos em degraus.
@@ -34,60 +34,38 @@ const d = (ms: number) => ({ "--d": `${ms}ms` }) as CSSProperties;
 const waLink = (w: string | null) => (w ? `https://wa.me/${w.replace(/\D/g, "")}` : null);
 const trustLine = (p: HeroProps) => [`Até ${p.maxInstallments}x sem juros`, p.pixAvailable ? "desconto no Pix" : null, "preço confirmado antes de pagar"].filter(Boolean) as string[];
 
-const DEST: { key: PhotoKey; city: string; country: string }[] = [
-  { key: "vernazza", city: "Cinque Terre", country: "Itália" },
-  { key: "colosseum", city: "Roma", country: "Itália" },
-  { key: "eiffel", city: "Paris", country: "França" },
-  { key: "lisbon", city: "Lisboa", country: "Portugal" },
-];
+/** Fotos do banner do topo 1 (trocam a cada 6 s). */
+const DEST: PhotoKey[] = ["vernazza", "colosseum", "eiffel", "lisbon"];
 
 // ─────────────────────────────── 1 · Cinemático ───────────────────────────────
+/** Só o banner: fotos de destino trocando sozinhas (sem texto por cima) e a busca flutuando na base. */
 export function HeroCinematic(p: HeroProps) {
-  const head = p.lines.slice(0, -1);
-  const last = p.lines.at(-1) ?? "";
   return (
     <section className="px-3 pt-3 sm:px-4">
-      <div className="relative isolate mx-auto h-[600px] max-w-[1440px] overflow-hidden rounded-[2rem] bg-ink text-white sm:h-[min(80vh,720px)] sm:min-h-[600px] sm:rounded-[2.5rem]">
-        {DEST.map((x, i) => (
-          <div key={x.key} className="slide absolute inset-0 -z-20" style={{ "--slide-delay": `${i * 6}s` } as CSSProperties}>
+      {/* título só para leitores de tela e buscadores; o banner fica limpo */}
+      <h1 className="sr-only">
+        {p.name}: {p.lines.join(" ")}
+      </h1>
+      <div className="relative isolate mx-auto h-[340px] max-w-[1440px] overflow-hidden rounded-[2rem] bg-ink sm:h-[460px] sm:rounded-[2.5rem] lg:h-[min(62vh,580px)] lg:min-h-[480px]">
+        {DEST.map((key, i) => (
+          <div key={key} className="slide absolute inset-0 -z-20" style={{ "--slide-delay": `${i * 6}s` } as CSSProperties}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={photo(x.key, 2000, 1200)} alt="" className="h-full w-full object-cover" loading={i === 0 ? "eager" : "lazy"} />
+            <img src={photo(key, 2400, 1100)} alt="" className="h-full w-full object-cover" loading={i === 0 ? "eager" : "lazy"} fetchPriority={i === 0 ? "high" : undefined} />
           </div>
         ))}
-        <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/80 via-black/25 to-black/20" />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-black/55 via-transparent to-transparent" />
-
-        <div className="flex h-full flex-col justify-between p-6 pb-44 sm:p-12 sm:pb-48 lg:pb-44">
-          <div className="flex items-center justify-between gap-4" data-enter>
-            <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3.5 py-1.5 text-[13px] font-semibold backdrop-blur-md ring-1 ring-white/25">
-              <span className="h-2 w-2 rounded-full bg-accent" aria-hidden /> {p.name}
+        {/* sombra só na base, para as abas da busca ficarem legíveis */}
+        <div aria-hidden className="absolute inset-x-0 bottom-0 -z-10 h-1/2 bg-gradient-to-t from-black/55 to-transparent" />
+        {/* andamento do banner (uma barrinha por foto) */}
+        <div aria-hidden className="absolute right-5 top-5 flex gap-1.5 sm:right-8 sm:top-7">
+          {DEST.map((key, i) => (
+            <span key={key} className="slide-bar h-1 w-8 overflow-hidden rounded-full bg-white/35 sm:w-10" style={{ "--slide-delay": `${i * 6}s` } as CSSProperties}>
+              <span className="block h-full w-full rounded-full bg-white" />
             </span>
-            {/* destino da vez (troca junto com a foto) */}
-            <span className="relative hidden h-8 w-48 sm:block" aria-hidden>
-              {DEST.map((x, i) => (
-                <span key={x.key} className="slide absolute inset-0 flex items-center justify-end gap-2 text-[13px] font-medium text-white/80" style={{ "--slide-delay": `${i * 6}s` } as CSSProperties}>
-                  <span className="h-px w-6 bg-white/60" /> {x.city}, {x.country}
-                </span>
-              ))}
-            </span>
-          </div>
-          <div className="max-w-3xl">
-            <h1 data-enter style={d(80)} className="text-[clamp(2.8rem,7vw,6.5rem)] font-semibold leading-[0.92] tracking-[-0.055em] drop-shadow-[0_4px_30px_rgba(0,0,0,0.35)]">
-              {head.map((l, i) => (
-                <span key={i} className="block">
-                  {l}
-                </span>
-              ))}
-              <span className="block text-accent">{last}</span>
-            </h1>
-            <p data-enter style={d(160)} className="mt-5 max-w-xl text-[16px] leading-relaxed text-white/80 sm:text-lg">
-              {p.subtitle}
-            </p>
-          </div>
+          ))}
         </div>
       </div>
-      {/* busca flutuando sobre a base da foto */}
-      <div data-enter style={d(240)} className="relative z-10 mx-auto -mt-36 max-w-[1240px] px-3 sm:-mt-32 sm:px-10">
+      {/* busca flutuando sobre a base do banner */}
+      <div data-enter style={d(120)} className="relative z-10 mx-auto -mt-28 max-w-[1240px] px-3 sm:-mt-32 sm:px-10">
         {p.tabsBar.length > 0 && <SearchTabs tabs={p.tabsBar} tone="photo" />}
         <p className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-[13px] text-muted">
           {trustLine(p).map((t) => (
