@@ -271,8 +271,8 @@ export function BrandingEditor({
                 <textarea name="heroSubtitle" rows={2} value={heroSubtitle} onChange={(e) => setHeroSubtitle(e.target.value)} maxLength={220} placeholder="Opcional — aparece abaixo do título, no computador" className={cn(inputClass, "h-auto py-3")} />
               </label>
               <div className="grid gap-6 lg:grid-cols-2">
-                <ImageField key={`h1-${fileKey}`} field="heroImageUrl" label="Foto principal" hint="Vertical (aparece em arco) — até 3 MB" current={initial.heroImageUrl} presets={presets} preset={presetOf(initial.heroImageUrl)} onPreview={setHero1} disabled={readOnly} />
-                <ImageField key={`h2-${fileKey}`} field="heroImage2Url" label="Foto secundária" hint="Quadrada (aparece em círculo) — até 3 MB" current={initial.heroImage2Url} presets={presets} preset={presetOf(initial.heroImage2Url)} onPreview={setHero2} disabled={readOnly} />
+                <ImageField key={`h1-${fileKey}`} field="heroImageUrl" label="Foto principal" hint="Vertical — até 3 MB" current={initial.heroImageUrl} presets={presets} preset={presetOf(initial.heroImageUrl)} onPreview={setHero1} disabled={readOnly} />
+                <ImageField key={`h2-${fileKey}`} field="heroImage2Url" label="Foto secundária" hint="Quadrada — até 3 MB" current={initial.heroImage2Url} presets={presets} preset={presetOf(initial.heroImage2Url)} onPreview={setHero2} disabled={readOnly} />
               </div>
             </div>
           </Section>
@@ -325,20 +325,19 @@ export function BrandingEditor({
             </div>
             <span className="rounded-full bg-ink px-3 py-1.5 text-[11px] font-semibold text-white">Carrinho</span>
           </div>
-          <div className="relative overflow-hidden px-4 pb-4 pt-3">
-            <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-brand-50" />
-            <div className="pointer-events-none absolute -right-6 top-14 h-36 w-36 rounded-full bg-brand-100" />
+          <div className="relative overflow-hidden bg-brand-50 px-4 pb-4 pt-3">
+            <div className="grid-paper pointer-events-none absolute inset-0 [background-size:64px_64px,64px_64px,16px_16px,16px_16px]" />
             <div className="relative grid grid-cols-[1.45fr_1fr] items-center gap-3">
               <div>
                 <p className="text-[1.05rem] font-semibold leading-[1.05] tracking-[-0.04em]">
                   {lines.map((l, i) => (
-                    <span key={i} className={cn(lines.length > 1 && i === lines.length - 1 && "text-brand-ink")}>
+                    <span key={i} className={cn(lines.length > 1 && i === lines.length - 1 && "marker text-brand-ink")}>
                       {i > 0 && " "}
                       {l}
                     </span>
                   ))}
                 </p>
-                <div className="mt-2 rounded-xl bg-white p-2 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.45)] ring-1 ring-black/[0.06]">
+                <div className="mt-2 rounded-lg bg-white p-2 ring-1 ring-ink/10 shadow-[4px_4px_0_0_var(--color-brand-200)]">
                   <div className="flex gap-2 border-b border-line pb-1 text-[8px] font-semibold">
                     <span className="border-b-2 border-brand pb-0.5">Ingressos</span>
                     <span className="text-muted">Hotéis</span>
@@ -353,13 +352,14 @@ export function BrandingEditor({
                 </div>
               </div>
               <div className="relative h-36">
-                <div className="absolute right-0 top-0 h-32 w-[78%] overflow-hidden rounded-b-xl rounded-t-[3rem] bg-black/10 ring-2 ring-white">
+                <div className="absolute bottom-1 right-0 h-[80%] w-[72%] rounded-lg bg-brand" />
+                <div className="absolute right-[12%] top-0 h-[80%] w-[72%] overflow-hidden rounded-lg bg-black/10 ring-1 ring-black/5">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   {hero1 && <img src={hero1} alt="" className="h-full w-full object-cover" />}
                 </div>
-                <div className="absolute bottom-0 left-0 h-14 w-14 overflow-hidden rounded-full bg-black/10 ring-2 ring-white">
+                <div className="absolute bottom-0 left-0 h-14 w-14 overflow-hidden rounded-md bg-white p-0.5 shadow-[3px_3px_0_0_var(--color-ink)]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  {hero2 && <img src={hero2} alt="" className="h-full w-full object-cover" />}
+                  {hero2 && <img src={hero2} alt="" className="h-full w-full rounded-[4px] object-cover" />}
                 </div>
               </div>
             </div>

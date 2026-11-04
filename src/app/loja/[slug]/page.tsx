@@ -14,7 +14,7 @@ import { StoreHero } from "./_components/store-hero";
 import { paymentProvider } from "@/server/payments/provider";
 import { getSettings } from "@/server/settings";
 import { CreditCard, MessageCircle, Plane, Search, ShoppingBag, Ticket } from "lucide-react";
-import { Postmark, SectionTitle } from "./_components/journal";
+import { RubberStamp, SectionTitle } from "./_components/journal";
 import { parseSearch, supplierParams, toQuery } from "./_components/search-params";
 import { ProductCard } from "./_components/product-card";
 
@@ -167,18 +167,20 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
       )}
 
       {/* ───────── Como funciona ───────── */}
-      <section className="relative mt-28 overflow-x-clip">
+      <section className="relative mt-28 overflow-x-clip py-14">
+        <div aria-hidden className="grid-paper grid-paper-ink pointer-events-none absolute inset-0 -z-10 [mask-image:linear-gradient(to_bottom,transparent,black_20%,black_80%,transparent)]" />
         <div className="mx-auto max-w-[1440px] px-4 sm:px-8">
           <SectionTitle eyebrow="Simples assim" title="Sua viagem em 4 passos." mark="4 passos." />
           <ol className="relative grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {/* rota tracejada ligando os passos (desktop) */}
-            <svg viewBox="0 0 1000 40" preserveAspectRatio="none" className="pointer-events-none absolute inset-x-[8%] top-9 hidden h-10 text-ink/25 lg:block" aria-hidden>
-              <path d="M0 20 C 160 -6, 330 46, 500 20 S 840 -6, 1000 20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeDasharray="2 10" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-            </svg>
             {STEPS(settings.maxInstallments, pixAvailable).map((st, i) => (
-              <li key={st.title} data-reveal style={{ "--i": i } as React.CSSProperties} className="relative rounded-[2rem] bg-white p-6 shadow-[0_24px_60px_-40px_rgba(10,10,11,0.45)] ring-1 ring-black/[0.05] transition duration-300 hover:-translate-y-1 sm:p-7">
+              <li
+                key={st.title}
+                data-reveal
+                style={{ "--i": i } as React.CSSProperties}
+                className="relative rounded-[1.25rem] bg-white p-6 ring-1 ring-ink/10 transition duration-300 [--hs:var(--color-brand-200)] [--hx:8px] [--hy:8px] hard-shadow hover:-translate-x-0.5 hover:-translate-y-0.5 hover:[--hs:var(--color-accent)] sm:p-7"
+              >
                 <div className="flex items-center justify-between">
-                  <span className="relative z-10 grid h-14 w-14 place-items-center rounded-2xl bg-brand-50 text-accent-ink ring-4 ring-white">
+                  <span className="relative z-10 grid h-14 w-14 place-items-center rounded-xl bg-brand-50 text-accent-ink ring-1 ring-inset ring-brand-100">
                     <st.icon className="h-6 w-6" aria-hidden />
                   </span>
                   <span className="text-[3.5rem] font-semibold leading-none tracking-[-0.06em] text-transparent [-webkit-text-stroke:1.5px_var(--color-line)]">0{i + 1}</span>
@@ -219,7 +221,7 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
 
         {/* polaroide */}
         <div data-reveal style={{ "--i": 1 } as React.CSSProperties} className="relative flex min-h-[400px] items-center justify-center overflow-hidden rounded-[2rem] bg-brand-50 p-8">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle,var(--color-brand-200)_1.2px,transparent_1.6px)] bg-[length:20px_20px] opacity-70" aria-hidden />
+          <div className="grid-paper pointer-events-none absolute inset-0" aria-hidden />
           <figure className="relative w-full max-w-[320px] -rotate-3 bg-white p-3.5 pb-5 shadow-[0_30px_60px_-30px_rgba(0,0,0,0.5)] transition duration-500 hover:rotate-0">
             <span className="absolute -top-3 left-1/2 h-7 w-28 -translate-x-1/2 rotate-2 bg-brand-200/80 mix-blend-multiply" aria-hidden />
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -233,14 +235,13 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
 
         {/* carimbo */}
         <div data-reveal style={{ "--i": 2 } as React.CSSProperties} className="relative flex min-h-[400px] flex-col justify-between overflow-hidden rounded-[2rem] bg-surface p-8 sm:p-10">
-          <div className="grain pointer-events-none absolute inset-0 opacity-20 mix-blend-multiply" aria-hidden />
+          <div className="grid-paper grid-paper-ink pointer-events-none absolute inset-0" aria-hidden />
           <p className="relative text-[15px] text-muted">{pixAvailable ? "No Pix" : "Antes de você pagar"}</p>
-          <Postmark
-            ring={pixAvailable ? "MELHOR PREÇO • PAGUE NO PIX • " : "PREÇO CONFIRMADO • DISPONÍVEL • "}
-            center={pixAvailable ? "PIX" : "OK"}
-            sub={pixAvailable ? "NA HORA" : "CONFERIDO"}
-            waves={false}
-            className="relative h-40 w-40 -rotate-12 self-center text-accent-ink opacity-90 transition duration-500 hover:rotate-0"
+          <RubberStamp
+            top={pixAvailable ? "Melhor preço" : "Antes de pagar"}
+            main={pixAvailable ? "Pix" : "Conferido"}
+            bottom={pixAvailable ? "na hora" : "com o fornecedor"}
+            className="relative -rotate-6 self-center text-accent-ink opacity-90 mix-blend-multiply transition duration-500 hover:rotate-0"
           />
           <div className="relative">
             <p className="text-2xl font-semibold leading-tight tracking-[-0.03em]">{pixAvailable ? "O melhor preço da loja." : "Preço e disponibilidade confirmados."}</p>
@@ -305,9 +306,9 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
       {store.whatsapp && (
         <section className="mx-auto mt-24 max-w-[1440px] px-4 sm:px-8">
           <div data-reveal className="relative overflow-hidden rounded-[2.5rem] bg-ink px-8 py-12 text-white sm:px-14 sm:py-16">
-            <div className="grain pointer-events-none absolute inset-0 opacity-25 mix-blend-overlay" aria-hidden />
-            <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-accent opacity-30 blur-3xl" aria-hidden />
-            <Postmark ring={`${store.name.toUpperCase()} • ATENDIMENTO • `} center="OI!" waves className="pointer-events-none absolute -bottom-6 right-6 hidden w-[300px] -rotate-6 text-white/15 lg:block" />
+            <div className="grid-paper grid-paper-light pointer-events-none absolute inset-0" aria-hidden />
+            <div className="pointer-events-none absolute -right-10 top-10 hidden h-40 w-40 rotate-6 rounded-[1.25rem] bg-accent lg:block" aria-hidden />
+            <div className="pointer-events-none absolute right-28 top-32 hidden h-24 w-24 -rotate-3 rounded-xl bg-white/10 ring-1 ring-white/20 lg:block" aria-hidden />
             <div className="relative max-w-2xl">
               <p className="text-[13px] font-semibold uppercase tracking-[0.16em] text-white/50">Atendimento {store.name}</p>
               <p className="mt-4 text-[clamp(2rem,4.2vw,3.5rem)] font-semibold leading-[1.02] tracking-[-0.045em]">

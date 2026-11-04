@@ -465,3 +465,39 @@ dialog::backdrop {
   background-color: rgba(255, 255, 255, 0.9);
   box-shadow: 0 12px 34px -24px rgba(10, 10, 20, 0.45);
 }
+
+/* ───────── Papel quadriculado (grade fina a cada 32px, grade forte a cada 128px) ───────── */
+.grid-paper {
+  --g: color-mix(in oklab, var(--color-brand) 11%, transparent);
+  --G: color-mix(in oklab, var(--color-brand) 20%, transparent);
+  background-image:
+    linear-gradient(var(--G) 1px, transparent 1px),
+    linear-gradient(90deg, var(--G) 1px, transparent 1px),
+    linear-gradient(var(--g) 1px, transparent 1px),
+    linear-gradient(90deg, var(--g) 1px, transparent 1px);
+  background-size:
+    128px 128px,
+    128px 128px,
+    32px 32px,
+    32px 32px;
+  background-position: -1px -1px;
+}
+.grid-paper-light {
+  --g: rgba(255, 255, 255, 0.1);
+  --G: rgba(255, 255, 255, 0.18);
+}
+.grid-paper-ink {
+  --g: rgba(10, 10, 11, 0.05);
+  --G: rgba(10, 10, 11, 0.09);
+}
+/* sombra "dura" deslocada (blocos sobrepostos) */
+.hard-shadow {
+  box-shadow: var(--hx, 8px) var(--hy, 8px) 0 0 var(--hs, var(--color-ink));
+}
+/* marca-texto retangular atrás do texto */
+.marker {
+  background-image: linear-gradient(transparent 58%, var(--marker, var(--color-brand-100)) 58%, var(--marker, var(--color-brand-100)) 92%, transparent 92%);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  padding: 0 0.08em;
+}

@@ -1,34 +1,26 @@
 import type { ReactNode } from "react";
 import { Plane, SearchX } from "lucide-react";
-import { Scribble } from "./journal";
 import { EmptyState } from "@/components/ui";
 import { photo, type PhotoKey } from "@/lib/images";
 
-/** Fundo de papel na cor da agência (grão + pontilhado), como no topo da página inicial. */
+/** Fundo de papel quadriculado na cor da agência, como no topo da página inicial. */
 function Paper() {
   return (
     <>
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-brand-50 via-brand-50/60 to-white" />
-      <div aria-hidden className="grain pointer-events-none absolute inset-0 -z-10 opacity-[0.12] mix-blend-multiply [mask-image:linear-gradient(to_bottom,black_60%,transparent)]" />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle,var(--color-brand-200)_1.2px,transparent_1.6px)] bg-[length:22px_22px] [mask-image:radial-gradient(ellipse_50%_70%_at_15%_20%,black,transparent)]"
-      />
+      <div aria-hidden className="grid-paper pointer-events-none absolute inset-0 -z-10 [mask-image:linear-gradient(to_bottom,black_55%,transparent)]" />
     </>
   );
 }
 
-/** Título com a última palavra na cor da marca e sublinhada à mão. */
+/** Título com a última palavra em marca-texto na cor da marca. */
 function ListingTitle({ title }: { title: string }) {
   const words = title.trim().split(/\s+/);
   const last = words.pop() ?? "";
   return (
     <>
       {words.length > 0 && <>{words.join(" ")} </>}
-      <span className="relative inline-block whitespace-nowrap text-accent-ink">
-        {last}
-        <Scribble draw className="absolute -bottom-1.5 left-0 h-2.5 w-full text-accent sm:-bottom-2.5 sm:h-3.5" />
-      </span>
+      <span className="marker whitespace-nowrap text-accent-ink">{last}</span>
     </>
   );
 }
@@ -36,8 +28,8 @@ function ListingTitle({ title }: { title: string }) {
 /** Topo das listagens: papel com textura, título com traço à mão, foto em arco e a busca logo abaixo. */
 export function ListingHeader({ title, subtitle, children, image, eyebrow, compact }: { title: string; subtitle?: string; children?: ReactNode; image?: PhotoKey; eyebrow?: string; compact?: boolean }) {
   const chip = eyebrow && (
-    <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-accent-ink shadow-[0_1px_2px_rgba(0,0,0,0.06)] ring-1 ring-black/[0.05]">
-      <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden /> {eyebrow}
+    <p className="mb-4 inline-flex items-center gap-2 rounded-md bg-white px-2.5 py-1.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-accent-ink ring-1 ring-inset ring-brand-100">
+      <span className="h-2 w-2 bg-accent" aria-hidden /> {eyebrow}
     </p>
   );
   if (compact)
@@ -70,12 +62,14 @@ export function ListingHeader({ title, subtitle, children, image, eyebrow, compa
         </div>
         {image && (
           <div className="relative hidden h-[330px] lg:block" data-enter style={{ "--d": "120ms" } as React.CSSProperties}>
-            <div className="absolute inset-y-0 right-4 w-[300px] rotate-[2deg] overflow-hidden rounded-b-[2rem] rounded-t-[150px] bg-surface shadow-[0_30px_60px_-35px_rgba(0,0,0,0.55)] ring-8 ring-white">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={photo(image, 700, 800)} alt="" className="h-full w-full object-cover" />
-              <div className="grain absolute inset-0 opacity-25 mix-blend-overlay" aria-hidden />
+            <div className="absolute bottom-0 right-0 h-[88%] w-[78%] rounded-[1.25rem] bg-accent" aria-hidden>
+              <div className="grid-paper grid-paper-light absolute inset-0 rounded-[1.25rem]" />
             </div>
-            <span data-bob className="absolute bottom-10 left-0 grid h-12 w-12 place-items-center rounded-full bg-white text-ink shadow-[0_12px_28px_-12px_rgba(0,0,0,0.5)] ring-1 ring-black/[0.05]" aria-hidden>
+            <div className="absolute left-[6%] top-0 h-[86%] w-[80%] overflow-hidden rounded-[1.25rem] bg-surface ring-1 ring-black/5 shadow-[0_30px_60px_-35px_rgba(0,0,0,0.55)]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={photo(image, 800, 640)} alt="" className="h-full w-full object-cover" />
+            </div>
+            <span data-drop style={{ "--d": "380ms" } as React.CSSProperties} className="absolute -left-1 bottom-6 grid h-12 w-12 place-items-center rounded-xl bg-white text-ink ring-1 ring-ink/10 [--hs:var(--color-ink)] [--hx:5px] [--hy:5px] hard-shadow" aria-hidden>
               <Plane className="h-5 w-5" />
             </span>
           </div>
