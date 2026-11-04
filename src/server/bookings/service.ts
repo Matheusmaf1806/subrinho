@@ -110,7 +110,7 @@ export async function issueItemBooking(
     .returning({ id: orderItems.id });
   if (!locked.length) throw new BookingIssueError("Este item já está sendo emitido. Aguarde alguns instantes e atualize a página.");
 
-  await db.insert(orderEvents).values({ orderId: order.id, type: "BOOKING_REQUESTED", data: { itemId, reference, by: actor.name ?? actor.type, byId: actor.id ?? null } });
+  await db.insert(orderEvents).values({ orderId: order.id, type: "BOOKING_REQUESTED", data: { itemId, reference, by: actor.id ?? null, byName: actor.name ?? actor.type } });
 
   const travelers = order.travelers ?? [];
   // titular da reserva = viajante principal (exigência dos fornecedores); pagador como reserva
@@ -250,7 +250,7 @@ export async function cancelItemBooking(
     .update(orderItems)
     .set({ supplierStatus: status, supplierPayload: { ...prev, cancellation: { at: new Date().toISOString(), by: actor.name ?? null, penalty: r.penalty, reference: r.reference, ...r.payload } } })
     .where(eq(orderItems.id, itemId));
-  await db.insert(orderEvents).values({ orderId: item.orderId, type: "BOOKING_CANCELLED", data: { itemId, status, penalty: r.penalty, reference: r.reference, by: actor.name ?? null, byId: actor.id ?? null } });
+  await db.insert(orderEvents).values({ orderId: item.orderId, type: "BOOKING_CANCELLED", data: { itemId, status, penalty: r.penalty, reference: r.reference, by: actor.id ?? null, byName: actor.name ?? null } });
   return {
     status,
     penalty: r.penalty,

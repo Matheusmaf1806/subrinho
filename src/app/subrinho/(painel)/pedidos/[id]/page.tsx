@@ -504,8 +504,9 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
             <CardBody>
               <ol className="relative space-y-4 border-l-2 border-brand-100 pl-5">
                 {events.map((e) => {
-                  const by = typeof e.data?.by === "string" ? (extras.staffNames.get(e.data.by) ?? String(e.data.byName ?? e.data.by)) : null;
-                  const rest = Object.fromEntries(Object.entries(e.data ?? {}).filter(([k]) => k !== "by" && k !== "byName"));
+                  const byKey = [e.data?.byId, e.data?.by].find((v): v is string => typeof v === "string" && !!v) ?? null;
+                  const by = byKey ? (extras.staffNames.get(byKey) ?? String(e.data?.byName ?? byKey)) : typeof e.data?.byName === "string" ? e.data.byName : null;
+                  const rest = Object.fromEntries(Object.entries(e.data ?? {}).filter(([k]) => k !== "by" && k !== "byName" && k !== "byId"));
                   return (
                     <li key={e.id} className="relative">
                       <span

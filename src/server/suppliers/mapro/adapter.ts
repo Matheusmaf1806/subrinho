@@ -97,7 +97,24 @@ export type MpQuote = {
   taxes?: MpTax[];
 };
 type MpQuoted = MpProperty & { quote: MpQuote };
-type QuoteListRS = { status?: number; quote?: MpQuoted[]; paginanation?: { nextCursor?: string | null; hasNextPage?: boolean }; pagination?: { nextCursor?: string | null; hasNextPage?: boolean } };
+type Page = { hasNextPage?: boolean; nextCursor?: string | null; link?: string | null; links?: { next?: string | null } | null };
+type QuoteListRS = { status?: number; quote?: MpQuoted[]; paginanation?: Page; pagination?: Page };
+type ReservationListRS = { reservations?: MpReservation[]; pagination?: Page; paginanation?: Page };
+
+/** Próxima página: o link pronto da API quando vier; senão, o cursor. */
+export function nextPagePath(path: string, params: Record<string, string>, pg: Page | null | undefined): string | null {
+  if (!pg?.hasNextPage) return null;
+  const link = pg.links?.next ?? pg.link ?? null;
+  if (link) {
+    try {
+      const u = new URL(link, "https://api.invalid");
+      if (u.pathname.startsWith("/v1/")) return `${u.pathname}${u.search}`;
+    } catch {
+      /* link inválido: usa o cursor */
+    }
+  }
+  return pg.nextCursor ? `${path}?${new URLSearchParams({ ...params, cursor: pg.nextCursor })}` : null;
+}
 export type MpReservation = {
   propertyId?: string;
   reservationId: string;
@@ -278,20 +295,24 @@ export function createMaproAdapter(cfg: MaproConfig, opts: { transport?: Transpo
   async function quoteAll(checkIn: string, checkOut: string): Promise<MpQuoted[]> {
     return cached(`mapro:${account}:quote:${checkIn}:${checkOut}`, QUOTE_TTL, async () => {
       const out: MpQuoted[] = [];
-      let cursor: string | null = null;
-      for (let page = 0; page < MAX_PAGES; page++) {
-        const qs = new URLSearchParams({ checkin: checkIn, checkout: checkOut, ...(cursor ? { cursor } : {}) });
+      const seen = new Set<string>();
+      const params = { checkin: checkIn, checkout: checkOut };
+      let next: string | null = `/v1/quote?${new URLSearchParams(params)}`;
+      for (let page = 0; next && page < MAX_PAGES; page++) {
         let rs: QuoteListRS;
         try {
-          rs = await client.get<QuoteListRS>(`/v1/quote?${qs}`, 45_000);
+          rs = await client.get<QuoteListRS>(next, 45_000);
         } catch (e) {
           if (e instanceof MaproApiError && /no matching properties/i.test(e.message)) break;
           throw e;
         }
-        out.push(...(rs.quote ?? []).filter((p) => p?.id && p.quote?.summary).map(slim));
-        const pg = rs.paginanation ?? rs.pagination;
-        cursor = pg?.hasNextPage && pg.nextCursor ? pg.nextCursor : null;
-        if (!cursor) break;
+        const fresh = (rs.quote ?? []).filter((p) => p?.id && p.quote?.summary && !seen.has(p.id));
+        for (const p of fresh) {
+          seen.add(p.id);
+          out.push(slim(p));
+        }
+        // página sem casa nova = fim (proteção contra cursor que não avança)
+        next = fresh.length ? nextPagePath("/v1/quote", params, rs.paginanation ?? rs.pagination) : null;
       }
       for (const p of out) if (p.address?.city) knownCities.add(cityLabel(p.address.city));
       return out;
@@ -561,17 +582,24 @@ export function createMaproAdapter(cfg: MaproConfig, opts: { transport?: Transpo
       const checkOut = item.serviceEndDate ?? null;
       if (!checkIn || !checkOut) return null;
       const who = await whoami();
-      const rs = await client.get<{ reservations?: MpReservation[] }>(`/v1/reservations?${new URLSearchParams({ from: checkIn, to: checkOut, limit: "100" })}`, 30_000);
       // mesma casa, mesmas datas, feita pelo nosso canal e não cancelada → é a nossa reserva
-      const r = (rs.reservations ?? []).find(
-        (x) =>
-          x.propertyId === item.productId &&
-          (x.arrival ?? "").startsWith(checkIn) &&
-          (x.departure ?? "").startsWith(checkOut) &&
-          !x.isCanceled &&
-          (!who.integration || !x.channel?.name || x.channel.name === who.integration),
-      );
-      return r ? toResult(r) : null;
+      const ours = (x: MpReservation) =>
+        x.propertyId === item.productId &&
+        (x.arrival ?? "").startsWith(checkIn) &&
+        (x.departure ?? "").startsWith(checkOut) &&
+        !x.isCanceled &&
+        (!who.integration || !x.channel?.name || x.channel.name === who.integration);
+      // a lista traz TODAS as reservas da administradora no período: percorre todas as páginas
+      const params = { from: checkIn, to: checkOut, limit: "100" };
+      let next: string | null = `/v1/reservations?${new URLSearchParams(params)}`;
+      for (let page = 0; next && page < 30; page++) {
+        const rs: ReservationListRS = await client.get<ReservationListRS>(next, 30_000);
+        const list = rs.reservations ?? [];
+        const r = list.find(ours);
+        if (r) return toResult(r);
+        next = list.length ? nextPagePath("/v1/reservations", params, rs.pagination ?? rs.paginanation) : null;
+      }
+      return null;
     },
 
     async book(item: BookItem, ctx: BookContext): Promise<BookingResult> {

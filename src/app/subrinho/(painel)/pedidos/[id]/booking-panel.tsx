@@ -145,7 +145,7 @@ export function SupplierBookingPanel({ item: i, live, orderPaid, canAct, canSimu
                   <input type="hidden" name="itemId" value={i.id} />
                   <input type="hidden" name="orderId" value={i.orderId} />
                   <Alert tone="warning" title="Reserva real, com custo">
-                    A reserva será feita agora na <strong>{supplierName(i.supplierCode)}</strong> com os hóspedes, as datas e o quarto deste pedido.
+                    A reserva será feita agora na <strong>{supplierName(i.supplierCode)}</strong> com os hóspedes, as datas e {i.category === "HOUSES" ? "a casa" : "o quarto"} deste pedido.
                   </Alert>
                   <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
                     <li>Antes de reservar, o sistema procura uma reserva já feita com a nossa referência — nunca reserva duas vezes.</li>

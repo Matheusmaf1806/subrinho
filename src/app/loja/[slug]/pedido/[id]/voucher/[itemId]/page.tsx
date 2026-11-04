@@ -219,7 +219,7 @@ export default async function VoucherPage({ params }: { params: Promise<{ slug: 
 
         {(remarks || (d.notes?.length ?? 0) > 0 || d.cancellation) && (
           <section className="mt-6">
-            <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">Observações da tarifa</h2>
+            <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">{house ? "Observações" : "Observações da tarifa"}</h2>
             {d.cancellation && <p className="text-[14px] text-ink">{/^cancelamento/i.test(d.cancellation) ? d.cancellation : `Cancelamento: ${d.cancellation}`}</p>}
             {d.notes?.map((n) => (
               <p key={n} className="mt-1 text-[14px] text-ink">

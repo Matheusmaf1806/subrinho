@@ -3,7 +3,7 @@
  * transporte falso no formato real da API (busca → detalhe → cotação → reserva → status → cancelamento).
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { bedsText, cancellationFor, createMaproAdapter, feeLabel, quoteLines, unavailableReason, type MpQuote } from "@/server/suppliers/mapro/adapter";
+import { bedsText, cancellationFor, createMaproAdapter, feeLabel, nextPagePath, quoteLines, unavailableReason, type MpQuote } from "@/server/suppliers/mapro/adapter";
 import { maproConfig, type Transport } from "@/server/suppliers/mapro/client";
 import { matchesHouseDestination, rankAmenities } from "@/server/suppliers/houses/common";
 import { clearMemoryCache } from "@/server/suppliers/hotels/cache";
@@ -246,6 +246,46 @@ describe("MAPRO — fluxo do adaptador", () => {
     const r = await a.book(item(), ctx);
     expect(r).toMatchObject({ bookingRef: "6529537", status: "CONFIRMED", payload: { reservationUlid: RESERVATION.reservationId } });
     expect(f.calls.some((c) => c.method === "POST")).toBe(false);
+  });
+
+  it("procura a reserva em TODAS as páginas (administradora com muitas reservas no período)", async () => {
+    const other = (n: number) => ({ ...RESERVATION, propertyId: `01OTHER${String(n).padStart(19, "0")}`, reservationId: `01RES${String(n).padStart(21, "0")}`, referenceCode: String(n) });
+    const calls: string[] = [];
+    const t: Transport = async (req) => {
+      const u = new URL(req.url);
+      calls.push(`${u.pathname}${u.search}`);
+      if (u.pathname === "/v1/whoami") return { status: 200, body: JSON.stringify({ status: 1, integration: "Website", customer_id: "C1" }) };
+      const page = u.searchParams.get("cursor");
+      const body =
+        page === "p3"
+          ? { reservations: [other(201), RESERVATION], pagination: { hasNextPage: false, nextCursor: null } }
+          : page === "p2"
+            ? { reservations: [other(101)], pagination: { hasNextPage: true, nextCursor: "p3", links: { next: "/v1/reservations?from=2027-01-10&to=2027-01-15&cursor=p3&limit=100" } } }
+            : { reservations: [other(1), other(2)], pagination: { hasNextPage: true, nextCursor: "p2" } };
+      return { status: 200, body: JSON.stringify(body) };
+    };
+    const a = createMaproAdapter(cfg, { transport: t });
+    expect((await a.findBooking!(item()))?.bookingRef).toBe("6529537");
+    expect(calls.filter((c) => c.startsWith("/v1/reservations"))).toEqual([
+      "/v1/reservations?from=2027-01-10&to=2027-01-15&limit=100",
+      "/v1/reservations?from=2027-01-10&to=2027-01-15&limit=100&cursor=p2",
+      "/v1/reservations?from=2027-01-10&to=2027-01-15&cursor=p3&limit=100",
+    ]);
+  });
+
+  it("paginação: segue o link da API; cursor que não avança não repete casas", async () => {
+    expect(nextPagePath("/v1/quote", { checkin: "a" }, { hasNextPage: true, nextCursor: "c", link: "https://api.mapro.io/v1/quote?checkin=a&cursor=c" })).toBe("/v1/quote?checkin=a&cursor=c");
+    expect(nextPagePath("/v1/quote", { checkin: "a" }, { hasNextPage: true, nextCursor: "c" })).toBe("/v1/quote?checkin=a&cursor=c");
+    expect(nextPagePath("/v1/quote", { checkin: "a" }, { hasNextPage: false, nextCursor: "c" })).toBeNull();
+    let n = 0;
+    const loop: Transport = async () => {
+      n++;
+      return { status: 200, body: JSON.stringify({ status: 1, quote: [H1, H2], paginanation: { hasNextPage: true, nextCursor: "same" } }) };
+    };
+    const a = createMaproAdapter(cfg, { transport: loop });
+    const list = await a.search({ ...STAY, pax: { adults: 2 } });
+    expect(list.map((x) => x.productId)).toEqual([H1.id, H2.id]);
+    expect(n).toBe(2); // 2ª página só repetiu → para
   });
 
   it("reserva de outro canal nas mesmas datas não é confundida com a nossa", async () => {

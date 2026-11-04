@@ -83,8 +83,10 @@ export async function orderDetailExtras(
   const ruleIds = [...new Set(items.flatMap((i) => [i.subrinhoMarginRuleId, i.affiliateMarginRuleId]).filter((x): x is string => !!x))];
   const staffIds = new Set<string>();
   const manualBy = (order.paymentData as { manualBy?: unknown }).manualBy;
-  if (typeof manualBy === "string") staffIds.add(manualBy);
-  for (const e of events) if (typeof e.data?.by === "string") staffIds.add(e.data.by);
+  // "by"/"byId" guardam o id do usuário; eventos antigos guardavam o nome — só ids válidos vão à consulta
+  const isUuid = (v: unknown): v is string => typeof v === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+  if (isUuid(manualBy)) staffIds.add(manualBy);
+  for (const e of events) for (const v of [e.data?.by, e.data?.byId]) if (isUuid(v)) staffIds.add(v);
 
   const [rules, payout, placedBy, account, staff] = await Promise.all([
     ruleIds.length ? tx.select().from(marginRules).where(inArray(marginRules.id, ruleIds)) : Promise.resolve([]),
