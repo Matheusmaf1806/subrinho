@@ -326,7 +326,7 @@ export function BrandingEditor({
             <span className="rounded-full bg-ink px-3 py-1.5 text-[11px] font-semibold text-white">Carrinho</span>
           </div>
           <div className="relative overflow-hidden bg-brand-50 px-4 pb-4 pt-3">
-            <div className="grid-paper pointer-events-none absolute inset-0 [background-size:64px_64px,64px_64px,16px_16px,16px_16px]" />
+            <div className="grid-paper pointer-events-none absolute inset-0 [background-size:40px_40px,40px_40px,8px_8px,8px_8px]" />
             <div className="relative grid grid-cols-[1.45fr_1fr] items-center gap-3">
               <div>
                 <p className="text-[1.05rem] font-semibold leading-[1.05] tracking-[-0.04em]">

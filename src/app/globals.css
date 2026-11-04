@@ -466,20 +466,21 @@ dialog::backdrop {
   box-shadow: 0 12px 34px -24px rgba(10, 10, 20, 0.45);
 }
 
-/* ───────── Papel quadriculado: linhas finas e claras que somem em degradê ───────── */
+/* ───────── Papel quadriculado: quadradinhos finos e claros que somem em degradê ───────── */
 .grid-paper {
-  --g: color-mix(in oklab, var(--color-brand) 6%, transparent);
-  --G: color-mix(in oklab, var(--color-brand) 10%, transparent);
+  --g: color-mix(in oklab, var(--color-brand) 5%, transparent);
+  --G: color-mix(in oklab, var(--color-brand) 9%, transparent);
   background-image:
     linear-gradient(var(--G) 1px, transparent 1px),
     linear-gradient(90deg, var(--G) 1px, transparent 1px),
     linear-gradient(var(--g) 1px, transparent 1px),
     linear-gradient(90deg, var(--g) 1px, transparent 1px);
+  /* quadradinhos de 16px, linha mais forte a cada 5 (80px) */
   background-size:
-    160px 160px,
-    160px 160px,
-    40px 40px,
-    40px 40px;
+    80px 80px,
+    80px 80px,
+    16px 16px,
+    16px 16px;
   background-position: -1px -1px;
   /* some nas bordas (degradê radial); --fade-at muda o centro */
   -webkit-mask-image: radial-gradient(ellipse 70% 75% at var(--fade-at, 50% 35%), black 10%, transparent 72%);
