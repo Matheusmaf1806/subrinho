@@ -12,7 +12,7 @@ function photosOf(p: PricedDetail): string[] {
   return [p.imageUrl ?? photo(CATEGORY_PHOTO[p.category] ?? "colosseum", 1600), stockA, stockB];
 }
 
-export function ProductHero({ p, back, cta }: { p: PricedDetail; back: { href: string; label: string }; cta?: { href: string; label: string; note?: string } }) {
+export function ProductHero({ p, back, cta }: { p: PricedDetail; back: { href: string; label: string }; cta?: { href: string; label: string; note?: string; mobileOnly?: boolean } }) {
   const photos = photosOf(p);
   const paragraphs = p.description.split(/\n{2,}/).map((x) => x.trim()).filter(Boolean);
   const info = p.info.filter((i) => i.label !== "Fornecedor");
@@ -35,7 +35,7 @@ export function ProductHero({ p, back, cta }: { p: PricedDetail; back: { href: s
         <h1 className="display mt-3 text-[clamp(2.5rem,5vw,4.75rem)] text-ink">{p.title}</h1>
         {p.subtitle && <p className="mt-4 max-w-2xl text-[17px] text-muted">{p.subtitle}</p>}
         {cta && (
-          <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div className={`mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 ${cta.mobileOnly ? "lg:hidden" : ""}`}>
             <a href={cta.href} className="inline-flex h-12 items-center gap-2 rounded-full bg-ink px-6 text-[15px] font-semibold text-white transition hover:bg-ink-2">
               {cta.label} <span aria-hidden>↓</span>
             </a>
@@ -126,9 +126,9 @@ export function ProductHero({ p, back, cta }: { p: PricedDetail; back: { href: s
 }
 
 /** Painel de reserva fixo à direita. */
-export function BookingPanel({ title, children }: { title: string; children: React.ReactNode }) {
+export function BookingPanel({ title, children, id }: { title: string; children: React.ReactNode; id?: string }) {
   return (
-    <aside className="lg:sticky lg:top-28 lg:self-start">
+    <aside id={id} className="scroll-mt-24 lg:sticky lg:top-28 lg:self-start">
       <div className="rounded-[2rem] bg-white p-6 ring-1 ring-inset ring-black/[0.07] shadow-[0_40px_100px_-50px_rgba(10,10,11,0.45)] sm:p-7">
         <h2 className="mb-5 text-2xl font-semibold tracking-[-0.035em] text-ink">{title}</h2>
         {children}

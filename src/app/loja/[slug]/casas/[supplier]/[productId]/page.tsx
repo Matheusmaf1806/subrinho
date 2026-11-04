@@ -51,8 +51,14 @@ export default async function HouseDetail({
       <ProductHero
         p={p}
         back={{ href: `/loja/${slug}/casas?${toQuery({ destino: d.destino, checkin: d.checkin, checkout: d.checkout, adultos: d.adultos, criancas: d.criancas })}`, label: "Voltar para casas" }}
+        cta={{
+          href: "#reservar",
+          mobileOnly: true, // no computador o painel de reserva já fica ao lado
+          label: available ? "Ver preço e reservar" : "Ver disponibilidade",
+          note: available && o.price ? `${brl(o.price.pix)} no Pix · ${nights} noite${nights > 1 ? "s" : ""} · taxas inclusas` : undefined,
+        }}
       />
-      <BookingPanel title="Reserve a casa">
+      <BookingPanel title="Reserve a casa" id="reservar">
         <div className="space-y-5">
           <form action={self} className="grid grid-cols-2 gap-2">
             <label className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
