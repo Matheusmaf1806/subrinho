@@ -65,6 +65,11 @@ export function needsControlledIssue(supplierCode: string): boolean {
   }
 }
 
+/** Pagamento marcado pelo botão "Simular pagamento" (somente ambiente de testes). */
+export function isSimulatedPayment(paymentData: unknown): boolean {
+  return (paymentData as { simulated?: boolean } | null)?.simulated === true;
+}
+
 type IssueOutcome = { itemId: string; status: string; bookingRef: string | null; message: string };
 
 /**
@@ -84,6 +89,9 @@ export async function issueItemBooking(
   if (!row) throw new BookingIssueError("Item não encontrado");
   const { item, order } = row;
   if (order.status !== "PAID") throw new BookingIssueError("O pedido ainda não está pago — a reserva só é emitida depois do pagamento");
+  // Pagamento simulado (ambiente sem gateway) não é dinheiro de verdade: nunca vira reserva real com custo.
+  if (isSimulatedPayment(order.paymentData) && process.env.ALLOW_SIMULATED_ISSUE !== "1")
+    throw new BookingIssueError("Pagamento simulado (teste) — não é dinheiro real, então nenhuma reserva é emitida no fornecedor. Confirme um pagamento real antes.");
   if (item.supplierStatus === BOOKING_STATUS.CONFIRMED || item.supplierStatus === BOOKING_STATUS.PENDING)
     return { itemId, status: item.supplierStatus, bookingRef: item.supplierBookingRef, message: "Este item já tem reserva no fornecedor" };
 
@@ -212,7 +220,7 @@ export async function autoIssueOrder(orderId: string, db?: DB): Promise<void> {
   try {
     db ??= getDb();
     const [order] = await db.select({ status: orders.status, paymentData: orders.paymentData }).from(orders).where(eq(orders.id, orderId));
-    if (order?.status !== "PAID" || (order.paymentData as { simulated?: boolean } | null)?.simulated) return;
+    if (order?.status !== "PAID" || isSimulatedPayment(order.paymentData)) return;
     const items = await db
       .select({ id: orderItems.id })
       .from(orderItems)
@@ -264,7 +272,14 @@ export async function bookingsNeedingAction(db: DB = getDb(), limit = 6) {
     .select({ itemId: orderItems.id, orderId: orders.id, number: orders.number, title: orderItems.title, status: orderItems.supplierStatus, serviceDate: orderItems.serviceDate })
     .from(orderItems)
     .innerJoin(orders, eq(orders.id, orderItems.orderId))
-    .where(and(eq(orders.status, "PAID"), inArray(orderItems.supplierStatus, [BOOKING_STATUS.AWAITING_ISSUE, BOOKING_STATUS.BOOKING_FAILED, BOOKING_STATUS.ISSUE_UNKNOWN, BOOKING_STATUS.REJECTED])))
+    .where(
+      and(
+        eq(orders.status, "PAID"),
+        inArray(orderItems.supplierStatus, [BOOKING_STATUS.AWAITING_ISSUE, BOOKING_STATUS.BOOKING_FAILED, BOOKING_STATUS.ISSUE_UNKNOWN, BOOKING_STATUS.REJECTED]),
+        // pedidos com pagamento simulado não pedem ação (não são emitidos)
+        sql`coalesce(${orders.paymentData}->>'simulated', 'false') <> 'true'`,
+      ),
+    )
     .orderBy(asc(orderItems.serviceDate))
     .limit(100);
   return { total: rows.length, items: rows.slice(0, limit) };

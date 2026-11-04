@@ -41,9 +41,12 @@ function periodRange(f: Fortnight) {
   return { from: startOfLocalDay(f.start), to: startOfLocalDay(addDays(f.end, 1)) };
 }
 
+/** Pagamento de verdade: o botão de teste "Simular pagamento" não gera repasse (não entrou dinheiro). */
+const REAL_PAYMENT = sql`coalesce(${orders.paymentData}->>'simulated', 'false') <> 'true'`;
+
 async function paidOrdersIn(tx: Tx, f: Fortnight, affiliateId?: string) {
   const { from, to } = periodRange(f);
-  const conds = [eq(orders.status, "PAID"), gte(orders.paidAt, from), lt(orders.paidAt, to)];
+  const conds = [eq(orders.status, "PAID"), gte(orders.paidAt, from), lt(orders.paidAt, to), REAL_PAYMENT];
   if (affiliateId) conds.push(eq(orders.affiliateId, affiliateId));
   return tx.select().from(orders).where(and(...conds)).orderBy(asc(orders.paidAt));
 }
@@ -313,7 +316,7 @@ export async function affiliateFinancials(tx: Tx, affiliateId: string) {
       gross: sql<string>`coalesce(sum(${orders.amountCharged}), 0)::text`,
     })
     .from(orders)
-    .where(and(eq(orders.affiliateId, affiliateId), eq(orders.status, "PAID"), isNull(orders.payoutId)))
+    .where(and(eq(orders.affiliateId, affiliateId), eq(orders.status, "PAID"), isNull(orders.payoutId), REAL_PAYMENT))
     .groupBy(orders.payoutDate)
     .orderBy(asc(orders.payoutDate));
   const proofs = await listPayoutProofs(tx, paid.map((p) => p.id));

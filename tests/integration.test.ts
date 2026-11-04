@@ -264,12 +264,12 @@ describe.skipIf(!url)("fluxo completo (integração)", () => {
     await expect(issueItemBooking(item.id, { type: "SUBRINHO", name: "Staff" }, db)).rejects.toBeInstanceOf(BookingIssueError);
 
     liveBook.calls.length = 0;
-    await markOrderPaid(db, order.id, { paidAt: new Date(), data: { simulated: true } });
+    await markOrderPaid(db, order.id, { paidAt: new Date(), ref: "PIX-REAL-1", data: { gateway: "test" } });
     const [awaiting] = await db.select().from(schema.orderItems).where(eq(schema.orderItems.id, item.id));
     expect(awaiting.supplierStatus).toBe("AWAITING_ISSUE");
     expect(liveBook.calls).toHaveLength(0); // pagamento confirmado NÃO reserva sozinho
 
-    // pagamento simulado nunca dispara emissão automática
+    // emissão automática desligada (SUPPLIER_BOOKING=manual): só a equipe emite
     await autoIssueOrder(order.id, db);
     expect(liveBook.calls).toHaveLength(0);
 
@@ -399,6 +399,27 @@ describe.skipIf(!url)("fluxo completo (integração)", () => {
     // a agência não vê custo, margem Subrinho nem dados do fornecedor (códigos de acesso ficam no voucher do cliente)
     const aff = JSON.stringify(await getOrderForAffiliate(db, affiliateId, order.id));
     for (const forbidden of ["costBrl", "netSubrinho", "supplierPayload", "doorCode", "reservationUlid"]) expect(aff).not.toContain(forbidden);
+  });
+
+  it("pagamento simulado (sem gateway) nunca vira reserva real no fornecedor", async () => {
+    const { customer } = await findOrCreateCustomer(db, affiliateId, { name: "Teste Simulado", email: "sim@casa.com", phone: "11955554444", password: "12345678" });
+    const q = await getAdapter("MAPRO").quote({ productId: "01HOUSEAUDIT0000000000001", checkIn: addDays(todayLocal(), 80), checkOut: addDays(todayLocal(), 84), pax: { adults: 2, children: 0 } });
+    const cart = await createCart(db, affiliateId, { type: "CUSTOMER", id: customer.id });
+    await addQuoteToCart(db, cart, q);
+    const { order } = await placeOrder(db, { cart, customer, payer: { name: "Teste Simulado", email: "sim@casa.com" }, travelers: [{ name: "Teste Simulado" }], paymentMethod: "PIX", installments: 1 });
+    await markOrderPaid(db, order.id, { paidAt: new Date(), data: { simulated: true } });
+    const [oi] = await db.select().from(schema.orderItems).where(eq(schema.orderItems.orderId, order.id));
+    const posts = mapro.calls.filter((c) => c.method === "POST").length;
+    await expect(issueItemBooking(oi.id, { type: "SUBRINHO", id: staffId, name: "Staff" }, db)).rejects.toThrow(/Pagamento simulado/);
+    await autoIssueOrder(order.id, db);
+    expect(mapro.calls.filter((c) => c.method === "POST").length).toBe(posts);
+    const { bookingsNeedingAction } = await import("@/server/bookings/service");
+    expect((await bookingsNeedingAction(db, 100)).items.some((x) => x.itemId === oi.id)).toBe(false);
+    // sem dinheiro real, sem repasse ao afiliado
+    const r = await closeFortnight(db, fortnightOf(todayLocal()), { type: "CRON" });
+    const [after] = await db.select().from(schema.orders).where(eq(schema.orders.id, order.id));
+    expect(after.payoutId).toBeNull();
+    expect(r.summary.totals.orders).toBeGreaterThanOrEqual(0);
   });
 
   it("casas: administradora subiu o preço depois do pagamento → não reserva e registra o motivo", async () => {

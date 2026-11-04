@@ -198,3 +198,12 @@ A visão do afiliado é montada por **lista branca** de campos (`getOrderForAffi
 - **Fotos:** só fotos reais do fornecedor; sem foto, a loja mostra um espaço neutro (nunca foto ilustrativa como se
   fosse a casa — vale também para hotéis).
 - **Conta DEMO:** em produção (`VERCEL_ENV=production`) o token da conta DEMO da MAPRO é recusado.
+
+## 9. Pagamento simulado (ambiente sem gateway)
+
+> `isSimulatedPayment` em `src/server/bookings/service.ts`, `REAL_PAYMENT` em `src/server/payouts/service.ts`
+
+- Com `PAYMENT_PROVIDER=mock` a loja oferece o botão “Simular pagamento” (testes). O pedido fica “Pago”, mas
+  **não é dinheiro real**: nenhuma reserva é emitida no fornecedor (o painel bloqueia e explica), o item não entra
+  nos alertas de “reservas aguardando ação” e o pedido **não gera repasse** ao afiliado.
+- Pagamento real = gateway (webhook) ou confirmação manual pelo Painel Subrinho (Pix recebido fora do gateway).

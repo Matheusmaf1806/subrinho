@@ -658,7 +658,8 @@ export function createMaproAdapter(cfg: MaproConfig, opts: { transport?: Transpo
       const out = toResult(res);
       const charged = res.amountTotal ? new Decimal(money2(res.amountTotal)) : null;
       out.payload.quotedTotal = total.toFixed(2);
-      if (charged && item.maxCost && charged.gt(new Decimal(item.maxCost.amount).plus("0.01"))) out.payload.costWarning = `Total da reserva (${charged.toFixed(2)}) acima do custo vendido (${item.maxCost.amount})`;
+      if (charged) out.payload.bookedPrice = charged.toFixed(2);
+      if (charged && item.maxCost && charged.gt(new Decimal(item.maxCost.amount).plus("0.01"))) out.payload.costAboveSold = true;
       return out;
     },
 

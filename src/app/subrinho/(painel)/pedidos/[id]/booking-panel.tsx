@@ -19,11 +19,25 @@ function tone(status: string | null): "success" | "warning" | "danger" | "info" 
   return "neutral";
 }
 
-export function SupplierBookingPanel({ item: i, live, orderPaid, canAct, canSimulateCancel = false }: { item: Item; live: boolean; orderPaid: boolean; canAct: boolean; canSimulateCancel?: boolean }) {
+export function SupplierBookingPanel({
+  item: i,
+  live,
+  orderPaid,
+  canAct,
+  canSimulateCancel = false,
+  simulatedPayment = false,
+}: {
+  item: Item;
+  live: boolean;
+  orderPaid: boolean;
+  canAct: boolean;
+  canSimulateCancel?: boolean;
+  simulatedPayment?: boolean;
+}) {
   const p = (i.supplierPayload ?? {}) as Record<string, unknown>;
   const s = i.supplierStatus;
   const str = (k: string) => (typeof p[k] === "string" && (p[k] as string).trim() ? (p[k] as string) : null);
-  const canIssue = live && orderPaid && canAct && CAN_ISSUE.has(s);
+  const canIssue = live && orderPaid && canAct && CAN_ISSUE.has(s) && !simulatedPayment;
   const canRefresh = live && canAct && (!!i.supplierBookingRef || (!!str("reference") && s !== "AWAITING_ISSUE"));
   const canCancel = live && canAct && !!i.supplierBookingRef && (s === "CONFIRMED" || s === "PENDING");
   const det = (i.details ?? {}) as { cancellation?: string; notes?: string[]; nonRefundable?: boolean };
@@ -161,6 +175,11 @@ export function SupplierBookingPanel({ item: i, live, orderPaid, canAct, canSimu
           </div>
         )}
       </div>
+      {live && simulatedPayment && !i.supplierBookingRef && (
+        <Alert tone="warning" className="mt-3" title="Pagamento simulado — emissão bloqueada">
+          Este pedido foi “pago” pelo botão de teste, sem dinheiro real. Nenhuma reserva é feita no fornecedor para ele.
+        </Alert>
+      )}
       {str("error") && s !== "CONFIRMED" && (
         <Alert tone="danger" className="mt-3" title="Último erro do fornecedor">
           {str("error")}

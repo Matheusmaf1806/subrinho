@@ -112,6 +112,8 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
                   </p>
                 ) : i.supplierStatus === "CANCELLED" ? (
                   <p className="mt-1 text-xs font-semibold text-red-700">Reserva cancelada</p>
+                ) : order.status === "PAID" && (order.paymentData as { simulated?: boolean } | null)?.simulated ? (
+                  <p className="mt-1 text-xs font-semibold text-amber-800">Pagamento de teste — nenhuma reserva é feita no fornecedor</p>
                 ) : order.status === "PAID" ? (
                   <p className="mt-1 text-xs font-semibold text-muted">Reserva em processamento — você recebe a confirmação em breve</p>
                 ) : null}
