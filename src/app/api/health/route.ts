@@ -131,7 +131,12 @@ export async function GET(request: Request) {
       provedor: provider === "paypal" ? "PayPal" : "simulado (sem gateway — pagamentos não valem)",
       ambiente: pp ? `${pp.environment} · ${new URL(pp.baseUrl).host}` : null,
       variaveis_faltando: pp ? undefined : paypalMissing(),
-      pix: provider === "mock" ? "simulado" : process.env.PIX_KEY?.trim() ? "QR Code da chave PIX_KEY · confirmação manual no painel" : "desligado (defina PIX_KEY para oferecer Pix)",
+      pix:
+        provider === "mock"
+          ? `simulado · PIX_KEY ${process.env.PIX_KEY?.trim() ? "configurada" : "não configurada (defina antes de ligar o PayPal)"}`
+          : process.env.PIX_KEY?.trim()
+            ? "QR Code da chave PIX_KEY · confirmação manual no painel"
+            : "desligado (defina PIX_KEY para oferecer Pix)",
       assinatura_webhook: pp ? (pp.webhookId ? "conferida (PAYPAL_WEBHOOK_ID)" : "sem PAYPAL_WEBHOOK_ID — eventos só disparam nova consulta à API do PayPal") : undefined,
       teste,
     };
