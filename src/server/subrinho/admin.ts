@@ -62,7 +62,7 @@ export async function deleteHoliday(tx: Tx, date: string) {
  * "A|B" = aceita qualquer um dos nomes (o primeiro é o recomendado).
  */
 export const SUPPLIER_ENV: Record<string, string[]> = {
-  TU_EXPERIENZA: ["TU_EXPERIENZA_API_KEY"],
+  TU_EXPERIENZA: ["TUEXPERIENCIA_DISTRIBUTOR_ID", "TUEXPERIENCIA_USERNAME", "TUEXPERIENCIA_PASSWORD"],
   NADIO: ["NADIO_API_KEY"],
   GGT_BEST_BUY: ["GGT_API_BASE_URL", "GGT_AGENCY_ID", "GGT_USER", "GGT_PASSWORD", "GGT_ENVIRONMENT"],
   RATEHAWK: ["RATEHAWK_KEY_ID", "RATEHAWK_API_KEY"],
