@@ -3,6 +3,7 @@ import { Lock, ShieldCheck } from "lucide-react";
 import { db } from "@/server/db";
 import { loadCartView } from "@/server/cart/service";
 import { getSettings } from "@/server/settings";
+import { paymentProvider } from "@/server/payments/provider";
 import { Alert, Input } from "@/components/ui";
 import { ActionForm, SubmitButton } from "@/components/ui-client";
 import { getStore, viewerFor } from "../../_lib/store";
@@ -48,6 +49,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ slug:
   const { slug, token } = await params;
   const store = await getStore(slug);
   const [view, viewer, settings] = await Promise.all([loadCartView(db, token, store.id), viewerFor(store), getSettings(db)]);
+  const provider = paymentProvider();
   if (!view) notFound();
   if (view.cart.status !== "OPEN" || view.items.length === 0 || view.removedNotices.length > 0) redirect(`/loja/${slug}/carrinho/${token}`);
 
@@ -156,9 +158,16 @@ export default async function CheckoutPage({ params }: { params: Promise<{ slug:
               </Step>
 
               <Step n={5} title="Pagamento">
-                <PaymentFields pix={Number(t.pix)} installment={Number(t.installment)} maxInstallments={settings.maxInstallments} />
-                <SubmitButton variant="accent" size="lg" className="mt-6 h-16 w-full text-base" pendingText="Processando pagamento…">
-                  Pagar e concluir →
+                <PaymentFields
+                  pix={Number(t.pix)}
+                  installment={Number(t.installment)}
+                  maxInstallments={settings.maxInstallments}
+                  cardCheckout={provider.cardCheckout}
+                  pixAvailable={provider.pixAvailable}
+                  simulated={provider.name === "mock"}
+                />
+                <SubmitButton variant="accent" size="lg" className="mt-6 h-16 w-full text-base" pendingText={provider.cardCheckout === "paypal" ? "Confirmando preços…" : "Processando pagamento…"}>
+                  {provider.cardCheckout === "paypal" ? "Continuar para o pagamento →" : "Pagar e concluir →"}
                 </SubmitButton>
                 <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-muted">
                   <ShieldCheck className="h-4 w-4" /> Antes de cobrar, confirmamos preço e disponibilidade com cada fornecedor.

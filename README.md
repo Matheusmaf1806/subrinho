@@ -41,8 +41,9 @@ Acessos do seed:
 | `/loja/viagens-da-ana/entrar` (cliente) | maria@cliente.com.br | cliente123 |
 | `/loja/viagens-da-ana/entrar?modo=agencia` (modo ADMIN) | ana@viagensdaana.com.br | afiliado123 |
 
-Pagamentos estão em modo de testes (`PAYMENT_PROVIDER=mock`): o Pix gera um “copia e cola” válido e a página do
-pedido tem o botão “Simular pagamento”; no cartão, qualquer número é aprovado, exceto final `0002` (recusado).
+Sem credenciais do PayPal (ou com `PAYMENT_PROVIDER=mock`) os pagamentos são simulados: o Pix gera um “copia e cola”
+e a página do pedido tem o botão “Simular pagamento”; no cartão, qualquer número é aprovado, exceto final `0002`
+(recusado). Pagamento simulado nunca emite reserva real nem gera repasse.
 
 ## Deploy na Vercel
 
@@ -55,7 +56,10 @@ pedido tem o botão “Simular pagamento”; no cartão, qualquer número é apr
    | `APP_URL` | URL pública (ex.: `https://subrinho.vercel.app`) — usada nos links de carrinho |
    | `CRON_SECRET` | um segredo qualquer — a Vercel envia nos crons e as rotas `/api/cron/*` exigem |
    | `FX_PROVIDER` | `manual` (cotação lançada no Painel Subrinho), `awesomeapi` ou `poolvo` |
-   | `PAYMENT_PROVIDER` | `mock` até o gateway ser integrado |
+   | `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` | PayPal (app de produção) — liga o gateway real |
+   | `PAYPAL_API_BASE` | `https://api.paypal.com` (padrão) ou `https://api-m.sandbox.paypal.com` |
+   | `PAYPAL_WEBHOOK_ID` | opcional — confere a assinatura dos webhooks do PayPal |
+   | `PIX_KEY`, `PIX_MERCHANT_NAME`, `PIX_MERCHANT_CITY` | Pix com confirmação manual no painel (sem `PIX_KEY`, só cartão/PayPal) |
    | `GGT_API_BASE_URL`, `GGT_AGENCY_ID`, `GGT_USER`, `GGT_PASSWORD`, `GGT_ENVIRONMENT` | GGT \| Best Buy Hotels (API real) |
    | `HB_HOTEIS_API_KEY`, `HB_HOTEIS_SECRET` | Hotelbeds: API key e secret (também aceita `API_KEY_HH` / `SECRET_KEY_HH`) |
    | `HB_HOTEIS_CLIENT_CRT`, `HB_HOTEIS_CLIENT_KEY`, `HB_HOTEIS_CA_CHAIN` | Hotelbeds: certificado mTLS, chave privada e cadeia da CA (PEM) |
@@ -197,6 +201,31 @@ página do hotel, sem gastar uma nova busca no fornecedor.
 **Diagnóstico:** Painel Subrinho → Fornecedores (modo de cada fornecedor, validade do certificado, “Testar conexão”,
 “Atualizar destinos”) e `GET /api/health?fornecedores` (testa as conexões, somente leitura).
 
+## Pagamento com PayPal (Orders API v2)
+
+> `src/server/payments/paypal.ts` (cliente e conferência) · `src/server/payments/paypal-checkout.ts` (fluxo) ·
+> `src/app/loja/[slug]/_components/paypal-buttons.tsx` · webhook `src/app/api/payments/webhook/route.ts` ·
+> testes: `tests/paypal.test.ts` e `tests/integration.test.ts`
+
+1. No checkout o cliente escolhe **Cartão de crédito ou PayPal**; o pedido é criado (preço e disponibilidade
+   reconfirmados) e a página do pedido mostra os botões do PayPal (conta PayPal ou cartão de débito/crédito).
+2. Ao clicar, o servidor cria o pedido no PayPal com o **valor do nosso banco** (`custom_id` = id do pedido,
+   `invoice_id` = `SUB<número>`, sem dados do fornecedor). O navegador só recebe o id do PayPal.
+3. Depois da aprovação, o servidor **captura** e só marca “Pago” se pedido, moeda (BRL) e valor conferirem. Cartão
+   recusado → o PayPal deixa escolher outro meio na mesma janela. Captura em análise → o pedido fica aguardando e é
+   confirmado sozinho quando o PayPal liberar.
+4. Se o cliente aprovar e fechar a janela, a página do pedido e o webhook conferem na API do PayPal e capturam.
+   Pedido cancelado/substituído ou carrinho já pago em outro pedido **nunca** é capturado.
+5. O painel mostra o pedido e a captura no PayPal, o meio usado, a tarifa e o líquido. Estornos e contestações
+   chegam pelo webhook como eventos na linha do tempo (o estorno em si é feito no painel do PayPal).
+
+**Parcelamento:** quem define as parcelas sem juros é o plano de parcelamento da conta PayPal Empresa
+(Configurações → Preferências de pagamento → Plano de parcelamento). Configure até `maxInstallments` (10x) para bater
+com o que a loja anuncia; a tarifa do parcelamento entra no acréscimo do cartão (`installmentFeePct`).
+
+**Webhook (recomendado):** cadastre `https://<seu-domínio>/api/payments/webhook` no app do PayPal com os eventos
+`CHECKOUT.ORDER.APPROVED` e `PAYMENT.CAPTURE.*`. Com `PAYPAL_WEBHOOK_ID` a assinatura também é conferida.
+
 ## Ingressos com API real — Tu Experienza (Tue Distributor API v2.0)
 
 `src/server/suppliers/tue/` — OAuth2 (`TUEXPERIENCIA_USERNAME`/`PASSWORD` → token Bearer) e distribuidor
@@ -244,7 +273,7 @@ fornecedores de API real (categorias sem fornecedor aparecem como “Em breve”
 - **Câmbio “Dólar Poolvo”:** `poolvoProvider` em `src/server/fx/index.ts` precisa do formato da API
   (`FX_POOLVO_URL`/`FX_POOLVO_TOKEN`). Enquanto isso, use `FX_PROVIDER=manual` (cotação informada no Painel Subrinho)
   ou `awesomeapi`.
-- **Gateway de pagamento:** implemente `PaymentProvider` em `src/server/payments/provider.ts` e o webhook em
-  `src/app/api/payments/webhook/route.ts` chamando `markOrderPaid`.
+- **Pix automático:** o Pix pelo PayPal é liberação limitada (depende da conta). Até lá, o Pix usa a chave `PIX_KEY`
+  com confirmação no Painel Subrinho; um gateway de Pix entra como mais um `PaymentProvider`.
 - **Agendador:** chame `/api/cron/fortnight-close` nos dias 1 e 16 e `/api/cron/fx-refresh` periodicamente
   (já configurado em `vercel.json`; em outro host, use qualquer cron com `Authorization: Bearer $CRON_SECRET`).

@@ -101,6 +101,8 @@ import { fortnightOf } from "@/server/payouts/calendar";
 import { getOrderForAffiliate } from "@/server/orders/queries";
 import { orderDetailExtras } from "@/server/subrinho/orders";
 import { addDays, todayLocal } from "@/lib/tz";
+import { PaypalClient, type Transport as PaypalTransport } from "@/server/payments/paypal";
+import { capturePaypalCheckout, createPaypalCheckout, handlePaypalWebhook, syncPaypalOrder } from "@/server/payments/paypal-checkout";
 
 const url = process.env.TEST_DATABASE_URL;
 
@@ -524,5 +526,154 @@ describe.skipIf(!url)("fluxo completo (integração)", () => {
     const json = JSON.stringify(view);
     for (const forbidden of ["costBrl", "fxRate", "netSubrinho", "subrinhoMargin", "priceFloor", "minSellPrice", "rateKeys", "supplierCode", "supplierPayload"]) expect(json).not.toContain(forbidden);
     expect(view!.items[0].commission).toBe("0.00");
+  });
+  // ───────────── PayPal (gateway real, com PayPal falso — sem rede) ─────────────
+
+  /** PayPal falso: pedidos em memória, captura com tarifa; `amount` força valor capturado diferente. */
+  function fakePaypal(o: { amount?: string; declineOnce?: boolean; captureStatus?: string } = {}) {
+    const calls: { method: string; path: string; body?: string }[] = [];
+    const store = new Map<string, Record<string, any>>();
+    let n = 0;
+    const transport: PaypalTransport = async (req) => {
+      const u = new URL(req.url);
+      calls.push({ method: req.method, path: u.pathname, body: req.body });
+      const json = (v: unknown, status = 200) => ({ status, body: JSON.stringify(v) });
+      if (u.pathname === "/v1/oauth2/token") return json({ access_token: "T", expires_in: 32400 });
+      if (u.pathname === "/v2/checkout/orders" && req.method === "POST") {
+        const b = JSON.parse(req.body!);
+        const id = `PP${++n}`;
+        store.set(id, { id, status: "CREATED", purchase_units: [{ ...b.purchase_units[0] }] });
+        return json(store.get(id), 201);
+      }
+      const m = u.pathname.match(/^\/v2\/checkout\/orders\/([^/]+)(\/capture)?$/);
+      const ord = m ? store.get(m[1]) : undefined;
+      if (!m || !ord) return json({ name: "RESOURCE_NOT_FOUND", details: [{ issue: "INVALID_RESOURCE_ID" }] }, 404);
+      if (!m[2]) return json(ord);
+      if (o.declineOnce) {
+        o.declineOnce = false;
+        return json({ name: "UNPROCESSABLE_ENTITY", details: [{ issue: "INSTRUMENT_DECLINED" }] }, 422);
+      }
+      if (ord.status === "COMPLETED") return json({ name: "UNPROCESSABLE_ENTITY", details: [{ issue: "ORDER_ALREADY_CAPTURED" }] }, 422);
+      const value = o.amount ?? ord.purchase_units[0].amount.value;
+      ord.status = "COMPLETED";
+      ord.payment_source = { card: { brand: "MASTERCARD", last_digits: "5100" } };
+      ord.purchase_units[0].payments = {
+        captures: [{ id: `CAP-${m[1]}`, status: o.captureStatus ?? "COMPLETED", amount: { currency_code: "BRL", value }, seller_receivable_breakdown: { paypal_fee: { value: "12.34" }, net_amount: { value: (Number(value) - 12.34).toFixed(2) } } }],
+      };
+      return json(ord, 201);
+    };
+    const cfg = { clientId: "cli", clientSecret: "sec", baseUrl: "https://api-m.sandbox.paypal.com", environment: "sandbox" as const, webhookId: null };
+    return { calls, store, client: new PaypalClient(cfg, transport), approve: (id: string) => (store.get(id)!.status = "APPROVED") };
+  }
+
+  /** Pedido no cartão com o PayPal ligado (credenciais de teste; nenhuma chamada real). */
+  async function paypalOrder(email: string) {
+    const prev = { ...process.env };
+    Object.assign(process.env, { PAYMENT_PROVIDER: "", PAYPAL_CLIENT_ID: "cli", PAYPAL_CLIENT_SECRET: "sec", PAYPAL_API_BASE: "https://api-m.sandbox.paypal.com", PIX_KEY: "" });
+    try {
+      const { customer } = await findOrCreateCustomer(db, affiliateId, { name: "Paula PayPal", email, password: "12345678" });
+      const cart = await createCart(db, affiliateId, { type: "CUSTOMER", id: customer.id });
+      await addQuoteToCart(db, cart, specQuote());
+      // sem PIX_KEY o Pix não é oferecido com gateway real
+      await expect(placeOrder(db, { cart, customer, payer: { name: "Paula PayPal", email }, travelers: [{ name: "Paula PayPal" }], paymentMethod: "PIX", installments: 1, revalidate: false })).rejects.toThrow(/Pix indisponível/);
+      const { order, approved } = await placeOrder(db, { cart, customer, payer: { name: "Paula PayPal", email }, travelers: [{ name: "Paula PayPal" }], paymentMethod: "CARD", installments: 3, revalidate: false });
+      return { order, approved, cart, customer };
+    } finally {
+      for (const k of ["PAYMENT_PROVIDER", "PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET", "PAYPAL_API_BASE", "PIX_KEY"]) {
+        if (prev[k] === undefined) delete process.env[k];
+        else process.env[k] = prev[k];
+      }
+    }
+  }
+
+  it("PayPal: pedido no PayPal com o valor do banco, captura conferida, pago de verdade e idempotente", async () => {
+    const { order, approved } = await paypalOrder("paula@paypal.com");
+    expect(approved).toBe(false);
+    expect(order).toMatchObject({ status: "PENDING_PAYMENT", paymentProvider: "paypal", paymentMethod: "CARD", installments: 10 });
+    expect((order.paymentData as { paypal: { status: string } }).paypal.status).toBe("AWAITING_BUYER");
+
+    const pp = fakePaypal({ declineOnce: true });
+    const id = await createPaypalCheckout(db, order, { brandName: "Viagens da Ana" }, pp.client);
+    const sent = JSON.parse(pp.calls.find((c) => c.path === "/v2/checkout/orders")!.body!);
+    expect(sent.purchase_units[0]).toMatchObject({ custom_id: order.id, invoice_id: `SUB${order.number}`, amount: { currency_code: "BRL", value: Number(order.amountCharged).toFixed(2) } });
+    expect(JSON.stringify(sent)).not.toMatch(/NADIO|disney/i); // nada do fornecedor no PayPal
+    const [o1] = await db.select().from(schema.orders).where(eq(schema.orders.id, order.id));
+    expect(o1.paymentRef).toBe(id);
+    // cliente fechou e voltou: reaproveita o mesmo pedido do PayPal
+    expect(await createPaypalCheckout(db, o1, { brandName: "Viagens da Ana" }, pp.client)).toBe(id);
+    expect(pp.calls.filter((c) => c.path === "/v2/checkout/orders" && c.method === "POST")).toHaveLength(1);
+
+    await expect(capturePaypalCheckout(db, o1, "PP-OUTRO", pp.client)).rejects.toThrow(/não corresponde/);
+    expect((await capturePaypalCheckout(db, o1, id, pp.client)).state).toBe("RETRY"); // cartão recusado → escolhe outro na mesma janela
+    const r = await capturePaypalCheckout(db, o1, id, pp.client);
+    expect(r.state).toBe("PAID");
+    const [paid] = await db.select().from(schema.orders).where(eq(schema.orders.id, order.id));
+    expect(paid).toMatchObject({ status: "PAID", paymentRef: `CAP-${id}` });
+    expect(paid.paymentData).toMatchObject({ paypal: { orderId: id, status: "COMPLETED", captureId: `CAP-${id}`, fee: "12.34", method: "Cartão MASTERCARD final 5100" } });
+    expect((paid.paymentData as { simulated?: boolean }).simulated).toBeUndefined();
+    // de novo (outra aba / webhook): continua pago, sem novo evento PAID
+    expect((await capturePaypalCheckout(db, paid, id, pp.client)).state).toBe("PAID");
+    expect((await syncPaypalOrder(db, order.id, pp.client))).toBeNull();
+    const evs = await db.select().from(schema.orderEvents).where(eq(schema.orderEvents.orderId, order.id));
+    expect(evs.filter((e) => e.type === "PAID")).toHaveLength(1);
+    expect(evs.map((e) => e.type)).toEqual(expect.arrayContaining(["PAYPAL_ORDER_CREATED", "PAYPAL_CAPTURED", "PAID"]));
+    // o carrinho virou pedido; o item aguarda emissão normalmente (pagamento real)
+    expect(paid.payoutDate).toBeTruthy();
+  });
+
+  it("PayPal: valor capturado diferente do pedido → não marca pago e avisa a equipe", async () => {
+    const { order } = await paypalOrder("valor@paypal.com");
+    const pp = fakePaypal({ amount: "1.00" });
+    const id = await createPaypalCheckout(db, order, { brandName: "Loja" }, pp.client);
+    const [o] = await db.select().from(schema.orders).where(eq(schema.orders.id, order.id));
+    const r = await capturePaypalCheckout(db, o, id, pp.client);
+    expect(r.state).toBe("CLOSED");
+    const [after] = await db.select().from(schema.orders).where(eq(schema.orders.id, order.id));
+    expect(after.status).toBe("PENDING_PAYMENT");
+    const evs = await db.select().from(schema.orderEvents).where(eq(schema.orderEvents.orderId, order.id));
+    expect(evs.find((e) => e.type === "PAYMENT_MISMATCH")?.data).toMatchObject({ reason: expect.stringContaining("BRL 1.00") });
+  });
+
+  it("PayPal: aprovado e o cliente fechou a janela → o webhook captura; pedido substituído nunca é capturado", async () => {
+    // A: aprovado, sem captura pelo navegador → webhook (só aponta o pedido; o estado vem da API)
+    const a = await paypalOrder("janela@paypal.com");
+    const pp = fakePaypal();
+    const idA = await createPaypalCheckout(db, a.order, { brandName: "Loja" }, pp.client);
+    pp.approve(idA);
+    const w = await handlePaypalWebhook(db, { id: "WH-1", event_type: "CHECKOUT.ORDER.APPROVED", resource: { id: idA } }, pp.client);
+    expect(w).toMatchObject({ handled: true, note: "PAID", orderId: a.order.id });
+    const [paidA] = await db.select().from(schema.orders).where(eq(schema.orders.id, a.order.id));
+    expect(paidA.status).toBe("PAID");
+
+    // evento forjado / desconhecido: nada acontece
+    expect((await handlePaypalWebhook(db, { event_type: "PAYMENT.CAPTURE.COMPLETED", resource: { supplementary_data: { related_ids: { order_id: "PP-NAO-EXISTE" } } } }, pp.client)).handled).toBe(false);
+
+    // B: cliente abriu o PayPal, voltou ao checkout e gerou outro pedido (B fica cancelado)
+    const b = await paypalOrder("troca@paypal.com");
+    const idB = await createPaypalCheckout(db, b.order, { brandName: "Loja" }, pp.client);
+    await db.update(schema.orders).set({ status: "CANCELLED", cancelledAt: new Date() }).where(eq(schema.orders.id, b.order.id));
+    pp.approve(idB);
+    expect(await syncPaypalOrder(db, b.order.id, pp.client)).toBeNull();
+    expect(pp.calls.some((c) => c.path === `/v2/checkout/orders/${idB}/capture`)).toBe(false);
+  });
+
+  it("cartão do ambiente de testes (sem gateway) é sempre pagamento simulado", async () => {
+    const { customer } = await findOrCreateCustomer(db, affiliateId, { name: "Teste Cartão", email: "cartao@mock.com", password: "12345678" });
+    const cart = await createCart(db, affiliateId, { type: "CUSTOMER", id: customer.id });
+    await addQuoteToCart(db, cart, specQuote());
+    const res = await placeOrder(db, {
+      cart,
+      customer,
+      payer: { name: "Teste Cartão", email: "cartao@mock.com" },
+      travelers: [{ name: "Teste Cartão" }],
+      paymentMethod: "CARD",
+      installments: 2,
+      card: { holder: "TESTE", number: "4111111111111111", expiry: "12/30", cvv: "123", installments: 2 },
+      revalidate: false,
+    });
+    expect(res.approved).toBe(true);
+    expect(res.order.status).toBe("PAID");
+    expect(res.order.paymentProvider).toBe("mock");
+    expect((res.order.paymentData as { simulated?: boolean }).simulated).toBe(true);
   });
 });

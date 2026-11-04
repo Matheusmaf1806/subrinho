@@ -8,6 +8,8 @@
  *   Loja             → /loja/viagens-da-ana  maria@cliente.com.br   / cliente123
  */
 import "./env";
+// o seed nunca fala com o gateway de pagamento real
+process.env.PAYMENT_PROVIDER = "mock";
 import { eq } from "drizzle-orm";
 import { closeDb, getDb } from "../src/server/db";
 import { cartItems, carts, cartViews, holidays, orders, settings, suppliers } from "../src/server/db/schema";
@@ -190,6 +192,7 @@ async function sell(opts: {
     placedByAffiliateUserId: opts.placedBy ?? null,
     revalidate: false,
     now: opts.paidAt,
+    demoPayment: true,
     userAgent: "seed",
   });
   let order = res.order;

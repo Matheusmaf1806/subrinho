@@ -1,10 +1,14 @@
 import { and, eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 import QRCode from "qrcode";
-import { CircleCheck, Clock, QrCode } from "lucide-react";
+import { CircleCheck, Clock, CreditCard, QrCode } from "lucide-react";
 import { db } from "@/server/db";
 import { orderItems, orders } from "@/server/db/schema";
-import { isMockPayments } from "@/server/payments/provider";
+import { after } from "next/server";
+import { isMockPayments, paymentProvider } from "@/server/payments/provider";
+import { paypalConfig } from "@/server/payments/paypal";
+import { syncPaypalOrder, type PaypalData } from "@/server/payments/paypal-checkout";
+import { autoIssueOrder } from "@/server/bookings/service";
 import { Alert, Badge, Button, Card, CardBody, CardHeader, statusTone } from "@/components/ui";
 import { CopyButton } from "@/components/ui-client";
 import { brl, date, dateTime, ORDER_STATUS_LABEL, orderNumber, paxSummary } from "@/lib/format";
@@ -12,6 +16,7 @@ import { formatDocument } from "@/lib/br";
 import { getStore, viewerFor } from "../../_lib/store";
 import { AutoRefresh } from "../../_components/auto-refresh";
 import { categoryLabel } from "../../_components/category";
+import { PaypalButtons } from "../../_components/paypal-buttons";
 import { simulatePixPaymentAction } from "../../actions";
 
 export const metadata = { title: "Pedido" };
@@ -22,8 +27,22 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const viewer = await viewerFor(store);
   if (!viewer) redirect(`/loja/${slug}/entrar?next=${encodeURIComponent(`/loja/${slug}/pedido/${id}`)}`);
-  const [order] = await db.select().from(orders).where(and(eq(orders.id, id), eq(orders.affiliateId, store.id)));
+  let [order] = await db.select().from(orders).where(and(eq(orders.id, id), eq(orders.affiliateId, store.id)));
   if (!order || (viewer.kind === "CUSTOMER" && order.customerId !== viewer.customer.id)) notFound();
+  // PayPal: confere o pedido no PayPal (cliente aprovou e fechou a janela antes da confirmação)
+  const paypalInfo = (order.paymentData as { paypal?: PaypalData } | null)?.paypal ?? null;
+  let paypalNote: string | null = null;
+  if (order.status === "PENDING_PAYMENT" && order.paymentProvider === "paypal" && paypalInfo?.orderId) {
+    const r = await syncPaypalOrder(db, order.id).catch((e) => {
+      console.error("[paypal] conferência:", e instanceof Error ? e.message : e);
+      return null;
+    });
+    if (r?.state === "PAID") {
+      order = r.order;
+      after(() => autoIssueOrder(id));
+    } else if (r && r.state !== "WAITING") paypalNote = r.message;
+  }
+  const paypalClientId = order.paymentProvider === "paypal" ? (paypalConfig()?.clientId ?? null) : null;
   const items = await db.select().from(orderItems).where(eq(orderItems.orderId, id));
 
   const pix = (order.paymentData as { pix?: { brCode: string; expiresAt: string; txid: string } }).pix;
@@ -35,6 +54,7 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
   return (
     <main className="mx-auto max-w-[1100px] space-y-4 px-4 py-10 sm:px-8">
       {pending && pix && !pixExpired && <AutoRefresh seconds={5} />}
+      {pending && paypalInfo?.status === "PENDING" && <AutoRefresh seconds={15} />}
       <div className="flex flex-wrap items-end justify-between gap-4 pb-4">
         <div>
           <p className="text-[13px] font-semibold text-muted">Pedido {orderNumber(order.number)}</p>
@@ -49,6 +69,25 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
         <Alert tone="success" title="Tudo certo com a sua compra">
           <CircleCheck className="mr-1 inline h-4 w-4" /> Pago em {dateTime(order.paidAt)}. Os vouchers ficam disponíveis nesta página assim que cada reserva for confirmada.
         </Alert>
+      )}
+
+      {pending && order.paymentMethod === "CARD" && order.paymentProvider === "paypal" && (
+        <Card>
+          <CardHeader
+            title={<span className="inline-flex items-center gap-2"><CreditCard className="h-5 w-5 text-accent-ink" /> Pague com cartão ou PayPal</span>}
+            subtitle={`Valor: ${brl(order.amountCharged)} · em até ${order.installments}x no cartão`}
+          />
+          <CardBody className="space-y-4">
+            {paypalNote && <Alert tone={paypalInfo?.status === "PENDING" ? "info" : "warning"}>{paypalNote}</Alert>}
+            {paypalInfo?.status === "PENDING" ? null : paypalClientId ? (
+              <div className="max-w-md">
+                <PaypalButtons clientId={paypalClientId} slug={slug} orderId={order.id} />
+              </div>
+            ) : (
+              <Alert tone="warning">Pagamento com cartão indisponível no momento. Tente novamente em instantes.</Alert>
+            )}
+          </CardBody>
+        </Card>
       )}
 
       {pending && order.paymentMethod === "PIX" && pix && (
@@ -74,6 +113,9 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
                       <Clock className="h-3.5 w-3.5" /> Válido até {dateTime(pix.expiresAt)}
                     </span>
                   </div>
+                  {!isMockPayments() && !paymentProvider().pixAutoConfirm && (
+                    <p className="text-xs text-muted">Depois de pagar, a confirmação é feita pela nossa equipe — esta página atualiza sozinha.</p>
+                  )}
                   {isMockPayments() && (
                     <form action={simulatePixPaymentAction.bind(null, slug, order.id)}>
                       <Button variant="dark" size="sm">
@@ -130,10 +172,13 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
             </div>
           )}
           <div className="flex justify-between text-base">
-            <span className="font-semibold">Total {order.paymentMethod === "PIX" ? "no Pix" : `no cartão (${order.installments}x sem juros)`}</span>
+            <span className="font-semibold">
+              Total {order.paymentMethod === "PIX" ? "no Pix" : order.paymentProvider === "paypal" ? `no cartão ou PayPal (em até ${order.installments}x)` : `no cartão (${order.installments}x sem juros)`}
+            </span>
             <span className="font-semibold tabular">{brl(order.amountCharged)}</span>
           </div>
           {card && <p className="mt-1 text-xs text-muted">{card.brand} final {card.last4}</p>}
+          {order.status === "PAID" && paypalInfo?.method && <p className="mt-1 text-xs text-muted">Pago com {paypalInfo.method} via PayPal</p>}
         </div>
       </Card>
 

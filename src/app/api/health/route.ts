@@ -8,6 +8,8 @@ import { getDb, resolveDatabaseUrl } from "@/server/db";
 import { hotelIntegrations, testHotelIntegration } from "@/server/suppliers/hotels/admin";
 import { getCurrentFx } from "@/server/fx";
 import { currentSubrinhoUser } from "@/server/auth/session";
+import { paymentProviderName } from "@/server/payments/provider";
+import { paypalClient, paypalConfig, paypalMissing } from "@/server/payments/paypal";
 
 type Check = { ok: boolean; detalhe: string; o_que_fazer?: string };
 
@@ -108,6 +110,33 @@ export async function GET(request: Request) {
     }
   }
 
+  // Gateway de pagamento (?fornecedores testa as credenciais do PayPal)
+  let pagamento: Record<string, unknown> | undefined;
+  if (privileged) {
+    const provider = paymentProviderName();
+    const pp = paypalConfig();
+    let teste: string | undefined;
+    if (testSuppliers && pp) {
+      try {
+        const c = paypalClient()!;
+        await c.accessToken(true);
+        const hooks = await c.request<{ webhooks?: { url?: string }[] }>("GET", "/v1/notifications/webhooks");
+        const ours = (hooks.webhooks ?? []).filter((w) => w.url?.includes("/api/payments/webhook")).length;
+        teste = `ok: credenciais aceitas (${pp.environment}) · webhooks para esta loja: ${ours}`;
+      } catch (e) {
+        teste = `falhou: ${e instanceof Error ? e.message : String(e)}`;
+      }
+    }
+    pagamento = {
+      provedor: provider === "paypal" ? "PayPal" : "simulado (sem gateway — pagamentos não valem)",
+      ambiente: pp ? `${pp.environment} · ${new URL(pp.baseUrl).host}` : null,
+      variaveis_faltando: pp ? undefined : paypalMissing(),
+      pix: provider === "mock" ? "simulado" : process.env.PIX_KEY?.trim() ? "QR Code da chave PIX_KEY · confirmação manual no painel" : "desligado (defina PIX_KEY para oferecer Pix)",
+      assinatura_webhook: pp ? (pp.webhookId ? "conferida (PAYPAL_WEBHOOK_ID)" : "sem PAYPAL_WEBHOOK_ID — eventos só disparam nova consulta à API do PayPal") : undefined,
+      teste,
+    };
+  }
+
   // Câmbio usado nos preços (crítico com fornecedores reais em dólar/euro)
   let cambio: Record<string, unknown> | undefined;
   if (checks.tabelas?.ok && privileged) {
@@ -137,7 +166,7 @@ export async function GET(request: Request) {
         status: ok ? "tudo certo" : "atenção",
         ambiente: process.env.VERCEL_ENV ?? "local",
         checks,
-        ...(privileged ? { cambio, ingressos, hoteis, casas } : { fornecedores: "entre no Painel Subrinho (ou use Authorization: Bearer <CRON_SECRET>) para ver fornecedores e câmbio" }),
+        ...(privileged ? { pagamento, cambio, ingressos, hoteis, casas } : { fornecedores: "entre no Painel Subrinho (ou use Authorization: Bearer <CRON_SECRET>) para ver fornecedores e câmbio" }),
       },
       null,
       2,

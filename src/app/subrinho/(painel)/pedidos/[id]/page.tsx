@@ -33,7 +33,7 @@ import { CATEGORY_LABEL } from "@/server/suppliers/types";
 import { brl, date, dateTime, fxRate, orderNumber, pct } from "@/lib/format";
 import { Fit, InfoList, JsonDetails, OrderStatusBadge, PayoutStatusBadge, SectionTitle } from "../../../_components/bits";
 import { isUuid } from "../../../_lib/form";
-import { canDo, EVENT_LABEL, PAYMENT_METHOD_LABEL, PERMS, USER_TYPE_LABEL, VIEW_PAGE_LABEL } from "../../../_lib/labels";
+import { canDo, EVENT_LABEL, PAYMENT_METHOD_LABEL, PAYPAL_STATUS_LABEL, PERMS, USER_TYPE_LABEL, VIEW_PAGE_LABEL } from "../../../_lib/labels";
 import { cancelOrderAction, confirmPaymentAction } from "./actions";
 import { ItemBreakdown } from "./item-breakdown";
 import { isSimulatedPayment, needsControlledIssue } from "@/server/bookings/service";
@@ -93,6 +93,7 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
   const pd = o.paymentData as Record<string, unknown>;
   const card = pd.card as { brand?: string; last4?: string; holder?: string; installments?: number; message?: string; ref?: string } | undefined;
   const pix = pd.pix as { txid?: string; expiresAt?: string; brCode?: string } | undefined;
+  const paypal = pd.paypal as { orderId?: string; status?: string; captureId?: string | null; fee?: string | null; net?: string | null; payer?: string | null; method?: string | null; pendingReason?: string | null } | undefined;
   const manualBy = typeof pd.manualBy === "string" ? pd.manualBy : null;
   const coupons = (o.couponsSnapshot ?? []) as CouponSnapshot[];
   const fxSnap = Object.entries(o.fxSnapshot ?? {});
@@ -240,13 +241,30 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
           <CardBody className="space-y-4">
             <InfoList
               items={[
-                { label: "Forma", value: `${PAYMENT_METHOD_LABEL[o.paymentMethod] ?? o.paymentMethod}${o.paymentMethod === "CARD" ? ` · ${o.installments}x` : ""}` },
+                {
+                  label: "Forma",
+                  value:
+                    o.paymentMethod === "CARD" && o.paymentProvider === "paypal"
+                      ? `Cartão ou conta PayPal · até ${o.installments}x`
+                      : `${PAYMENT_METHOD_LABEL[o.paymentMethod] ?? o.paymentMethod}${o.paymentMethod === "CARD" ? ` · ${o.installments}x` : ""}`,
+                },
                 { label: "Referência", value: <span className="break-all font-mono text-xs">{o.paymentRef ?? "—"}</span> },
                 ...(card
                   ? [
                       { label: "Cartão", value: `${card.brand ?? "—"} •••• ${card.last4 ?? "????"}` },
                       { label: "Titular", value: card.holder ?? "—" },
                       { label: "Retorno do gateway", value: card.message ?? "—" },
+                    ]
+                  : []),
+                ...(paypal
+                  ? [
+                      { label: "PayPal · pedido", value: <span className="break-all font-mono text-xs">{paypal.orderId ?? "— (cliente ainda não abriu o PayPal)"}</span> },
+                      { label: "PayPal · situação", value: paypal.status === "PENDING" ? `Em análise no PayPal (${paypal.pendingReason ?? "?"})` : (PAYPAL_STATUS_LABEL[paypal.status ?? ""] ?? paypal.status ?? "—") },
+                      ...(paypal.captureId ? [{ label: "PayPal · captura", value: <span className="break-all font-mono text-xs">{paypal.captureId}</span> }] : []),
+                      ...(paypal.method ? [{ label: "Pago com", value: paypal.method }] : []),
+                      ...(paypal.payer ? [{ label: "Conta do pagador", value: paypal.payer }] : []),
+                      ...(paypal.fee ? [{ label: "Tarifa PayPal", value: brl(paypal.fee) }] : []),
+                      ...(paypal.net ? [{ label: "Líquido recebido", value: brl(paypal.net) }] : []),
                     ]
                   : []),
                 ...(pix

@@ -24,7 +24,8 @@ import {
 import { CheckoutError, findOrCreateCustomer, markOrderPaid, placeOrder } from "@/server/checkout/service";
 import { autoIssueOrder } from "@/server/bookings/service";
 import { after } from "next/server";
-import { isMockPayments } from "@/server/payments/provider";
+import { isMockPayments, paymentProvider } from "@/server/payments/provider";
+import { capturePaypalCheckout, createPaypalCheckout } from "@/server/payments/paypal-checkout";
 import { parseProductRef } from "@/server/suppliers/refs";
 import { PricingError } from "@/server/pricing/engine";
 import { getAdapter } from "@/server/suppliers/registry";
@@ -346,8 +347,9 @@ export async function placeOrderAction(slug: string, token: string, _prev: Actio
     if (hotelError) return { error: hotelError };
 
     const method = fd.get("paymentMethod") === "CARD" ? "CARD" : "PIX";
+    // PayPal: o cartão é digitado no PayPal (página do pedido), não aqui
     const card =
-      method === "CARD"
+      method === "CARD" && paymentProvider().cardCheckout === "inline"
         ? {
             holder: String(fd.get("cardHolder") ?? "").trim(),
             number: onlyDigits(String(fd.get("cardNumber") ?? "")),
@@ -415,6 +417,51 @@ function hotelGuestsError(items: { category: string; pax: PaxConfig }[], travele
   const incomplete = [...adults.slice(0, needAdults), ...children.slice(0, needChildren)].find((t) => t.name.split(" ").filter(Boolean).length < 2);
   if (incomplete) return `Informe nome e sobrenome de “${incomplete.name}” (exigência do hotel)`;
   return null;
+}
+
+// ───────────── PayPal (botões na página do pedido) ─────────────
+
+/** Pedido desta loja que quem está vendo pode pagar (cliente dono ou equipe da agência). */
+async function payableOrder(slug: string, orderId: string) {
+  const store = await getStore(slug);
+  if (!/^[0-9a-f-]{36}$/i.test(orderId)) throw new CheckoutError("Pedido não encontrado");
+  const viewer = await viewerFor(store);
+  if (!viewer) throw new CheckoutError("Entre na sua conta para pagar");
+  const [o] = await db.select().from(orders).where(and(eq(orders.id, orderId), eq(orders.affiliateId, store.id)));
+  if (!o || (viewer.kind === "CUSTOMER" && o.customerId !== viewer.customer.id)) throw new CheckoutError("Pedido não encontrado");
+  return { store, order: o };
+}
+
+/** Cria (ou reaproveita) o pedido no PayPal — o valor vem do nosso banco, nunca do navegador. */
+export async function startPaypalAction(slug: string, orderId: string): Promise<{ id?: string; error?: string }> {
+  try {
+    const { store, order } = await payableOrder(slug, orderId);
+    return { id: await createPaypalCheckout(db, order, { brandName: store.name }) };
+  } catch (e) {
+    const msg = userError(e);
+    if (!msg) console.error("[paypal] criar pedido:", e instanceof Error ? e.message : e);
+    return { error: msg ?? "Não conseguimos abrir o PayPal agora. Tente novamente em instantes." };
+  }
+}
+
+/** Captura depois da aprovação no PayPal; `retry` = o PayPal deixa escolher outro meio na mesma janela. */
+export async function capturePaypalAction(slug: string, orderId: string, paypalOrderId: string): Promise<{ ok?: boolean; retry?: boolean; pending?: boolean; message?: string; error?: string }> {
+  try {
+    const { store, order } = await payableOrder(slug, orderId);
+    const r = await capturePaypalCheckout(db, order, String(paypalOrderId).slice(0, 64));
+    revalidatePath(storePath(store, `/pedido/${orderId}`));
+    if (r.state === "PAID") {
+      after(() => autoIssueOrder(orderId));
+      return { ok: true };
+    }
+    if (r.state === "RETRY") return { retry: true, message: r.message };
+    if (r.state === "PENDING") return { pending: true, message: r.message };
+    return { error: r.message };
+  } catch (e) {
+    const msg = userError(e);
+    if (!msg) console.error("[paypal] captura:", e instanceof Error ? e.message : e);
+    return { error: msg ?? "Não conseguimos confirmar o pagamento agora. Se o valor foi debitado, o pedido é confirmado automaticamente em instantes." };
+  }
 }
 
 /** Somente em ambiente de testes (PAYMENT_PROVIDER=mock): simula a confirmação do Pix. */

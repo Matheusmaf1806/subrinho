@@ -74,16 +74,39 @@ export function PayerFields({ defaultSame = true, sameLabel }: { defaultSame?: b
   );
 }
 
-export function PaymentFields({ pix, installment, maxInstallments }: { pix: number; installment: number; maxInstallments: number }) {
-  const [method, setMethod] = useState<"PIX" | "CARD">("PIX");
+export function PaymentFields({
+  pix,
+  installment,
+  maxInstallments,
+  cardCheckout = "inline",
+  pixAvailable = true,
+  simulated = true,
+}: {
+  pix: number;
+  installment: number;
+  maxInstallments: number;
+  /** "paypal": o cartão é pago nos botões do PayPal, na página do pedido. */
+  cardCheckout?: "inline" | "paypal";
+  pixAvailable?: boolean;
+  simulated?: boolean;
+}) {
+  const [method, setMethod] = useState<"PIX" | "CARD">(pixAvailable ? "PIX" : "CARD");
   const save = installment - pix;
+  const paypal = cardCheckout === "paypal";
+  const options = [
+    ...(pixAvailable ? [{ key: "PIX" as const, icon: QrCode, title: "Pix", price: fmt(pix), sub: save > 0 ? `Economize ${fmt(save)}` : "Aprovação imediata" }] : []),
+    {
+      key: "CARD" as const,
+      icon: CreditCard,
+      title: paypal ? "Cartão de crédito ou PayPal" : "Cartão de crédito",
+      price: `${maxInstallments}x de ${fmt(Math.floor((installment / maxInstallments) * 100) / 100)}`,
+      sub: `sem juros · total ${fmt(installment)}`,
+    },
+  ];
   return (
     <div className="space-y-3">
-      <div className="grid gap-3 sm:grid-cols-2">
-        {[
-          { key: "PIX" as const, icon: QrCode, title: "Pix", price: fmt(pix), sub: save > 0 ? `Economize ${fmt(save)}` : "Aprovação imediata" },
-          { key: "CARD" as const, icon: CreditCard, title: "Cartão de crédito", price: `${maxInstallments}x de ${fmt(Math.floor((installment / maxInstallments) * 100) / 100)}`, sub: `sem juros · total ${fmt(installment)}` },
-        ].map((m) => (
+      <div className={cn("grid gap-3", options.length > 1 && "sm:grid-cols-2")}>
+        {options.map((m) => (
           <label key={m.key} className={cn("flex cursor-pointer gap-3 rounded-[1.5rem] p-5 transition", method === m.key ? "bg-ink text-white" : "bg-surface text-ink hover:bg-surface-2")}>
             <input type="radio" name="paymentMethod" value={m.key} checked={method === m.key} onChange={() => setMethod(m.key)} className="mt-1 accent-brand" />
             <span>
@@ -96,7 +119,12 @@ export function PaymentFields({ pix, installment, maxInstallments }: { pix: numb
           </label>
         ))}
       </div>
-      {method === "CARD" && (
+      {method === "CARD" && paypal && (
+        <p className="rounded-[1.5rem] bg-surface p-4 text-[14px] text-ink sm:p-5">
+          Na próxima tela você paga com <strong>cartão de crédito</strong> ou com a sua <strong>conta PayPal</strong>, em ambiente seguro do PayPal, e escolhe as parcelas (até {maxInstallments}x).
+        </p>
+      )}
+      {method === "CARD" && !paypal && (
         <div className="grid gap-3 rounded-[1.5rem] bg-surface p-4 sm:grid-cols-4 sm:p-5 [&_input]:bg-white [&_select]:bg-white">
           <label className="block sm:col-span-4">
             <span className={lab}>Nome impresso no cartão</span>
@@ -124,7 +152,7 @@ export function PaymentFields({ pix, installment, maxInstallments }: { pix: numb
               ))}
             </Select>
           </label>
-          <p className="text-xs text-muted sm:col-span-4">Ambiente de testes: qualquer cartão é aprovado, exceto final 0002 (recusado). Os dados do cartão não são armazenados.</p>
+          {simulated && <p className="text-xs text-muted sm:col-span-4">Ambiente de testes: qualquer cartão é aprovado, exceto final 0002 (recusado). Pagamento simulado — nenhuma reserva é feita.</p>}
         </div>
       )}
     </div>

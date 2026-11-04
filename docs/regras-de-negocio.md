@@ -203,10 +203,28 @@ A visão do afiliado é montada por **lista branca** de campos (`getOrderForAffi
 
 > `isSimulatedPayment` em `src/server/bookings/service.ts`, `REAL_PAYMENT` em `src/server/payouts/service.ts`
 
-- Com `PAYMENT_PROVIDER=mock` a loja oferece o botão “Simular pagamento” (testes). O pedido fica “Pago”, mas
-  **não é dinheiro real**: nenhuma reserva é emitida no fornecedor (o painel bloqueia e explica), o item não entra
-  nos alertas de “reservas aguardando ação” e o pedido **não gera repasse** ao afiliado.
-- Pagamento real = gateway (webhook) ou confirmação manual pelo Painel Subrinho (Pix recebido fora do gateway).
+- Sem gateway (sem credenciais do PayPal ou `PAYMENT_PROVIDER=mock`) a loja oferece o botão “Simular pagamento” e
+  o cartão de teste. O pedido fica “Pago”, mas **não é dinheiro real** (`paymentData.simulated`): nenhuma reserva é
+  emitida no fornecedor (o painel bloqueia e explica), o item não entra nos alertas de “reservas aguardando ação” e
+  o pedido **não gera repasse** ao afiliado. Vale para o Pix simulado **e para o cartão de teste**.
+- Pagamento real = captura conferida no PayPal ou confirmação manual pelo Painel Subrinho (Pix recebido na chave
+  `PIX_KEY`, conferido no extrato).
+
+### PayPal
+
+> `src/server/payments/paypal.ts` · `src/server/payments/paypal-checkout.ts`
+
+- O valor enviado ao PayPal é sempre o `amountCharged` do pedido (preço do cartão); o navegador nunca informa valor.
+- “Pago” só quando a captura está `COMPLETED` **e** confere: pedido (`custom_id`), moeda BRL e valor ao centavo.
+  Valor diferente → não paga e registra “Pagamento não confere com o pedido — verificar”.
+- Captura pendente (análise do PayPal) → o pedido continua aguardando; confirma sozinho quando o PayPal liberar.
+- Nunca captura pedido que não está “Aguardando pagamento” (cancelado ou substituído por outro do mesmo carrinho)
+  nem de carrinho já pago em outro pedido — o PayPal anula a aprovação sozinho.
+- Idempotente: captura com `PayPal-Request-Id` fixo por pedido do PayPal; pedido travado (`FOR UPDATE`) ao marcar
+  pago; aba repetida, página do pedido e webhook juntos geram um único “Pagamento confirmado”.
+- Webhook: o conteúdo do evento só aponta o pedido; o estado é relido da API do PayPal com as nossas credenciais.
+- Pix com PayPal ligado: QR Code da chave `PIX_KEY`, confirmação manual no painel; sem `PIX_KEY`, Pix fora do checkout.
+- Parcelas: o cliente escolhe no PayPal (até o limite da loja); o valor é o mesmo para qualquer número de parcelas.
 
 ## 10. Fornecedores invisíveis para cliente e agência
 

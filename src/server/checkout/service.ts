@@ -117,6 +117,8 @@ export type PlaceOrderInput = {
   revalidate?: boolean;
   /** Relógio (para seed/testes). */
   now?: Date;
+  /** Seed de demonstração: o cartão simulado conta como pago de verdade (nunca em produção). */
+  demoPayment?: boolean;
 };
 
 export async function placeOrder(tx: Tx, input: PlaceOrderInput) {
@@ -134,7 +136,12 @@ export async function placeOrder(tx: Tx, input: PlaceOrderInput) {
   if (!priced.items.length) throw new CheckoutError("O carrinho está vazio");
   const t = priced.cart.totals;
 
-  const installments = input.paymentMethod === "PIX" ? 1 : Math.min(Math.max(1, Math.floor(input.installments || 1)), s.maxInstallments);
+  const provider = paymentProvider();
+  if (input.paymentMethod === "PIX" && !provider.pixAvailable) throw new CheckoutError("Pix indisponível no momento. Pague com cartão ou PayPal.");
+  if (input.paymentMethod === "CARD" && provider.cardCheckout === "inline" && !input.card) throw new CheckoutError("Informe os dados do cartão");
+  // PayPal: o cliente escolhe as parcelas no PayPal (até o limite da loja); o valor é o mesmo
+  const installments =
+    input.paymentMethod === "PIX" ? 1 : provider.cardCheckout === "paypal" ? s.maxInstallments : Math.min(Math.max(1, Math.floor(input.installments || 1)), s.maxInstallments);
   const amountCharged = input.paymentMethod === "PIX" ? t.pix : t.installment;
 
   // Pedidos pendentes anteriores deste carrinho deixam de valer.
@@ -202,7 +209,7 @@ export async function placeOrder(tx: Tx, input: PlaceOrderInput) {
       affiliateCommission: money(t.affiliateCommission),
       fxSnapshot: ctxFx as never,
       couponsSnapshot,
-      paymentProvider: paymentProvider().name,
+      paymentProvider: provider.name,
       ip: input.ip ?? null,
       userAgent: input.userAgent ?? null,
     })
@@ -269,7 +276,6 @@ export async function placeOrder(tx: Tx, input: PlaceOrderInput) {
     data: { paymentMethod: input.paymentMethod, installments, amountCharged: money(amountCharged), placedByAffiliateUserId: input.placedByAffiliateUserId ?? null },
   });
 
-  const provider = paymentProvider();
   if (input.paymentMethod === "PIX") {
     const pix = await provider.createPix({ orderNumber: order.number, amount: money(amountCharged), expiresInMinutes: s.pixExpirationMinutes });
     const [o] = await tx.update(orders).set({ paymentRef: pix.txid, paymentData: { pix } }).where(eq(orders.id, order.id)).returning();
@@ -277,8 +283,16 @@ export async function placeOrder(tx: Tx, input: PlaceOrderInput) {
     return { order: o, approved: false as const };
   }
 
-  if (!input.card) throw new CheckoutError("Informe os dados do cartão");
+  if (provider.cardCheckout === "paypal") {
+    // o pagamento acontece nos botões do PayPal na página do pedido (createPaypalCheckout → capturePaypalCheckout)
+    const [o] = await tx.update(orders).set({ paymentData: { paypal: { status: "AWAITING_BUYER" } } }).where(eq(orders.id, order.id)).returning();
+    return { order: o, approved: false as const };
+  }
+
+  if (!input.card || !provider.chargeCard) throw new CheckoutError("Informe os dados do cartão");
   const res = await provider.chargeCard({ orderNumber: order.number, amount: money(amountCharged), card: { ...input.card, installments } });
+  // cartão do ambiente de testes: aprovado, mas simulado (não emite reserva real nem gera repasse)
+  const simulated = provider.name === "mock" && !input.demoPayment;
   const cardData = { brand: res.brand, last4: res.last4, holder: input.card.holder, installments, message: res.message, ref: res.ref };
   if (!res.approved) {
     const [o] = await tx.update(orders).set({ paymentRef: res.ref, paymentData: { card: cardData, declined: true } }).where(eq(orders.id, order.id)).returning();
@@ -286,7 +300,7 @@ export async function placeOrder(tx: Tx, input: PlaceOrderInput) {
     return { order: o, approved: false as const, declined: res.message };
   }
   await tx.update(orders).set({ paymentRef: res.ref, paymentData: { card: cardData } }).where(eq(orders.id, order.id));
-  const paid = await markOrderPaid(tx, order.id, { paidAt: input.now ?? new Date(), ref: res.ref, data: { card: cardData } });
+  const paid = await markOrderPaid(tx, order.id, { paidAt: input.now ?? new Date(), ref: res.ref, data: { card: cardData, ...(simulated ? { simulated: true } : {}) } });
   return { order: paid, approved: true as const };
 }
 
