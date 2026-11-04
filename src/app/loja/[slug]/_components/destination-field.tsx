@@ -22,12 +22,14 @@ export function DestinationField({ value, destKey, placeholder, className, optio
   const [active, setActive] = useState(-1);
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
+  // lista fixa vazia (fornecedor sem catálogo de destinos): usa as sugestões gerais, enviando só o texto
+  const local = options && options.length > 0 ? options : null;
 
   useEffect(() => {
     if (!open) return;
-    if (options) {
+    if (local) {
       const q = fold(text);
-      const hit = options.filter((o) => !q || fold(o).includes(q));
+      const hit = local.filter((o) => !q || fold(o).includes(q));
       // começa com o que foi digitado primeiro
       hit.sort((a, b) => Number(!fold(a).startsWith(q)) - Number(!fold(b).startsWith(q)));
       setItems(hit.slice(0, 8).map((o) => ({ key: o, label: o, detail: "" })));
@@ -48,7 +50,7 @@ export function DestinationField({ value, destKey, placeholder, className, optio
       clearTimeout(t);
       ctrl.abort();
     };
-  }, [text, open, options]);
+  }, [text, open, local]);
 
   const choose = (s: Suggestion) => {
     setText(s.label);
