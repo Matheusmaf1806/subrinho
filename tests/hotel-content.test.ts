@@ -163,6 +163,17 @@ describe("regras comuns", () => {
     ]);
   });
 
+  it("lista curta depois de 'inclui:' vira uma linha; 'Sem …' não é comodidade", () => {
+    const s = splitDescription("Taxas obrigatórias (pagas no hotel): O hotel cobra os seguintes custos ao chegar, que podem incluir impostos:\nTaxa do hotel: 34.04 USD por noite\nA taxa de alojamento inclui:\nAcesso ao centro de fitness\nCofre no quarto\nEstacionamento");
+    expect(s.policies).toEqual([
+      {
+        title: "Taxas pagas no hotel",
+        items: ["O hotel cobra os seguintes custos ao chegar, que podem incluir impostos:", "Taxa do hotel: 34.04 USD por noite", "A taxa de alojamento inclui: Acesso ao centro de fitness, Cofre no quarto, Estacionamento"],
+      },
+    ]);
+    expect(roomAmenitiesFrom(["Sem berços (camas para crianças)", "Caminho sem escadas", "Varanda"])).toEqual(["Caminho sem escadas", "Varanda"]);
+  });
+
   it("texto sem títulos fica todo em 'sobre'", () => {
     const s = splitDescription("Hotel no centro.\n\nPerto do metrô.");
     expect(s.about).toEqual([

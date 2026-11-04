@@ -61,8 +61,10 @@ export function amenityIcon(text: string): LucideIcon {
 export function topAmenities(all: string[], max = 8): { text: string; Icon: LucideIcon }[] {
   const out: { text: string; Icon: LucideIcon }[] = [];
   const used = new Set<LucideIcon>();
+  // dados numéricos ("Número de restaurantes: 1") não são destaque
+  const pool = all.filter((t) => !/^(n[úu]mero|dimens[aã]o|quantidade|n\.?º)\b/i.test(t) && !/:\s*\d/.test(t));
   for (const [re, Icon] of RULES) {
-    const hit = all.find((t) => re.test(t) && !/\(pago à parte\)/.test(t)) ?? all.find((t) => re.test(t));
+    const hit = pool.find((t) => re.test(t) && !/\(pago à parte\)/.test(t)) ?? pool.find((t) => re.test(t));
     if (!hit || used.has(Icon)) continue;
     used.add(Icon);
     out.push({ text: hit, Icon });

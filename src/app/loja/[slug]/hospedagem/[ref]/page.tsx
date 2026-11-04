@@ -64,7 +64,11 @@ export default async function HotelDetail({
 
   // quartos: avisos repetidos em todas as opções aparecem uma vez só, acima da lista
   const board = (o: (typeof p.options)[number]) => o.attributes?.find((a) => a.label === "Regime")?.value ?? o.description ?? "";
-  const common = p.options.length > 1 ? (p.options[0].notes ?? []).filter((n) => p.options.every((o) => o.notes?.includes(n))) : [];
+  // avisos que se repetem em várias opções: uma vez só acima da lista; no cartão, só uma etiqueta curta
+  const noteCount = new Map<string, number>();
+  for (const o of p.options) for (const n of new Set(o.notes ?? [])) noteCount.set(n, (noteCount.get(n) ?? 0) + 1);
+  const common = p.options.length > 1 ? [...noteCount.entries()].filter(([, c]) => c > 1).map(([n]) => n) : [];
+  const noteChip = (n: string) => (/^pago direto no hotel/i.test(n) ? "Taxas pagas no hotel" : "Aviso importante");
   const withBreakfast = p.options.filter((o) => WITH_BREAKFAST.test(board(o))).length;
   const withFree = p.options.filter((o) => o.freeCancellationUntil).length;
 
@@ -196,12 +200,16 @@ export default async function HotelDetail({
             </MobileSearchToggle>
           </div>
           {common.length > 0 && (
-            <div className="mb-5 rounded-[1.25rem] bg-surface p-4 sm:px-5">
-              <p className="text-[13px] font-semibold text-ink">Vale para todas as opções</p>
+            <div id="avisos-quartos" className="mb-5 scroll-mt-36 rounded-[1.25rem] bg-amber-50/70 p-4 ring-1 ring-inset ring-amber-200/70 sm:px-5">
+              <p className="text-[13px] font-semibold text-ink">Avisos das opções</p>
               <ul className="mt-1.5 space-y-1">
                 {common.map((n) => (
                   <li key={n} className="flex items-start gap-1.5 text-[13px] text-ink/75">
-                    <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted" aria-hidden /> {n}
+                    <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted" aria-hidden />
+                    <span>
+                      {n}
+                      <span className="ml-1 text-muted">({noteCount.get(n) === p.options.length ? "todas as opções" : `${noteCount.get(n)} de ${p.options.length} opções`})</span>
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -218,6 +226,7 @@ export default async function HotelDetail({
                 {p.options.map((o) => {
                   const cancel = o.attributes?.find((a) => a.label === "Cancelamento");
                   const notes = (o.notes ?? []).filter((n) => !common.includes(n));
+                  const shared = [...new Set((o.notes ?? []).filter((n) => common.includes(n)).map(noteChip))];
                   const photo = o.room?.photos?.[0];
                   const breakfast = WITH_BREAKFAST.test(board(o));
                   return (
@@ -261,6 +270,11 @@ export default async function HotelDetail({
                                 {a.label}: {a.value}
                               </span>
                             ))}
+                          {shared.map((c) => (
+                            <a key={c} href="#avisos-quartos" className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900 ring-1 ring-inset ring-amber-200">
+                              <Info className="h-3.5 w-3.5" aria-hidden /> {c}
+                            </a>
+                          ))}
                           {!o.available && <Badge tone="danger">Não comporta esta ocupação</Badge>}
                         </div>
                         {o.room && o.room.amenities.length > 0 && (

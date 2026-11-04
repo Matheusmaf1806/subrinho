@@ -51,6 +51,26 @@ export function SectionHeading({ eyebrow, title, children }: { eyebrow?: string;
   );
 }
 
+/** Lista que mostra os primeiros itens e o resto em "Ver mais" (sem JS). */
+function Collapsible({ items, max, render }: { items: string[]; max: number; render: (it: string) => ReactNode }) {
+  const head = items.length > max + 2 ? items.slice(0, max) : items;
+  const tail = items.slice(head.length);
+  return (
+    <>
+      <ul className="mt-3 space-y-2">{head.map(render)}</ul>
+      {tail.length > 0 && (
+        <details className="group mt-2">
+          <summary className="cursor-pointer list-none text-[13px] font-semibold text-ink underline decoration-ink/25 underline-offset-4 hover:decoration-ink">
+            <span className="group-open:hidden">Ver mais {tail.length}</span>
+            <span className="hidden group-open:inline">Mostrar menos</span>
+          </summary>
+          <ul className="mt-2 space-y-2">{tail.map(render)}</ul>
+        </details>
+      )}
+    </>
+  );
+}
+
 // ───────────────────────── Visão geral ─────────────────────────
 
 export function HotelOverview({ h, allAmenities }: { h: HotelContent; allAmenities: string[] }) {
@@ -185,16 +205,14 @@ export function HotelAmenities({ h }: { h: HotelContent }) {
                 {g.group}
               </p>
               {g.group === "Nos quartos" && <p className="mt-2 text-[12px] text-muted">Pode variar conforme o tipo de quarto.</p>}
-              <ul className="mt-3 space-y-2">
-                {g.items.map((it) => {
-                  const I = amenityIcon(it);
-                  return (
-                    <li key={it} className="flex items-start gap-2.5 text-[14px] leading-snug text-ink/85">
-                      <I className="mt-0.5 h-4 w-4 shrink-0 text-muted" aria-hidden /> {it}
-                    </li>
-                  );
-                })}
-              </ul>
+              <Collapsible items={g.items} max={10} render={(it) => {
+                const I = amenityIcon(it);
+                return (
+                  <li key={it} className="flex items-start gap-2.5 text-[14px] leading-snug text-ink/85">
+                    <I className="mt-0.5 h-4 w-4 shrink-0 text-muted" aria-hidden /> {it}
+                  </li>
+                );
+              }} />
             </div>
           );
         })}
@@ -236,8 +254,8 @@ export function HotelLocation({ h, address, title }: { h: HotelContent; address:
       </SectionHeading>
       <div className={map ? "grid gap-6 lg:grid-cols-[1.35fr_1fr]" : ""}>
         {map && (
-          <div className="overflow-hidden rounded-[1.75rem] bg-surface ring-1 ring-inset ring-black/[0.06]">
-            <iframe title={`Mapa: ${title}`} src={map} loading="lazy" className="h-[340px] w-full border-0 sm:h-[420px]" referrerPolicy="no-referrer" />
+          <div className="flex flex-col overflow-hidden rounded-[1.75rem] bg-surface ring-1 ring-inset ring-black/[0.06]">
+            <iframe title={`Mapa: ${title}`} src={map} loading="lazy" className="h-[340px] w-full flex-1 border-0 sm:min-h-[420px]" referrerPolicy="no-referrer" />
             <p className="flex items-start gap-2 px-5 py-4 text-[14px] text-ink">
               <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-accent-ink" aria-hidden /> {address}
             </p>
@@ -310,13 +328,11 @@ export function HotelPolicies({ h }: { h: HotelContent }) {
             <p className="flex items-center gap-2 text-[16px] font-semibold text-ink">
               <Info className="h-[18px] w-[18px] text-accent-ink" aria-hidden /> {p.title}
             </p>
-            <ul className="mt-3 space-y-2">
-              {p.items.map((it) => (
-                <li key={it} className="flex items-start gap-2 text-[14px] leading-relaxed text-ink/80">
-                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-ink/30" aria-hidden /> {it}
-                </li>
-              ))}
-            </ul>
+            <Collapsible items={p.items} max={6} render={(it) => (
+              <li key={it} className="flex items-start gap-2 text-[14px] leading-relaxed text-ink/80">
+                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-ink/30" aria-hidden /> {it}
+              </li>
+            )} />
           </div>
         ))}
       </div>

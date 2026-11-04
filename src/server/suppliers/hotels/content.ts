@@ -72,7 +72,7 @@ const MATCH_ORDER = ["Estacionamento e transporte", "Acessibilidade", "Família"
 
 /** Item que não ajuda a decidir (negativos, técnicos, textos longos demais). */
 function noisyAmenity(f: string): boolean {
-  return f.length > 90 || /\bn[aã]o\b|\bnot\b|\bno\b|fumador|fumante|smoking|alarme|alarm|extintor|detetor|detector|barra de apoio|grab bar|tamanho do televisor|tv size|polegadas|inches|sinaliza/i.test(f);
+  return f.length > 90 || /^sem\s|^without\b|\bn[aã]o\b|\bnot\b|\bno\b|fumador|fumante|smoking|alarme|alarm|extintor|detetor|detector|barra de apoio|grab bar|tamanho do televisor|tv size|polegadas|inches|sinaliza/i.test(f);
 }
 
 /** Lista solta de comodidades → grupos ("Lazer e bem-estar", "Alimentação"…, resto em "Serviços"). */
@@ -245,7 +245,23 @@ export function splitDescription(text: string): DescriptionParts {
     }
     add(line);
   }
-  return { about, nearby, policies: [...policies.entries()].map(([t, items]) => ({ title: t, items })), languages: [...new Set(languages)], times };
+  return { about, nearby, policies: [...policies.entries()].map(([t, items]) => ({ title: t, items: joinSublists(items) })), languages: [...new Set(languages)], times };
+}
+
+/** "A taxa inclui:" + itens curtos seguidos → uma linha só ("A taxa inclui: Academia, Cofre, Piscina"). */
+function joinSublists(items: string[]): string[] {
+  const out: string[] = [];
+  let open = false;
+  for (const it of items) {
+    if (open && it.length <= 60 && !/[.:]$/.test(it)) {
+      const prev = out[out.length - 1];
+      out[out.length - 1] = prev.endsWith(":") ? `${prev} ${it}` : `${prev}, ${it}`;
+      continue;
+    }
+    out.push(it);
+    open = it.endsWith(":") && it.length <= 60;
+  }
+  return out;
 }
 
 /** Avisos com data que pegam a estadia (sem data = sempre). */
