@@ -186,7 +186,7 @@ export function normalizeHotels(data: SearchResponse): GgtHotel[] {
       name: clean(h.HotelName),
       cityId: h.CityId != null ? String(h.CityId) : null,
       location: clean(h.Location) || null,
-      image: clean(h.HotelImage) || clean(h.Thumbnail) || null,
+      image: clean(h.HotelImage) ? ggtPhoto(clean(h.HotelImage), "y") : clean(h.Thumbnail) || null,
       lat: Number.isFinite(Number(h.Latitude)) && h.Latitude ? Number(h.Latitude) : null,
       lng: Number.isFinite(Number(h.Longitude)) && h.Longitude ? Number(h.Longitude) : null,
       stars: list.find((o) => o.stars)?.stars,
@@ -313,11 +313,19 @@ const lines = (html: string) =>
     .map((s) => s.trim())
     .filter((s) => s && !/^may include:?$/i.test(s));
 
+/**
+ * Fotos da GGT vêm em 350 px ("…_b.jpg"); o mesmo endereço tem 500 px ("_y") e 1000 px ("_z").
+ * Galeria usa _z, cards usam _y (o /m/ volta para _b se o tamanho maior não existir).
+ */
+export function ggtPhoto(url: string, size: "y" | "z" = "z"): string {
+  return url.replace(/^(https:\/\/i\.travelapi\.com\/.+)_[a-z]\.(jpe?g)$/i, `$1_${size}.$2`);
+}
+
 /** Resposta do HOTEL_INFO → dados do hotel (descrição em seções, fotos com categoria, mapa). */
 export function parseHotelInfo(m: Record<string, unknown>) {
   const pics = ((m.Pictures as Record<string, unknown> | undefined)?.Picture as unknown[] | undefined) ?? [];
   const photos = pics
-    .map((p) => ({ url: text(p), tag: photoTag(typeof p === "object" && p ? String((p as Record<string, unknown>)["@Description"] ?? "") : "") }))
+    .map((p) => ({ url: ggtPhoto(text(p)), tag: photoTag(typeof p === "object" && p ? String((p as Record<string, unknown>)["@Description"] ?? "") : "") }))
     .filter((p) => /^https?:\/\//.test(p.url));
   const geo = (m.GeoCodes ?? {}) as Record<string, unknown>;
   const lat = Number(text(geo.Latitude));
@@ -441,7 +449,7 @@ export function createGgtAdapter(cfg: GgtConfig, opts: { fetch?: typeof fetch } 
 
   async function hotelInfo(id: string) {
     return cached(
-      `ggt:info:v2:${id}:${cfg.language}`,
+      `ggt:info:v3:${id}:${cfg.language}`,
       INFO_TTL,
       async () => parseHotelInfo(await client.xml(GGT_OP.HOTEL_INFO, `<Main Version="2.2"><InfoHotelId>${escapeXml(id)}</InfoHotelId><InfoLanguage>${escapeXml(cfg.language)}</InfoLanguage></Main>`, 20_000)),
       { cacheIf: (v) => !!v.name },

@@ -12,6 +12,7 @@ describe("GGT: HOTEL_INFO completo", () => {
 
   it("fotos com categoria, mapa e número de quartos", () => {
     expect(info.photos.length).toBe(27);
+    expect(info.photos[0].url).toMatch(/_z\.jpg$/); // 1000 px em vez de 350 px
     expect(info.photos.filter((p) => p.tag === "Quartos").length).toBeGreaterThan(10);
     expect(info.photos.some((p) => p.tag === "Áreas comuns")).toBe(true);
     expect(info.coordinates).toEqual({ lat: 28.462529, lng: -81.398105 });
