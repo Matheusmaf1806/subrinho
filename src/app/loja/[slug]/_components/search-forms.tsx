@@ -2,9 +2,15 @@
 import { Search } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/components/ui";
+import { DestinationField } from "./destination-field";
+import { GuestsField } from "./guests-field";
 
 export type SearchDefaults = {
   destino?: string;
+  /** Chave do destino escolhido nas sugestões (hotéis). */
+  dest?: string;
+  /** Idades das crianças (hotéis). */
+  idades?: number[];
   data?: string;
   checkin?: string;
   checkout?: string;
@@ -87,14 +93,23 @@ export function TicketsSearch({ action, d, destinations, minDate, className }: {
 }
 
 export function LodgingSearch({ action, d, destinations, minDate, className, houses }: { action: string; d: SearchDefaults; destinations: string[]; minDate: string; className?: string; houses?: boolean }) {
+  if (houses)
+    return (
+      <Bar action={action} className={className} cols="sm:grid-cols-[1.6fr_1fr_1fr_0.65fr_0.65fr_auto]">
+        <Destination options={destinations} value={d.destino} placeholder="Orlando" />
+        <DateCell name="checkin" label="Check-in" value={d.checkin} min={minDate} />
+        <DateCell name="checkout" label="Check-out" value={d.checkout} min={minDate} />
+        <NumberCell name="adultos" label="Adultos" value={d.adultos ?? 2} min={1} />
+        <NumberCell name="criancas" label="Crianças" value={d.criancas ?? 0} divider={false} />
+      </Bar>
+    );
+  // Hotéis: destino com sugestões (todos os destinos dos fornecedores) e hóspedes com idade das crianças.
   return (
-    <Bar action={action} className={className} cols={houses ? "sm:grid-cols-[1.6fr_1fr_1fr_0.65fr_0.65fr_auto]" : "sm:grid-cols-[1.5fr_1fr_1fr_0.6fr_0.6fr_0.6fr_auto]"}>
-      <Destination options={destinations} value={d.destino} placeholder={houses ? "Orlando" : "Cidade ou hotel"} />
+    <Bar action={action} className={className} cols="sm:grid-cols-[1.6fr_1fr_1fr_1.25fr_auto]">
+      <DestinationField value={d.destino} destKey={d.dest} placeholder="Para onde você vai?" />
       <DateCell name="checkin" label="Check-in" value={d.checkin} min={minDate} />
       <DateCell name="checkout" label="Check-out" value={d.checkout} min={minDate} />
-      {!houses && <NumberCell name="quartos" label="Quartos" value={d.quartos ?? 1} min={1} max={5} />}
-      <NumberCell name="adultos" label="Adultos" value={d.adultos ?? 2} min={1} />
-      <NumberCell name="criancas" label="Crianças" value={d.criancas ?? 0} divider={false} />
+      <GuestsField key={`${d.quartos}-${d.adultos}-${(d.idades ?? []).join(",")}`} rooms={d.quartos ?? 1} adults={d.adultos ?? 2} ages={(d.idades ?? []).slice(0, d.criancas ?? 0)} />
     </Bar>
   );
 }

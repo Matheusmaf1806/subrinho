@@ -15,6 +15,13 @@
       "when": 1793744798484,
       "tag": "0001_white_label",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793756570181,
+      "tag": "0002_hotel_suppliers",
+      "breakpoints": true
     }
   ]
 }

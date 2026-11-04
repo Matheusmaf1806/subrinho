@@ -33,7 +33,10 @@ export async function loadMarginRules(tx: Tx, affiliateId: string): Promise<Marg
 /** Tudo que é preciso para precificar itens de uma loja (margens, câmbio, taxa do parcelado). */
 export async function loadPricingContext(tx: Tx, affiliateId: string): Promise<PricingContext> {
   await ensureFreshFx(tx);
-  const [rules, fx, s] = await Promise.all([loadMarginRules(tx, affiliateId), getCurrentFx(tx), getSettings(tx)]);
+  // em sequência: `tx` pode ser uma transação (uma única conexão não executa consultas em paralelo)
+  const rules = await loadMarginRules(tx, affiliateId);
+  const fx = await getCurrentFx(tx);
+  const s = await getSettings(tx);
   return {
     affiliateId,
     margins: new MarginBook(rules, { subrinho: s.fallbackSubrinhoMarginPct, affiliate: s.fallbackAffiliateMarginPct }),

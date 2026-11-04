@@ -193,6 +193,46 @@ export const suppliers = pgTable("suppliers", {
   notes: text("notes"),
 });
 
+/**
+ * Destinos dos fornecedores de hotel (cidades da GGT/GoGlobal, destinos da Hotelbeds), sincronizados
+ * das APIs. Usados para transformar o que o cliente digita ("Orlando") nos códigos de cada fornecedor.
+ */
+export const hotelDestinations = pgTable(
+  "hotel_destinations",
+  {
+    supplierCode: text("supplier_code").notNull(),
+    code: text("code").notNull(),
+    /** Nome como o fornecedor envia (ex.: "ORLANDO (FL)"). */
+    name: text("name").notNull(),
+    /** Nome limpo para exibir (ex.: "Orlando"). */
+    city: text("city").notNull(),
+    /** Estado/região, quando houver (ex.: "FL"). */
+    region: text("region"),
+    /** ISO 3166-1 alfa-2. */
+    countryCode: text("country_code"),
+    countryName: text("country_name"),
+    /** Nome normalizado (minúsculo, sem acento, sem estado) — chave de busca. */
+    searchKey: text("search_key").notNull(),
+    updatedAt: ts("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.supplierCode, t.code] }),
+    index("hotel_destinations_search_idx").on(t.searchKey.op("text_pattern_ops")),
+    index("hotel_destinations_country_idx").on(t.countryCode, t.searchKey),
+  ],
+);
+
+/** Cache de respostas dos fornecedores (conteúdo de hotéis, buscas recentes). */
+export const supplierCache = pgTable(
+  "supplier_cache",
+  {
+    key: text("key").primaryKey(),
+    value: jsonb("value").notNull(),
+    expiresAt: ts("expires_at").notNull(),
+  },
+  (t) => [index("supplier_cache_expires_idx").on(t.expiresAt)],
+);
+
 /** Histórico de câmbio. A cotação vigente é a mais recente por moeda. */
 export const fxRates = pgTable(
   "fx_rates",
@@ -404,6 +444,12 @@ export const cartCoupons = pgTable(
 
 export type PersonData = {
   name: string;
+  /** Hotéis: adulto ou criança (ordem dos hóspedes na reserva). */
+  type?: "ADULT" | "CHILD";
+  /** Tratamento (reservas de hotel): Sr. = MR, Sra. = MRS. */
+  title?: "MR" | "MRS" | "MS";
+  /** Idade da criança no check-in. */
+  age?: number;
   email?: string | null;
   phone?: string | null;
   document?: string | null; // CPF/CNPJ

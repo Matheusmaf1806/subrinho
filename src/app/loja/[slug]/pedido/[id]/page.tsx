@@ -101,7 +101,11 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
                   {i.serviceDate ? `${date(i.serviceDate)}${i.serviceEndDate ? ` a ${date(i.serviceEndDate)}` : ""} · ` : ""}
                   {paxSummary(i.pax)}
                 </p>
-                {i.supplierBookingRef && <p className="mt-1 text-xs font-semibold text-success">Reserva confirmada · código {i.supplierBookingRef}</p>}
+                {i.supplierStatus === "CONFIRMED" && i.supplierBookingRef ? (
+                  <p className="mt-1 text-xs font-semibold text-success">Reserva confirmada · localizador {i.supplierBookingRef}</p>
+                ) : order.status === "PAID" ? (
+                  <p className="mt-1 text-xs font-semibold text-muted">Reserva em processamento — você recebe a confirmação em breve</p>
+                ) : null}
               </div>
               <p className="font-semibold text-ink tabular">{brl(i.chargedAmount)}</p>
             </li>

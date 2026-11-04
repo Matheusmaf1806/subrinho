@@ -8,7 +8,13 @@ import { brl } from "@/lib/format";
 import { ActiveBadge, ReadOnlyNotice } from "../../_components/bits";
 import { InlineActionButton } from "../../_components/inline-action";
 import { canDo, PERMS } from "../../_lib/labels";
-import { toggleSupplierAction } from "./actions";
+import { syncDestinationsAction, testIntegrationAction, toggleSupplierAction } from "./actions";
+import { hotelIntegrations } from "@/server/suppliers/hotels/admin";
+import { supplierModes, suppliersMode } from "@/server/suppliers/registry";
+import { dateTime } from "@/lib/format";
+
+// sincronizar destinos baixa ~75 mil cidades da GGT (limite seguro do plano Hobby da Vercel)
+export const maxDuration = 60;
 
 export const metadata = { title: "Fornecedores" };
 
@@ -23,24 +29,64 @@ const FUTURE_HINT: Record<string, string> = {
 export default async function SubrinhoSuppliersPage() {
   const user = await requireSubrinhoUser();
   const canEdit = canDo(user.role, PERMS.suppliers);
-  const rows = await listSuppliersForSubrinho(db);
-  const mode = process.env.SUPPLIERS_MODE || "mock";
+  const [rows, integrations] = await Promise.all([listSuppliersForSubrinho(db), hotelIntegrations()]);
+  const mode = suppliersMode();
+  const modes = new Map(supplierModes().map((m) => [m.code, m.mode]));
 
   return (
     <>
       <PageHeader title="Fornecedores" subtitle="Integrações que abastecem o catálogo das lojas. Fornecedor inativo some da busca e não pode ser vendido." />
 
-      <Alert tone={mode === "mock" ? "warning" : "info"} className="mb-6" title={`Modo de integração: ${mode === "mock" ? "simulado (mock)" : mode}`}>
+      <Alert tone={mode === "mock" ? "warning" : "info"} className="mb-6" title={mode === "mock" ? "Modo simulado (SUPPLIERS_MODE=mock)" : "Integrações automáticas"}>
         {mode === "mock" ? (
           <>
-            Com <code className="rounded bg-white/70 px-1">SUPPLIERS_MODE=mock</code> o catálogo, as cotações e as reservas são simulados. Para integrar a API real de um
-            fornecedor, implemente o adapter (<code className="rounded bg-white/70 px-1">src/server/suppliers/types.ts</code>), registre em{" "}
-            <code className="rounded bg-white/70 px-1">registry.ts</code> e preencha as credenciais no ambiente.
+            Com <code className="rounded bg-white/70 px-1">SUPPLIERS_MODE=mock</code> todos os fornecedores usam o catálogo simulado, mesmo com credenciais. Remova a
+            variável para ativar as APIs reais configuradas.
           </>
         ) : (
-          <>As credenciais são lidas das variáveis de ambiente do servidor. Os valores nunca são exibidos aqui.</>
+          <>
+            Fornecedor com credenciais no ambiente usa a <strong>API real</strong>; sem credenciais, o catálogo simulado. Numa categoria com API real, os simulados
+            saem da vitrine (nunca se mistura hotel fictício com real). Os valores das credenciais nunca são exibidos.
+          </>
         )}
       </Alert>
+
+      <div className="mb-6 grid gap-4 lg:grid-cols-2">
+        {integrations.map((h) => (
+          <Card key={h.code}>
+            <CardHeader
+              title={h.name}
+              subtitle={h.live ? `API real · ambiente ${h.environment}` : h.configured ? "Credenciais configuradas — ative removendo SUPPLIERS_MODE=mock" : "Sem credenciais — usando catálogo simulado"}
+            />
+            <CardBody className="space-y-3 text-sm">
+              <div className="flex flex-wrap gap-2">
+                <Badge tone={h.live ? "success" : "neutral"}>{h.live ? "API real" : "Simulado"}</Badge>
+                {h.missing.length > 0 && <Badge tone="warning">Faltam: {h.missing.join(", ")}</Badge>}
+                {h.certificate &&
+                  (h.certificate.ok ? (
+                    <Badge tone={(h.certificate.daysLeft ?? 0) < 30 ? "warning" : "success"}>Certificado válido · vence em {h.certificate.daysLeft} dias</Badge>
+                  ) : (
+                    <Badge tone="danger">{h.certificate.error ? "Certificado ilegível" : h.certificate.keyMatches === false ? "Chave não corresponde ao certificado" : "Certificado vencido"}</Badge>
+                  ))}
+              </div>
+              <p className="text-muted">
+                Destinos sincronizados: <strong className="text-ink">{h.destinations.toLocaleString("pt-BR")}</strong>
+                {h.destinationsUpdatedAt ? ` · atualizado em ${dateTime(h.destinationsUpdatedAt)}` : " · baixados automaticamente na primeira busca"}
+              </p>
+              {canEdit && h.configured && (
+                <div className="flex flex-wrap gap-2">
+                  <InlineActionButton action={testIntegrationAction} fields={{ code: h.code }} variant="outline">
+                    Testar conexão
+                  </InlineActionButton>
+                  <InlineActionButton action={syncDestinationsAction} fields={{ code: h.code }} variant="outline">
+                    Atualizar destinos
+                  </InlineActionButton>
+                </div>
+              )}
+            </CardBody>
+          </Card>
+        ))}
+      </div>
       {!canEdit && <ReadOnlyNotice>Somente Administradores podem ativar ou desativar fornecedores.</ReadOnlyNotice>}
 
       <Card className="mt-4">
@@ -91,7 +137,12 @@ export default async function SubrinhoSuppliersPage() {
                   <div className="text-xs text-muted">custo {brl(s.costBrl)}</div>
                 </Td>
                 <Td>
-                  {s.registered ? <ActiveBadge active={s.active} /> : <Badge tone="warning">Não cadastrado</Badge>}
+                  <div className="flex flex-col items-start gap-1">
+                    {s.registered ? <ActiveBadge active={s.active} /> : <Badge tone="warning">Não cadastrado</Badge>}
+                    {modes.get(s.code) === "live" && <Badge tone="success">API real</Badge>}
+                    {modes.get(s.code) === "mock" && <Badge tone="neutral">Simulado</Badge>}
+                    {modes.get(s.code) === "hidden" && <Badge tone="neutral">Fora da vitrine (simulado)</Badge>}
+                  </div>
                 </Td>
                 {canEdit && (
                   <Td className="whitespace-nowrap">

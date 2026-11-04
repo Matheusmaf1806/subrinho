@@ -63,7 +63,7 @@ const STOP = new Set(["da", "de", "do", "das", "dos", "e", "&", "a", "o"]);
 export function monogram(name: string): string {
   const words = name
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .split(/\s+/)
     .filter((w) => w && !STOP.has(w.toLowerCase()) && /[a-z0-9]/i.test(w));
   if (!words.length) return "?";

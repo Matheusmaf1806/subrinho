@@ -1,4 +1,4 @@
-import type { Category, Currency, PaxConfig, PriceLine } from "@/server/db/schema";
+import type { Category, Currency, PaxConfig, PersonData, PriceLine } from "@/server/db/schema";
 
 export type PaxType = "ADULT" | "CHILD" | "SENIOR" | "ROOM" | "UNIT";
 
@@ -10,10 +10,20 @@ export const PAX_KEY: Record<PaxType, keyof PaxConfig> = {
   UNIT: "units",
 };
 
-export type PaxRule = { type: PaxType; label: string; min: number; max: number; hint?: string };
+export type PaxRule = {
+  type: PaxType;
+  label: string;
+  min: number;
+  max: number;
+  hint?: string;
+  /** Crianças: pedir a idade de cada uma (hotéis). */
+  ages?: { min: number; max: number };
+};
 
 export type SearchParams = {
   destination?: string;
+  /** Chave do destino escolhido na lista de sugestões (hotéis reais). */
+  destinationKey?: string;
   /** Ingressos: data da visita */
   date?: string;
   /** Hospedagem/Casas */
@@ -32,6 +42,10 @@ export type OfferOption = {
   currency: Currency;
   lines: PriceLine[];
   attributes?: { label: string; value: string }[];
+  /** Avisos importantes da tarifa (taxas pagas no hotel, política de cancelamento…). */
+  notes?: string[];
+  /** Cancelamento grátis até esta data (yyyy-mm-dd); null = não reembolsável. */
+  freeCancellationUntil?: string | null;
   available: boolean;
 };
 
@@ -55,7 +69,10 @@ export type ProductSummary = {
 };
 
 export type ProductDetail = ProductSummary & {
+  /** Texto corrido; parágrafos separados por linha em branco. */
   description: string;
+  /** Fotos reais do fornecedor (quando houver). */
+  gallery?: string[];
   highlights: string[];
   options: OfferOption[];
   paxRules: PaxRule[];
@@ -94,21 +111,63 @@ export type Quote = {
   quoteRef: string;
 };
 
+/** Item a reservar no fornecedor (dados congelados do pedido). */
+export type BookItem = {
+  quoteRef: string | null;
+  productId: string;
+  optionId: string | null;
+  pax: PaxConfig;
+  serviceDate?: string | null;
+  serviceEndDate?: string | null;
+  details?: Record<string, unknown>;
+  /** Referência única nossa (vai para o fornecedor e permite achar a reserva de novo). */
+  reference?: string;
+  /** Custo vendido — a reserva não é feita se o fornecedor pedir mais do que isto. */
+  maxCost?: { currency: Currency; amount: string };
+};
+
+export type BookContext = {
+  travelers: PersonData[];
+  /** Quem responde pela reserva (pagador/cliente). */
+  holder?: PersonData | null;
+  remark?: string | null;
+};
+
+/**
+ * Status devolvido pelo fornecedor:
+ * CONFIRMED (confirmada), PENDING (pedido recebido, aguardando confirmação), REJECTED, CANCELLED.
+ */
 export type BookingResult = { bookingRef: string; status: string; payload: Record<string, unknown> };
 
 export class SupplierError extends Error {}
+
+/** Erro de integração (credencial, rede, resposta inesperada) — mensagem técnica para o Painel Subrinho. */
+export class SupplierIntegrationError extends SupplierError {
+  constructor(
+    message: string,
+    readonly detail?: Record<string, unknown>,
+  ) {
+    super(message);
+  }
+}
 
 export interface SupplierAdapter {
   code: string;
   name: string;
   category: Category;
   defaultCurrency: Currency;
+  /** true = API real do fornecedor (reservas de verdade). false/undefined = catálogo simulado. */
+  live?: boolean;
   destinations(): { id: string; name: string }[];
   search(params: SearchParams): Promise<ProductSummary[]>;
   getProduct(productId: string, params: SearchParams): Promise<ProductDetail | null>;
   /** Cotação com preço correto da API para a configuração de pax (usado ao adicionar e ao alterar quantidade). */
   quote(req: QuoteRequest): Promise<Quote>;
-  book(item: { quoteRef: string | null; productId: string; optionId: string | null; pax: PaxConfig }, travelers: unknown[]): Promise<BookingResult>;
+  book(item: BookItem, ctx: BookContext): Promise<BookingResult>;
+  /** Consulta a reserva no fornecedor (status atualizado). */
+  bookingStatus?(bookingRef: string): Promise<BookingResult>;
+  /** Procura uma reserva feita com a nossa referência (evita reservar duas vezes). */
+  findBooking?(item: BookItem): Promise<BookingResult | null>;
 }
 
 export const CATEGORY_LABEL: Record<Category, string> = {

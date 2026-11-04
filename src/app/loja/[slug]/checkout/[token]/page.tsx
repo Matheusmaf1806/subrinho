@@ -55,7 +55,11 @@ export default async function CheckoutPage({ params }: { params: Promise<{ slug:
   const items = toItemVMs(view, { adminMode });
   const t = totalsVM(view);
   const next = `/loja/${slug}/checkout/${token}`;
-  const travelers = Math.min(10, Math.max(1, ...view.items.map((i) => (i.pax.adults ?? 0) + (i.pax.children ?? 0) + (i.pax.seniors ?? 0))));
+  // Viajantes: adultos e crianças (hotéis pedem nome de todos, com a idade das crianças).
+  const hotelItems = view.items.filter((i) => i.category === "LODGING");
+  const travelerAdults = Math.min(16, Math.max(1, ...view.items.map((i) => (i.pax.adults ?? 0) + (i.pax.seniors ?? 0) + (i.category === "LODGING" ? 0 : (i.pax.children ?? 0)))));
+  const childSource = [...hotelItems].sort((a, b) => (b.pax.children ?? 0) - (a.pax.children ?? 0))[0];
+  const travelerChildAges = childSource ? (childSource.pax.childrenAges ?? []).slice(0, childSource.pax.children ?? 0) : [];
 
   return (
     <main className="mx-auto max-w-[1440px] px-4 py-10 sm:px-8">
@@ -135,7 +139,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ slug:
               </Step>
 
               <Step n={4} title="Viajantes">
-                <TravelerFields count={travelers} firstName={viewer.kind === "CUSTOMER" ? viewer.customer.name : undefined} />
+                <TravelerFields adults={travelerAdults} childAges={travelerChildAges} hotel={hotelItems.length > 0} firstName={viewer.kind === "CUSTOMER" ? viewer.customer.name : undefined} />
               </Step>
 
               <Step n={5} title="Pagamento">

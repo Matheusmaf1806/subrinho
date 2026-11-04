@@ -23,6 +23,7 @@ export function toItemVMs(view: View, opts: { adminMode: boolean }) {
       pax: i.pax as PaxConfig,
       paxRules: ((i.details as { paxRules?: PaxRule[] }).paxRules ?? []) as PaxRule[],
       lines: i.lines.map((l) => ({ label: l.label, quantity: l.quantity })),
+      hotel: i.category === "LODGING" ? hotelInfo(i.details as Record<string, unknown>) : null,
       listPix: money(f.netAffiliate),
       pix: money(f.finalPix),
       installment: money(f.finalInstallment),
@@ -43,6 +44,21 @@ export function toItemVMs(view: View, opts: { adminMode: boolean }) {
 }
 
 export type ItemVM = ReturnType<typeof toItemVMs>[number];
+
+/** Informações do hotel que o cliente precisa ver antes de pagar (sem dados internos do fornecedor). */
+function hotelInfo(d: Record<string, unknown>) {
+  const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+  const notes = Array.isArray(d.notes) ? d.notes.filter((n): n is string => typeof n === "string" && !!n.trim()) : [];
+  if (!str(d.cancellation) && !str(d.board) && !notes.length) return null;
+  return {
+    board: str(d.board),
+    cancellation: str(d.cancellation),
+    freeCancellation: !!str(d.freeCancellationUntil),
+    nonRefundable: d.nonRefundable === true,
+    notes,
+    remarks: str(d.remarks)?.slice(0, 2500) ?? null,
+  };
+}
 
 export function totalsVM(view: View) {
   const t = view.priced.totals;

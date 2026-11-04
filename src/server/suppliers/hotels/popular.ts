@@ -1,0 +1,110 @@
+/**
+ * Destinos mais buscados, com o nome em português. Os fornecedores usam nomes em inglês
+ * ("Rome", "London"); aqui ligamos o que o cliente digita à chave normalizada de cada destino.
+ * `ggt`: códigos extras da GGT conferidos na lista oficial (bairros/áreas que o cliente espera ver
+ * junto — ex.: Orlando inclui Disney, Universal, Kissimmee e Lake Buena Vista).
+ */
+export type PopularDestination = {
+  id: string;
+  label: string;
+  country: string;
+  /** Chaves normalizadas (nome em inglês do fornecedor, sem estado). */
+  keys: string[];
+  /** Outras grafias aceitas na busca livre. */
+  aliases?: string[];
+  /** Estados/regiões aceitos (desambigua "Las Vegas (NV)" de "Las Vegas (NM)"). */
+  regions?: string[];
+  ggt?: string[];
+};
+
+export const POPULAR_DESTINATIONS: PopularDestination[] = [
+  { id: "orlando", label: "Orlando", country: "US", keys: ["orlando"], regions: ["FL", "FLORIDA"], ggt: ["1423", "161121", "7700", "7566", "7574", "156206"], aliases: ["disney", "disney world", "walt disney world", "universal orlando", "kissimmee", "lake buena vista"] },
+  { id: "miami", label: "Miami", country: "US", keys: ["miami", "miami beach"], regions: ["FL", "FLORIDA"], ggt: ["1241", "10821", "161051"], aliases: ["miami beach"] },
+  { id: "nova-york", label: "Nova York", country: "US", keys: ["new york", "manhattan"], regions: ["NY", "NEW YORK"], ggt: ["1380"], aliases: ["new york", "nova iorque", "ny", "nyc", "manhattan"] },
+  { id: "las-vegas", label: "Las Vegas", country: "US", keys: ["las vegas"], regions: ["NV", "NEVADA"], ggt: ["1050"] },
+  { id: "los-angeles", label: "Los Angeles", country: "US", keys: ["los angeles"], regions: ["CA", "CALIFORNIA"], ggt: ["1057"] },
+  { id: "sao-francisco", label: "São Francisco", country: "US", keys: ["san francisco"], regions: ["CA", "CALIFORNIA"], aliases: ["san francisco"] },
+  { id: "fort-lauderdale", label: "Fort Lauderdale", country: "US", keys: ["fort lauderdale"], regions: ["FL", "FLORIDA"], ggt: ["647"] },
+  { id: "tampa", label: "Tampa", country: "US", keys: ["tampa"], regions: ["FL", "FLORIDA"], ggt: ["1983"] },
+  { id: "chicago", label: "Chicago", country: "US", keys: ["chicago"], regions: ["IL", "ILLINOIS"], ggt: ["401"] },
+  { id: "boston", label: "Boston", country: "US", keys: ["boston"], regions: ["MA", "MASSACHUSETTS"], ggt: ["255"] },
+  { id: "washington", label: "Washington", country: "US", keys: ["washington", "washington dc"], regions: ["DC", "DISTRICT OF COLUMBIA"] },
+  { id: "nova-orleans", label: "Nova Orleans", country: "US", keys: ["new orleans"], regions: ["LA", "LOUISIANA"], ggt: ["1299"], aliases: ["new orleans"] },
+  { id: "honolulu", label: "Honolulu (Havaí)", country: "US", keys: ["honolulu", "oahu"], ggt: ["150360"], aliases: ["havai", "hawaii", "waikiki"] },
+  { id: "toronto", label: "Toronto", country: "CA", keys: ["toronto"], ggt: ["2172"] },
+  { id: "vancouver", label: "Vancouver", country: "CA", keys: ["vancouver"], regions: ["BC", "BRITISH COLUMBIA"], ggt: ["2173"] },
+  { id: "montreal", label: "Montreal", country: "CA", keys: ["montreal"], regions: ["QC", "QUEBEC"], ggt: ["2165"] },
+  { id: "cancun", label: "Cancún", country: "MX", keys: ["cancun"], ggt: ["482"] },
+  { id: "playa-del-carmen", label: "Playa del Carmen", country: "MX", keys: ["playa del carmen", "riviera maya"], ggt: ["2480"], aliases: ["riviera maya"] },
+  { id: "tulum", label: "Tulum", country: "MX", keys: ["tulum"], ggt: ["11034"] },
+  { id: "cidade-do-mexico", label: "Cidade do México", country: "MX", keys: ["mexico city"], ggt: ["1235"], aliases: ["mexico city"] },
+  { id: "punta-cana", label: "Punta Cana", country: "DO", keys: ["punta cana"], ggt: ["9408"] },
+  { id: "aruba", label: "Aruba", country: "AW", keys: ["aruba"], ggt: ["5312"] },
+  { id: "curacao", label: "Curaçao", country: "CW", keys: ["curacao"], ggt: ["9430"] },
+  { id: "buenos-aires", label: "Buenos Aires", country: "AR", keys: ["buenos aires"], ggt: ["297"] },
+  { id: "bariloche", label: "Bariloche", country: "AR", keys: ["bariloche", "san carlos de bariloche"], ggt: ["9663"] },
+  { id: "ushuaia", label: "Ushuaia", country: "AR", keys: ["ushuaia"], ggt: ["2037"] },
+  { id: "el-calafate", label: "El Calafate", country: "AR", keys: ["el calafate"], ggt: ["331"] },
+  { id: "santiago", label: "Santiago (Chile)", country: "CL", keys: ["santiago de chile", "santiago"], ggt: ["1733"], aliases: ["santiago do chile", "santiago de chile"] },
+  { id: "montevideu", label: "Montevidéu", country: "UY", keys: ["montevideo"], ggt: ["1306"], aliases: ["montevideo"] },
+  { id: "punta-del-este", label: "Punta del Este", country: "UY", keys: ["punta del este"], ggt: ["1470"] },
+  { id: "lima", label: "Lima", country: "PE", keys: ["lima"] },
+  { id: "cusco", label: "Cusco", country: "PE", keys: ["cusco", "cuzco"] },
+  { id: "bogota", label: "Bogotá", country: "CO", keys: ["bogota"], ggt: ["2370"] },
+  { id: "cartagena", label: "Cartagena (Colômbia)", country: "CO", keys: ["cartagena", "cartagena de indias"] },
+  { id: "lisboa", label: "Lisboa", country: "PT", keys: ["lisbon", "lisboa"], ggt: ["1104"], aliases: ["lisbon"] },
+  { id: "porto", label: "Porto", country: "PT", keys: ["porto", "oporto"], ggt: ["1412"], aliases: ["oporto"] },
+  { id: "algarve", label: "Algarve", country: "PT", keys: ["algarve", "albufeira"], ggt: ["45"] },
+  { id: "madeira", label: "Ilha da Madeira", country: "PT", keys: ["madeira", "funchal"], ggt: ["9609", "8418"], aliases: ["madeira", "funchal"] },
+  { id: "madri", label: "Madri", country: "ES", keys: ["madrid"], ggt: ["7334"], aliases: ["madrid"] },
+  { id: "barcelona", label: "Barcelona", country: "ES", keys: ["barcelona"], ggt: ["7333"] },
+  { id: "ibiza", label: "Ibiza", country: "ES", keys: ["ibiza"], ggt: ["48769"] },
+  { id: "paris", label: "Paris", country: "FR", keys: ["paris"], ggt: ["1459"] },
+  { id: "nice", label: "Nice", country: "FR", keys: ["nice"], ggt: ["1332"], aliases: ["riviera francesa", "cote d azur"] },
+  { id: "londres", label: "Londres", country: "GB", keys: ["london"], ggt: ["1133"], aliases: ["london"] },
+  { id: "edimburgo", label: "Edimburgo", country: "GB", keys: ["edinburgh"], ggt: ["571"], aliases: ["edinburgh"] },
+  { id: "dublin", label: "Dublin", country: "IE", keys: ["dublin"], ggt: ["550"] },
+  { id: "amsterda", label: "Amsterdã", country: "NL", keys: ["amsterdam"], ggt: ["75"], aliases: ["amsterdam", "amsterda"] },
+  { id: "bruxelas", label: "Bruxelas", country: "BE", keys: ["brussels"], ggt: ["280"], aliases: ["brussels"] },
+  { id: "roma", label: "Roma", country: "IT", keys: ["rome", "roma"], ggt: ["1661"], aliases: ["rome"] },
+  { id: "florenca", label: "Florença", country: "IT", keys: ["florence", "firenze"], ggt: ["650"], aliases: ["florence", "firenze"] },
+  { id: "veneza", label: "Veneza", country: "IT", keys: ["venice", "venice island", "venice lido", "venezia"], ggt: ["2053", "2054", "2056"], aliases: ["venice", "venezia"] },
+  { id: "milao", label: "Milão", country: "IT", keys: ["milan", "milano"], ggt: ["1248"], aliases: ["milan", "milano"] },
+  { id: "napoles", label: "Nápoles", country: "IT", keys: ["naples", "napoli"], ggt: ["1324"], aliases: ["naples", "napoli"] },
+  { id: "costa-amalfitana", label: "Costa Amalfitana", country: "IT", keys: ["amalfi", "amalfi coast", "positano", "sorrento"], ggt: ["1536", "1829"], aliases: ["amalfi", "positano", "sorrento"] },
+  { id: "zurique", label: "Zurique", country: "CH", keys: ["zurich"], ggt: ["2199"], aliases: ["zurich"] },
+  { id: "genebra", label: "Genebra", country: "CH", keys: ["geneva"], ggt: ["752"], aliases: ["geneva"] },
+  { id: "interlaken", label: "Interlaken", country: "CH", keys: ["interlaken"], ggt: ["876"] },
+  { id: "lucerna", label: "Lucerna", country: "CH", keys: ["lucerne", "luzern"], ggt: ["1161"], aliases: ["lucerne", "luzern"] },
+  { id: "viena", label: "Viena", country: "AT", keys: ["vienna", "wien"], ggt: ["2073"], aliases: ["vienna"] },
+  { id: "salzburgo", label: "Salzburgo", country: "AT", keys: ["salzburg"], ggt: ["1918"], aliases: ["salzburg"] },
+  { id: "praga", label: "Praga", country: "CZ", keys: ["prague", "praha"], ggt: ["1547"], aliases: ["prague"] },
+  { id: "budapeste", label: "Budapeste", country: "HU", keys: ["budapest"], ggt: ["295"], aliases: ["budapest"] },
+  { id: "berlim", label: "Berlim", country: "DE", keys: ["berlin"], ggt: ["196"], aliases: ["berlin"] },
+  { id: "munique", label: "Munique", country: "DE", keys: ["munich", "munchen"], ggt: ["1301"], aliases: ["munich"] },
+  { id: "atenas", label: "Atenas", country: "GR", keys: ["athens"], ggt: ["123", "161123"], aliases: ["athens"] },
+  { id: "santorini", label: "Santorini", country: "GR", keys: ["santorini"], ggt: ["5253"] },
+  { id: "istambul", label: "Istambul", country: "TR", keys: ["istanbul"], ggt: ["889"], aliases: ["istanbul"] },
+  { id: "dubai", label: "Dubai", country: "AE", keys: ["dubai"], aliases: ["dubai"] },
+  { id: "cairo", label: "Cairo", country: "EG", keys: ["cairo"], ggt: ["329"] },
+  { id: "marrakech", label: "Marrakech", country: "MA", keys: ["marrakech", "marrakesh"], ggt: ["1614"] },
+  { id: "cidade-do-cabo", label: "Cidade do Cabo", country: "ZA", keys: ["cape town"], ggt: ["159912"], aliases: ["cape town"] },
+  { id: "jerusalem", label: "Jerusalém", country: "IL", keys: ["jerusalem"], ggt: ["926"] },
+  { id: "toquio", label: "Tóquio", country: "JP", keys: ["tokyo"], ggt: ["2015", "161172"], aliases: ["tokyo"] },
+  { id: "bangkok", label: "Bangkok", country: "TH", keys: ["bangkok"], ggt: ["224"] },
+  { id: "singapura", label: "Singapura", country: "SG", keys: ["singapore"], ggt: ["1784"], aliases: ["singapore"] },
+  { id: "sydney", label: "Sydney", country: "AU", keys: ["sydney"], regions: ["NSW", "NEW SOUTH WALES"], ggt: ["1915"] },
+  { id: "rio-de-janeiro", label: "Rio de Janeiro", country: "BR", keys: ["rio de janeiro"], ggt: ["1650"] },
+  { id: "sao-paulo", label: "São Paulo", country: "BR", keys: ["sao paulo"], regions: ["SP", "SAO PAULO"], ggt: ["1714"] },
+  { id: "gramado", label: "Gramado", country: "BR", keys: ["gramado"], ggt: ["6346"] },
+  { id: "foz-do-iguacu", label: "Foz do Iguaçu", country: "BR", keys: ["foz do iguacu"], ggt: ["9844"] },
+  { id: "salvador", label: "Salvador", country: "BR", keys: ["salvador"], regions: ["BA", "BAHIA"], ggt: ["1848"] },
+  { id: "fortaleza", label: "Fortaleza", country: "BR", keys: ["fortaleza"], ggt: ["660"] },
+  { id: "natal", label: "Natal", country: "BR", keys: ["natal"], regions: ["RN", "RIO GRANDE DO NORTE"], ggt: ["1325"] },
+  { id: "maceio", label: "Maceió", country: "BR", keys: ["maceio"], ggt: ["1218"] },
+  { id: "recife", label: "Recife", country: "BR", keys: ["recife"], ggt: ["1632"] },
+  { id: "porto-seguro", label: "Porto Seguro", country: "BR", keys: ["porto seguro"], ggt: ["4150"] },
+  { id: "florianopolis", label: "Florianópolis", country: "BR", keys: ["florianopolis"], ggt: ["649"] },
+  { id: "buzios", label: "Búzios", country: "BR", keys: ["buzios", "armacao dos buzios"], ggt: ["314"] },
+  { id: "fernando-de-noronha", label: "Fernando de Noronha", country: "BR", keys: ["fernando de noronha"], ggt: ["46292"] },
+];

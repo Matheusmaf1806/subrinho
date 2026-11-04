@@ -36,10 +36,11 @@ function Feedback({ state, okText }: { state: ActionState; okText?: string }) {
         {state.error}
       </p>
     );
-  if (state?.ok && okText)
+  const ok = okText ?? (state?.ok ? state.message : undefined);
+  if (state?.ok && ok)
     return (
       <p role="status" className="mt-1 w-full text-xs font-semibold text-emerald-700">
-        {okText}
+        {ok}
       </p>
     );
   return null;
@@ -74,7 +75,7 @@ export function InlineActionButton({
       <SubmitButton size="sm" variant={variant} pendingText={pendingText}>
         {children}
       </SubmitButton>
-      <Feedback state={state} />
+      <Feedback state={state} okText={undefined} />
     </form>
   );
 }

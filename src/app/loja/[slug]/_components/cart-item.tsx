@@ -1,4 +1,4 @@
-import { CalendarDays, MapPin, Trash2 } from "lucide-react";
+import { BadgeCheck, CalendarDays, Info, MapPin, Trash2 } from "lucide-react";
 import { brl, date, paxSummary } from "@/lib/format";
 import type { ActionState } from "@/components/ui-client";
 import { categoryLabel } from "./category";
@@ -60,6 +60,33 @@ export function CartItemCard({
             </li>
           ))}
         </ul>
+        {item.hotel && (
+          <div className="mt-3 space-y-2">
+            <div className="flex flex-wrap gap-1.5 text-[12px] font-semibold">
+              {item.hotel.board && <span className="rounded-full bg-white px-3 py-1.5 text-ink">{item.hotel.board}</span>}
+              {item.hotel.cancellation && (
+                <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 ${item.hotel.freeCancellation ? "bg-emerald-100 text-emerald-800" : item.hotel.nonRefundable ? "bg-amber-100 text-amber-900" : "bg-white text-ink"}`}>
+                  {item.hotel.freeCancellation && <BadgeCheck className="h-3.5 w-3.5" />}
+                  {item.hotel.cancellation}
+                </span>
+              )}
+            </div>
+            {item.hotel.notes.map((n) => (
+              <p key={n} className="flex items-start gap-1.5 text-[13px] text-ink/75">
+                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted" /> {n}
+              </p>
+            ))}
+            {item.hotel.remarks && (
+              <details className="group rounded-xl bg-white px-3 py-2 text-[13px]">
+                <summary className="cursor-pointer list-none font-semibold text-ink">
+                  <span className="mr-1.5 inline-block transition group-open:rotate-90">›</span>Informações importantes da tarifa
+                </summary>
+                <p className="mt-2 whitespace-pre-line text-ink/75">{item.hotel.remarks}</p>
+                <p className="mt-2 text-xs text-muted">Texto enviado pelo fornecedor (pode estar em inglês).</p>
+              </details>
+            )}
+          </div>
+        )}
         {editable && (
           <div className="mt-4 flex flex-wrap items-center gap-2">
             {paxAction && <PaxModal item={item} action={paxAction} />}

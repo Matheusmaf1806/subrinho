@@ -28,6 +28,9 @@ import { fortnightOf } from "../src/server/payouts/calendar";
 import { addDays, todayLocal } from "../src/lib/tz";
 import type { QuoteRequest } from "../src/server/suppliers/types";
 
+// Os dados de demonstração usam sempre o catálogo simulado (nunca as APIs reais dos fornecedores).
+process.env.SUPPLIERS_MODE = "mock";
+
 const db = getDb();
 const today = todayLocal();
 const future = (n: number) => addDays(today, n);

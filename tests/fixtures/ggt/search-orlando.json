@@ -1,0 +1,187 @@
+{
+ "Header": {
+  "Agency": "000000",
+  "User": "XML-TEST",
+  "Password": "",
+  "Operation": "HOTEL_SEARCH_RESPONSE",
+  "OperationType": "Response",
+  "Stats": {
+   "HotelQty": 3,
+   "ResultsQty": 7
+  }
+ },
+ "Hotels": [
+  {
+   "HotelName": "OYO HOTEL ORLANDO AIRPORT",
+   "HotelCode": 862326,
+   "CountryId": 89,
+   "CityId": 1423,
+   "Location": "NEAR LAKE ELLENOR",
+   "Thumbnail": "https://i.travelapi.com/lodging/38000000/37230000/37227800/37227716/addef21a_t.jpg",
+   "Longitude": -81.398149,
+   "Latitude": 28.46261,
+   "BestSellerRank": "0",
+   "HotelImage": "https://i.travelapi.com/lodging/38000000/37230000/37227800/37227716/addef21a_b.jpg",
+   "Offers": [
+    {
+     "HotelSearchCode": "30247648/223137649259291962/100",
+     "CxlDeadLine": "30/Dec/2026",
+     "NonRef": false,
+     "Rooms": [
+      "ROOM 2 DOUBLE BEDS"
+     ],
+     "RoomBasis": "RO",
+     "Availability": 1,
+     "TotalPrice": 184.88,
+     "Currency": "USD",
+     "Category": "2.5",
+     "Remark": "EXTRA BED FOR CHILDREN IS NOT GUARANTEED.<BR />PLEASE NOTE THE FRONT DESK IS OPEN DAILY FROM 9:00 AM - 10:00 PM. THIS PROPERTY DOESN'T OFFER AFTER-HOURS CHECK-IN. FRONT DESK STAFF WILL GREET GUESTS ON ARRIVAL.<BR />IF YOU FAIL TO CHECK-IN FOR THIS RESERVATION, OR IF YOU CANCEL OR CHANGE THIS RESERVATION AFTER CXL DEADLINE, YOU MAY INCUR PENALTY CHARGES AT THE DISCRETION OF THE HOTEL OF UP TO 100% OF THE BOOKING VALUE, UNLESS OTHERWISE STATED.<BR />CXL charges apply as follows: STARTING 30/12/2026 CXL-PENALTY FEE IS 100.00% OF BOOKING PRICE.",
+     "Special": "<BR /><BR />Early Booking discount",
+     "Preferred": false
+    },
+    {
+     "HotelSearchCode": "30247648/223137649259291962/102",
+     "CxlDeadLine": "29/Dec/2026",
+     "NonRef": false,
+     "Rooms": [
+      "QUADRUPLE ROOM 2 BEDS"
+     ],
+     "RoomBasis": "RO",
+     "Availability": 1,
+     "TotalPrice": 272.09,
+     "Currency": "USD",
+     "Category": "2.5",
+     "Remark": "EXTRA BED FOR CHILDREN IS NOT GUARANTEED.<BR />PLEASE NOTE THE FRONT DESK IS OPEN DAILY FROM 9:00 AM - 10:00 PM. THIS PROPERTY DOESN'T OFFER AFTER-HOURS CHECK-IN. FRONT DESK STAFF WILL GREET GUESTS ON ARRIVAL.<BR />IF YOU FAIL TO CHECK-IN FOR THIS RESERVATION, OR IF YOU CANCEL OR CHANGE THIS RESERVATION AFTER CXL DEADLINE, YOU MAY INCUR PENALTY CHARGES AT THE DISCRETION OF THE HOTEL OF UP TO 100% OF THE BOOKING VALUE, UNLESS OTHERWISE STATED.No Amendments Allowed. <BR />CXL charges apply as follows: STARTING 29/12/2026 CXL-PENALTY FEE IS 100.00% OF BOOKING PRICE.",
+     "Special": "<BR />",
+     "Preferred": false
+    }
+   ]
+  },
+  {
+   "HotelName": "LEGACY VACATION RESORTS LAKE BUENA VISTA",
+   "HotelCode": 139832,
+   "CountryId": 89,
+   "CityId": 1423,
+   "Location": "LAKE BUENA VISTA AREA",
+   "Thumbnail": "https://i.travelapi.com/lodging/1000000/60000/57000/56941/01162595_t.jpg",
+   "Longitude": -81.499343,
+   "Latitude": 28.387489,
+   "BestSellerRank": "131",
+   "HotelImage": "https://i.travelapi.com/lodging/1000000/60000/57000/56941/01162595_b.jpg",
+   "Offers": [
+    {
+     "HotelSearchCode": "27046858/223137649259291962/28",
+     "CxlDeadLine": "28/Dec/2026",
+     "NonRef": false,
+     "Rooms": [
+      "MINI SUITE"
+     ],
+     "RoomBasis": "RO",
+     "Availability": 1,
+     "TotalPrice": 254.65,
+     "Currency": "USD",
+     "Category": "3",
+     "Remark": "EXTRA BED FOR CHILDREN IS NOT GUARANTEED.<BR />IF YOU FAIL TO CHECK-IN FOR THIS RESERVATION, OR IF YOU CANCEL OR CHANGE THIS RESERVATION AFTER CXL DEADLINE, YOU MAY INCUR PENALTY CHARGES AT THE DISCRETION OF THE HOTEL OF UP TO 100% OF THE BOOKING VALUE, UNLESS OTHERWISE STATED.<BR />Taxes 50.63 USD be paid at the hotel.CXL charges apply as follows: STARTING 28/12/2026 CXL-PENALTY FEE IS 33.05% OF BOOKING PRICE.",
+     "Special": "<BR /><BR />Special discount",
+     "Preferred": false,
+     "Fee": [
+      {
+       "Type": "Resort Fees",
+       "Detail": "Resort Fee",
+       "Amount": 50.63,
+       "Currency": "USD",
+       "Inclusive": "Not Inclusive"
+      }
+     ]
+    },
+    {
+     "HotelSearchCode": "27046858/223137649259291962/26",
+     "CxlDeadLine": "28/Dec/2026",
+     "NonRef": false,
+     "Rooms": [
+      "2 BEDROOMS DELUXE SUITE"
+     ],
+     "RoomBasis": "RO",
+     "Availability": 1,
+     "TotalPrice": 472.09,
+     "Currency": "USD",
+     "Category": "3",
+     "Remark": "EXTRA BED FOR CHILDREN IS NOT GUARANTEED.<BR />IF YOU FAIL TO CHECK-IN FOR THIS RESERVATION, OR IF YOU CANCEL OR CHANGE THIS RESERVATION AFTER CXL DEADLINE, YOU MAY INCUR PENALTY CHARGES AT THE DISCRETION OF THE HOTEL OF UP TO 100% OF THE BOOKING VALUE, UNLESS OTHERWISE STATED.<BR />Taxes 50.63 USD be paid at the hotel.CXL charges apply as follows: STARTING 28/12/2026 CXL-PENALTY FEE IS 33.33% OF BOOKING PRICE.",
+     "Special": "<BR /><BR />Special discount",
+     "Preferred": false,
+     "Fee": [
+      {
+       "Type": "Resort Fees",
+       "Detail": "Resort Fee",
+       "Amount": 50.63,
+       "Currency": "USD",
+       "Inclusive": "Not Inclusive"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "HotelName": "GRAND HOTEL ORLANDO AT UNIVERSAL BLVD",
+   "HotelCode": 18640,
+   "CountryId": 89,
+   "CityId": 1423,
+   "Location": "UNIVERSAL STUDIOS AREA",
+   "Thumbnail": "https://i.travelapi.com/lodging/1000000/50000/40800/40764/53131860_t.jpg",
+   "Longitude": -81.46474,
+   "Latitude": 28.451035,
+   "BestSellerRank": "34",
+   "HotelImage": "https://i.travelapi.com/lodging/1000000/50000/40800/40764/53131860_b.jpg",
+   "Offers": [
+    {
+     "HotelSearchCode": "18134673/223137649259291962/168",
+     "CxlDeadLine": "15/Nov/2026",
+     "NonRef": false,
+     "Rooms": [
+      "QUADRUPLE ROOM DOUBLE BED"
+     ],
+     "RoomBasis": "BB",
+     "Availability": 1,
+     "TotalPrice": 417.44,
+     "Currency": "USD",
+     "Category": "3",
+     "Remark": "EXTRA BED FOR CHILDREN IS NOT GUARANTEED.<BR />IF YOU FAIL TO CHECK-IN FOR THIS RESERVATION, OR IF YOU CANCEL OR CHANGE THIS RESERVATION AFTER CXL DEADLINE, YOU MAY INCUR PENALTY CHARGES AT THE DISCRETION OF THE HOTEL OF UP TO 100% OF THE BOOKING VALUE, UNLESS OTHERWISE STATED.No Amendments Allowed. <BR />CXL charges apply as follows: STARTING 15/11/2026 CXL-PENALTY FEE IS 100.00% OF BOOKING PRICE.",
+     "Special": "<BR />",
+     "Preferred": false
+    },
+    {
+     "HotelSearchCode": "18134673/223137649259291962/167",
+     "CxlDeadLine": "15/Nov/2026",
+     "NonRef": false,
+     "Rooms": [
+      "QUADRUPLE ROOM POOL VIEW"
+     ],
+     "RoomBasis": "BB",
+     "Availability": 1,
+     "TotalPrice": 439.53,
+     "Currency": "USD",
+     "Category": "3",
+     "Remark": "EXTRA BED FOR CHILDREN IS NOT GUARANTEED.<BR />IF YOU FAIL TO CHECK-IN FOR THIS RESERVATION, OR IF YOU CANCEL OR CHANGE THIS RESERVATION AFTER CXL DEADLINE, YOU MAY INCUR PENALTY CHARGES AT THE DISCRETION OF THE HOTEL OF UP TO 100% OF THE BOOKING VALUE, UNLESS OTHERWISE STATED.No Amendments Allowed. <BR />CXL charges apply as follows: STARTING 15/11/2026 CXL-PENALTY FEE IS 100.00% OF BOOKING PRICE.",
+     "Special": "<BR />",
+     "Preferred": false
+    },
+    {
+     "HotelSearchCode": "18134673/223137649259291962/169",
+     "CxlDeadLine": "15/Nov/2026",
+     "NonRef": false,
+     "Rooms": [
+      "SUITE 2 DOUBLE BEDS"
+     ],
+     "RoomBasis": "BB",
+     "Availability": 1,
+     "TotalPrice": 561.63,
+     "Currency": "USD",
+     "Category": "3",
+     "Remark": "EXTRA BED FOR CHILDREN IS NOT GUARANTEED.<BR />IF YOU FAIL TO CHECK-IN FOR THIS RESERVATION, OR IF YOU CANCEL OR CHANGE THIS RESERVATION AFTER CXL DEADLINE, YOU MAY INCUR PENALTY CHARGES AT THE DISCRETION OF THE HOTEL OF UP TO 100% OF THE BOOKING VALUE, UNLESS OTHERWISE STATED.No Amendments Allowed. <BR />CXL charges apply as follows: STARTING 15/11/2026 CXL-PENALTY FEE IS 100.00% OF BOOKING PRICE.",
+     "Special": "<BR />",
+     "Preferred": false
+    }
+   ]
+  }
+ ]
+}

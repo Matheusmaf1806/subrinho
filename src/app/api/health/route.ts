@@ -5,6 +5,7 @@
  */
 import { sql } from "drizzle-orm";
 import { getDb, resolveDatabaseUrl } from "@/server/db";
+import { hotelIntegrations, testHotelIntegration } from "@/server/suppliers/hotels/admin";
 
 type Check = { ok: boolean; detalhe: string; o_que_fazer?: string };
 
@@ -25,8 +26,11 @@ function classify(e: unknown): { detalhe: string; o_que_fazer: string } {
   return { detalhe: `${code ? code + ": " : ""}${msg}`.slice(0, 300), o_que_fazer: "Envie esta mensagem para o suporte técnico." };
 }
 
-export async function GET() {
+export const maxDuration = 60;
+
+export async function GET(request: Request) {
   const checks: Record<string, Check> = {};
+  const testSuppliers = new URL(request.url).searchParams.has("fornecedores");
   const resolved = resolveDatabaseUrl();
   checks.variavel_de_ambiente = resolved
     ? { ok: true, detalhe: `Usando ${resolved.source}` }
@@ -69,8 +73,30 @@ export async function GET() {
     }
   }
 
+  // Hotéis com API real (sem rede; ?fornecedores testa a conexão de cada um)
+  let hoteis: Record<string, unknown> | undefined;
+  if (checks.tabelas?.ok) {
+    try {
+      const list = await hotelIntegrations();
+      hoteis = {};
+      for (const h of list) {
+        const test = testSuppliers && h.configured ? await testHotelIntegration(h.code) : null;
+        hoteis[h.code] = {
+          modo: h.live ? "API real" : h.configured ? "credenciais ok, mas SUPPLIERS_MODE=mock" : "simulado (sem credenciais)",
+          ambiente: h.environment,
+          variaveis_faltando: h.missing.length ? h.missing : undefined,
+          destinos: h.destinations,
+          certificado: h.certificate ? (h.certificate.ok ? `válido, vence em ${h.certificate.daysLeft} dias` : h.certificate.error ?? (h.certificate.keyMatches === false ? "a chave não corresponde ao certificado" : "vencido")) : undefined,
+          teste: test ? `${test.ok ? "ok" : "falhou"}: ${test.message}` : undefined,
+        };
+      }
+    } catch {
+      hoteis = undefined;
+    }
+  }
+
   const ok = Object.values(checks).every((c) => c.ok);
-  return new Response(JSON.stringify({ status: ok ? "tudo certo" : "atenção", ambiente: process.env.VERCEL_ENV ?? "local", checks }, null, 2), {
+  return new Response(JSON.stringify({ status: ok ? "tudo certo" : "atenção", ambiente: process.env.VERCEL_ENV ?? "local", checks, hoteis }, null, 2), {
     status: ok ? 200 : 503,
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
   });

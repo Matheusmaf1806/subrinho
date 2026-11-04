@@ -128,3 +128,25 @@ A visão do afiliado é montada por **lista branca** de campos (`getOrderForAffi
   margens) e agenda o repasse de cada afiliado. É idempotente.
 - Depois de pagar, a Subrinho marca o repasse como pago e **anexa os comprovantes** (PDF/imagem), que o afiliado
   baixa no Financeiro.
+
+## 7. Hotéis com API real (GGT | Best Buy e Hotelbeds)
+
+- **Ocupação:** 1 a 5 quartos, ao menos 1 adulto por quarto, até 8 hóspedes por quarto. Criança = 0 a 17 anos e a
+  **idade de cada criança é obrigatória** (muda o preço). Os hóspedes são distribuídos nos quartos sempre da mesma
+  forma na busca, na cotação e na reserva (adultos o mais igual possível; crianças em rodízio).
+- **Preço:** o custo é o total da estadia devolvido pelo fornecedor (na moeda dele) e entra na mesma conta de todo
+  item (câmbio → margem Subrinho → margem afiliado → parcelado). Ao reservar e no checkout o fornecedor é consultado
+  de novo; se o preço mudou, o carrinho é atualizado e o cliente revisa antes de pagar.
+- **Taxas pagas no hotel** (resort fee, city tax…) não fazem parte do preço: aparecem como aviso no quarto, no
+  carrinho e na tarifa.
+- **Cancelamento:** mostrado como “Cancelamento grátis até DD/MM” (dia anterior ao início da multa informada pelo
+  fornecedor) ou “Não reembolsável”.
+- **Hóspedes no checkout:** nome e sobrenome de todos os adultos e crianças da hospedagem (adultos com tratamento
+  Sr./Sra.). Os nomes vão para a reserva sem acentos.
+- **Emissão da reserva:** só depois do pagamento. Padrão: a equipe Subrinho emite no Painel (item “Aguardando
+  emissão”). O sistema nunca reserva duas vezes (procura pela referência `SUB<pedido>-<item>` antes) e não reserva se o
+  fornecedor pedir mais que o custo vendido — nesses casos o item fica “Falha na emissão” com o motivo, para a equipe
+  resolver. Com pagamento simulado nunca há emissão automática.
+- **Vitrine:** numa categoria com fornecedor real, os fornecedores simulados saem da vitrine (o cliente nunca vê um
+  hotel fictício ao lado de um real).
+

@@ -3,7 +3,8 @@
  * funciona em QUALQUER estado do banco (vazio, só com tabelas, parcialmente ou já instalado):
  *  - cria tipos/tabelas/índices/colunas que faltarem (sem erro se já existirem);
  *  - registra as migrações (os deploys na Vercel não tentam recriar nada);
- *  - insere os dados de exemplo ignorando o que já existir (ON CONFLICT DO NOTHING);
+ *  - insere os dados de exemplo ignorando o que já existir (ON CONFLICT DO NOTHING) — sem sessões,
+ *    sem cache de fornecedores e sem a lista de destinos (baixada pela própria aplicação);
  *  - ajusta as sequências e mostra uma contagem no final.
  *
  * Uso: npm run db:reset (banco local com o seed) && npm run neon:sql
@@ -49,7 +50,7 @@ const url = process.env.DATABASE_URL;
 if (!url) throw new Error("DATABASE_URL não definida (banco local com o seed)");
 const dump = execFileSync(
   "pg_dump",
-  ["--dbname", url, "--schema=public", "--data-only", "--no-owner", "--no-privileges", "--column-inserts", "--rows-per-insert=200", "--on-conflict-do-nothing", "--exclude-table=public.sessions"],
+  ["--dbname", url, "--schema=public", "--data-only", "--no-owner", "--no-privileges", "--column-inserts", "--rows-per-insert=200", "--on-conflict-do-nothing", "--exclude-table=public.sessions", "--exclude-table-data=public.hotel_destinations", "--exclude-table-data=public.supplier_cache"],
   { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
 );
 const data = dump

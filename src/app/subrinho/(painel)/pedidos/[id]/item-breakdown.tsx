@@ -9,6 +9,7 @@ import { brl, date, fxRate, money, paxSummary, pct } from "@/lib/format";
 import { JsonDetails } from "../../../_components/bits";
 import { MARGIN_SOURCE_LABEL } from "../../../_lib/labels";
 import { ruleSummary, supplierName } from "../../../_lib/rules";
+import { SupplierBookingPanel } from "./booking-panel";
 
 type Item = typeof orderItems.$inferSelect;
 type Rule = typeof marginRules.$inferSelect;
@@ -51,7 +52,19 @@ function verify(i: Item): { ok: boolean; detail?: string } {
   }
 }
 
-export function ItemBreakdown({ item: i, index, rules, paymentMethod }: { item: Item; index: number; rules: Map<string, Rule>; paymentMethod: string }) {
+export function ItemBreakdown({
+  item: i,
+  index,
+  rules,
+  paymentMethod,
+  booking,
+}: {
+  item: Item;
+  index: number;
+  rules: Map<string, Rule>;
+  paymentMethod: string;
+  booking?: { live: boolean; orderPaid: boolean; canAct: boolean };
+}) {
   const cur = i.costCurrency;
   const check = verify(i);
   const rows: Row[] = [
@@ -228,13 +241,14 @@ export function ItemBreakdown({ item: i, index, rules, paymentMethod }: { item: 
             <dd className="break-all font-mono text-xs">
               {i.supplierBookingRef ?? "—"}{" "}
               {i.supplierStatus && (
-                <Badge tone={i.supplierStatus === "BOOKING_FAILED" ? "danger" : "success"} className="ml-1">
+                <Badge tone={i.supplierStatus === "CONFIRMED" ? "success" : ["BOOKING_FAILED", "REJECTED", "CANCELLED"].includes(i.supplierStatus) ? "danger" : "warning"} className="ml-1">
                   {i.supplierStatus}
                 </Badge>
               )}
             </dd>
           </div>
         </dl>
+        {booking && <SupplierBookingPanel item={i} live={booking.live} orderPaid={booking.orderPaid} canAct={booking.canAct} />}
         <div className="grid gap-2 md:grid-cols-2">
           <JsonDetails label="Resposta do fornecedor (payload)" value={i.supplierPayload} />
           <JsonDetails label="Detalhes do item" value={i.details} />

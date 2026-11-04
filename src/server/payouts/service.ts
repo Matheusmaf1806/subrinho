@@ -25,12 +25,15 @@ export async function loadCalendar(tx: Tx): Promise<BusinessCalendar> {
 }
 
 export async function payoutDateFor(tx: Tx, paidAt: Date): Promise<string> {
-  const [cal, s] = await Promise.all([loadCalendar(tx), getSettings(tx)]);
+  // em sequência: `tx` pode ser uma transação (sem consultas paralelas na mesma conexão)
+  const cal = await loadCalendar(tx);
+  const s = await getSettings(tx);
   return payoutDateForSale(paidAt, cal, s.payoutBusinessDays);
 }
 
 export async function payoutDateForPeriod(tx: Tx, f: Fortnight): Promise<string> {
-  const [cal, s] = await Promise.all([loadCalendar(tx), getSettings(tx)]);
+  const cal = await loadCalendar(tx);
+  const s = await getSettings(tx);
   return payoutDateForFortnight(f, cal, s.payoutBusinessDays);
 }
 

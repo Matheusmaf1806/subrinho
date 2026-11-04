@@ -35,7 +35,8 @@ export async function affiliatePayoutsOverview(tx: Tx, affiliateId: string) {
 
   // Vendas pagas ainda sem repasse vinculado: descobre a quinzena pela data de repasse.
   const candidates = recentFortnights(6);
-  const dates = await Promise.all(candidates.map((f) => payoutDateForPeriod(tx, f)));
+  const dates: string[] = [];
+  for (const f of candidates) dates.push(await payoutDateForPeriod(tx, f));
   const byDate = new Map<string, Fortnight>();
   candidates.forEach((f, i) => {
     if (!byDate.has(dates[i])) byDate.set(dates[i], f);

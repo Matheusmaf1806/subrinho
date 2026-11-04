@@ -11,8 +11,8 @@
 Três tipos de usuário: **usuário da loja** (cliente), **usuário da Subrinho** e **usuário do afiliado**
 (papéis ADMIN e AGENT; o ADMIN pode entrar na loja em “modo ADMIN” e alterar margens no checkout).
 
-Produtos: **Ingressos e Experiências** (Tu Experienza, Nadio), **Hospedagem** (GGT | Best Buy Hotels, RateHawk,
-Hotelbeds), **Casas** (Master Vacation Home, Mapro), **Seguro Viagem** (Intermac, Hero) e **Chip** (esimx).
+Produtos: **Ingressos e Experiências** (Tu Experienza, Nadio), **Hospedagem** (GGT | Best Buy Hotels e Hotelbeds com
+**API real**; RateHawk), **Casas** (Master Vacation Home, Mapro), **Seguro Viagem** (Intermac, Hero) e **Chip** (esimx).
 Em breve: Aluguel de Carro, Guiamento Remoto, Cruzeiros, Transfer e Roteirização (categorias já previstas no banco).
 
 As regras de preço, margens, cupons, carrinho, visibilidade e repasse estão em
@@ -56,6 +56,13 @@ pedido tem o botão “Simular pagamento”; no cartão, qualquer número é apr
    | `CRON_SECRET` | um segredo qualquer — a Vercel envia nos crons e as rotas `/api/cron/*` exigem |
    | `FX_PROVIDER` | `manual` (cotação lançada no Painel Subrinho), `awesomeapi` ou `poolvo` |
    | `PAYMENT_PROVIDER` | `mock` até o gateway ser integrado |
+   | `GGT_API_BASE_URL`, `GGT_AGENCY_ID`, `GGT_USER`, `GGT_PASSWORD`, `GGT_ENVIRONMENT` | GGT \| Best Buy Hotels (API real) |
+   | `HB_HOTEIS_API_KEY`, `HB_HOTEIS_SECRET` | Hotelbeds: API key e secret (também aceita `API_KEY_HH` / `SECRET_KEY_HH`) |
+   | `HB_HOTEIS_CLIENT_CRT`, `HB_HOTEIS_CLIENT_KEY`, `HB_HOTEIS_CA_CHAIN` | Hotelbeds: certificado mTLS, chave privada e cadeia da CA (PEM) |
+   | `HOTELBEDS_ENVIRONMENT` | `production` ou `test` — o mesmo ambiente das credenciais |
+   | `SUPPLIER_BOOKING` | `manual` (padrão — a equipe emite as reservas no Painel Subrinho) ou `auto` (só com gateway real) |
+
+   Não defina `SUPPLIERS_MODE=mock` em produção (isso força o catálogo simulado mesmo com credenciais).
 
 3. **Deploy:** o script `vercel-build` aplica as migrações do banco e depois roda `next build`
    (sem `DATABASE_URL`, só avisa e segue).
@@ -84,6 +91,7 @@ pedido tem o botão “Simular pagamento”; no cartão, qualquer número é apr
 | `npm run db:migrate` / `db:seed` / `db:reset` | Banco |
 | `npm run fx:refresh` | Atualiza o câmbio pelo provedor configurado |
 | `npm run fortnight:close [AAAA-MM-DD]` | Fecha a quinzena (relatório + repasses) |
+| `npm run hotels:check [-- "Destino" AAAA-MM-DD noites]` | Confere as APIs de hotel ao vivo: conexão, busca, hotel e cotação — **nunca reserva** |
 
 ## Arquitetura
 
@@ -147,12 +155,35 @@ login do painel: marina@solemar.com.br / afiliado123).
   está em `src/lib/images.ts` — para trocar uma foto, troque o ID. Quando a API real de um fornecedor enviar imagens,
   elas substituem as fotos de exemplo automaticamente (`imageUrl` da cotação).
 
+## Hotéis com API real — GGT | Best Buy e Hotelbeds
+
+| | GGT \| Best Buy Hotels | Hotelbeds |
+|---|---|---|
+| API | GoGlobal (SOAP/XML), `src/server/suppliers/ggt/` | APItude (JSON) com **mTLS**, `src/server/suppliers/hotelbeds/` |
+| Busca | por cidade (uma consulta por área, em paralelo) | por destino + fotos da Content API |
+| Hotel | disponibilidade do hotel + descrição/fotos em português | disponibilidade + Content API (descrição, fotos, comodidades) |
+| Cotação (ao reservar e no checkout) | busca de novo + *valuation* | busca de novo + *checkrate* |
+| Reserva | `BOOKING_INSERT` | `POST /bookings` |
+
+**Como funciona na loja:** o campo Destino sugere cidades (destinos populares em português + as listas oficiais
+dos fornecedores, baixadas sozinhas na primeira busca e atualizáveis no Painel Subrinho). Hóspedes: quartos,
+adultos e a **idade de cada criança** (obrigatória — muda o preço). A página do hotel mostra fotos reais, quartos,
+regime, **cancelamento grátis até a data** e **taxas pagas direto no hotel** (resort fee, city tax). No carrinho
+aparecem as observações da tarifa; no checkout é pedido **nome e sobrenome de todos os hóspedes**.
+
+**Reserva (segura):** pagamento confirmado não reserva sozinho — o item fica **“Aguardando emissão”** e a equipe
+clica em **Emitir reserva** no pedido (Painel Subrinho). Antes de reservar, o sistema procura uma reserva já feita
+com a nossa referência (`SUB<pedido>-<item>`) — **nunca reserva duas vezes** — e **não reserva se o fornecedor pedir
+mais que o custo vendido**. Com `SUPPLIER_BOOKING=auto` e gateway de pagamento real, a emissão é automática.
+
+**Diagnóstico:** Painel Subrinho → Fornecedores (modo de cada fornecedor, validade do certificado, “Testar conexão”,
+“Atualizar destinos”) e `GET /api/health?fornecedores` (testa as conexões, somente leitura).
+
 ## Integrações — o que falta plugar
 
-- **Fornecedores:** hoje todos usam catálogo simulado com a mesma interface que a integração real vai usar
-  (`SupplierAdapter` em `src/server/suppliers/types.ts`: `search`, `getProduct`, `quote`, `book`). Para cada
-  fornecedor, implemente o adaptador com a API dele e registre em `src/server/suppliers/registry.ts`. As credenciais
-  esperadas estão no `.env.example`.
+- **Fornecedores:** GGT e Hotelbeds já usam as APIs reais (veja acima). Os demais usam catálogo simulado com a mesma
+  interface (`SupplierAdapter` em `src/server/suppliers/types.ts`: `search`, `getProduct`, `quote`, `book`). Para
+  cada um, implemente o adaptador com a API dele e registre em `src/server/suppliers/registry.ts`.
 - **Câmbio “Dólar Poolvo”:** `poolvoProvider` em `src/server/fx/index.ts` precisa do formato da API
   (`FX_POOLVO_URL`/`FX_POOLVO_TOKEN`). Enquanto isso, use `FX_PROVIDER=manual` (cotação informada no Painel Subrinho)
   ou `awesomeapi`.

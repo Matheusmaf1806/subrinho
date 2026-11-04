@@ -194,7 +194,8 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
         </div>
       </section>
 
-      {/* ───────── Hotéis ───────── */}
+      {/* ───────── Hotéis (com API real, a vitrine precisa de destino: a seção some) ───────── */}
+      {hotels.length > 0 && (
       <section className="mx-auto mt-28 max-w-[1440px] px-4 sm:px-8">
         <SectionTitle title="Hotéis em destaque" href={`${base}/hospedagem`} />
         <div className="grid gap-x-5 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
@@ -203,6 +204,7 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
           ))}
         </div>
       </section>
+      )}
 
       {/* ───────── Destinos ───────── */}
       <section className="mx-auto mt-28 max-w-[1440px] px-4 sm:px-8">

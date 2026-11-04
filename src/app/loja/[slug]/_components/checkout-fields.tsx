@@ -131,25 +131,72 @@ export function PaymentFields({ pix, installment, maxInstallments }: { pix: numb
   );
 }
 
-export function TravelerFields({ count, firstName }: { count: number; firstName?: string }) {
+/**
+ * Viajantes. Hotéis exigem o nome (e sobrenome) de TODOS os hóspedes — adultos primeiro, depois
+ * crianças com a idade informada na busca. Cada linha envia todos os campos (os arrays ficam alinhados).
+ */
+export function TravelerFields({
+  count,
+  firstName,
+  adults,
+  childAges = [],
+  hotel = false,
+}: {
+  count?: number;
+  firstName?: string;
+  adults?: number;
+  childAges?: number[];
+  hotel?: boolean;
+}) {
+  const nAdults = Math.max(1, adults ?? count ?? 1);
+  const rows = [
+    ...Array.from({ length: nAdults }, (_, i) => ({ type: "ADULT" as const, i, age: null as number | null })),
+    ...childAges.map((age, i) => ({ type: "CHILD" as const, i, age })),
+  ];
   return (
     <div className="space-y-3">
-      {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="grid gap-3 rounded-[1.5rem] bg-surface p-4 sm:grid-cols-[2fr_1fr_1fr] [&_input]:bg-white">
-          <label className="block">
-            <span className={lab}>{i === 0 ? "Viajante principal" : `Viajante ${i + 1}`}</span>
-            <Input name="travelerName" required={i === 0} defaultValue={i === 0 ? firstName : undefined} placeholder="Nome completo" />
-          </label>
-          <label className="block">
-            <span className={lab}>Documento</span>
-            <Input name="travelerDocument" placeholder="CPF ou passaporte" />
-          </label>
-          <label className="block">
-            <span className={lab}>Nascimento</span>
-            <Input name="travelerBirthDate" type="date" />
-          </label>
-        </div>
-      ))}
+      {hotel && <p className="text-[13px] text-muted">Os hotéis exigem nome e sobrenome de todos os hóspedes, como no documento.</p>}
+      {rows.map((r, k) => {
+        const lead = r.type === "ADULT" && r.i === 0;
+        const label = r.type === "CHILD" ? `Criança ${r.i + 1} · ${r.age === 0 ? "menos de 1 ano" : `${r.age} ano${(r.age ?? 0) > 1 ? "s" : ""}`}` : lead ? "Viajante principal" : `Adulto ${r.i + 1}`;
+        return (
+          <div key={k} className={cn("grid gap-3 rounded-[1.5rem] bg-surface p-4 [&_input]:bg-white [&_select]:bg-white", hotel && r.type === "ADULT" ? "sm:grid-cols-[0.7fr_2fr_1fr_1fr]" : "sm:grid-cols-[2fr_1fr_1fr]")}>
+            <input type="hidden" name="travelerType" value={r.type} />
+            <input type="hidden" name="travelerAge" value={r.age ?? ""} />
+            {hotel && r.type === "ADULT" ? (
+              <label className="block">
+                <span className={lab}>Tratamento</span>
+                <Select name="travelerTitle" defaultValue="MR">
+                  <option value="MR">Sr.</option>
+                  <option value="MRS">Sra.</option>
+                </Select>
+              </label>
+            ) : (
+              <input type="hidden" name="travelerTitle" value="" />
+            )}
+            <label className="block">
+              <span className={lab}>{label}</span>
+              <Input
+                name="travelerName"
+                required={lead || hotel}
+                defaultValue={lead ? firstName : undefined}
+                placeholder="Nome e sobrenome"
+                autoComplete={lead ? "name" : "off"}
+                pattern={hotel ? "\\s*\\S+(\\s+\\S+)+\\s*" : undefined}
+                title={hotel ? "Informe nome e sobrenome" : undefined}
+              />
+            </label>
+            <label className="block">
+              <span className={lab}>Documento</span>
+              <Input name="travelerDocument" placeholder="CPF ou passaporte" />
+            </label>
+            <label className="block">
+              <span className={lab}>Nascimento</span>
+              <Input name="travelerBirthDate" type="date" />
+            </label>
+          </div>
+        );
+      })}
     </div>
   );
 }

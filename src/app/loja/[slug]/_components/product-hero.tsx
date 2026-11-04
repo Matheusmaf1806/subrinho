@@ -3,9 +3,13 @@ import { Check, MapPin, Star } from "lucide-react";
 import type { PricedDetail } from "@/server/catalog";
 import { CATEGORY_PHOTO, galleryFor, photo } from "@/lib/images";
 
-export function ProductHero({ p, back }: { p: PricedDetail; back: { href: string; label: string } }) {
-  const main = p.imageUrl ?? photo(CATEGORY_PHOTO[p.category] ?? "colosseum", 1600);
-  const [a, b] = galleryFor(p.category, p.destination);
+export function ProductHero({ p, back, cta }: { p: PricedDetail; back: { href: string; label: string }; cta?: { href: string; label: string } }) {
+  const main = p.gallery?.[0] ?? p.imageUrl ?? photo(CATEGORY_PHOTO[p.category] ?? "colosseum", 1600);
+  const [stockA, stockB] = galleryFor(p.category, p.destination);
+  // fotos reais do fornecedor quando houver; completa com fotos ilustrativas
+  const a = p.gallery?.[1] ?? stockA;
+  const b = p.gallery?.[2] ?? stockB;
+  const paragraphs = p.description.split(/\n{2,}/).map((x) => x.trim()).filter(Boolean);
   const info = p.info.filter((i) => i.label !== "Fornecedor");
   return (
     <div className="min-w-0 space-y-10">
@@ -25,6 +29,11 @@ export function ProductHero({ p, back }: { p: PricedDetail; back: { href: string
         </div>
         <h1 className="display mt-3 text-[clamp(2.5rem,5vw,4.75rem)] text-ink">{p.title}</h1>
         {p.subtitle && <p className="mt-4 max-w-2xl text-[17px] text-muted">{p.subtitle}</p>}
+        {cta && (
+          <a href={cta.href} className="mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-ink px-6 text-[15px] font-semibold text-white transition hover:bg-ink-2">
+            {cta.label} <span aria-hidden>↓</span>
+          </a>
+        )}
       </div>
 
       <div className="grid h-[300px] grid-cols-3 grid-rows-2 gap-3 sm:h-[460px]">
@@ -38,7 +47,28 @@ export function ProductHero({ p, back }: { p: PricedDetail; back: { href: string
 
       <div className="grid gap-10 border-t border-line pt-10 lg:grid-cols-[1.4fr_1fr]">
         <div>
-          <p className="text-[19px] leading-relaxed text-ink">{p.description}</p>
+          <div className="space-y-4">
+            {paragraphs.slice(0, 3).map((t, i) => (
+              <p key={i} className={i === 0 ? "whitespace-pre-line text-[19px] leading-relaxed text-ink" : "whitespace-pre-line text-[16px] leading-relaxed text-ink/80"}>
+                {t}
+              </p>
+            ))}
+            {paragraphs.length > 3 && (
+              <details className="group">
+                <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-full bg-surface px-4 py-2 text-[14px] font-semibold text-ink hover:bg-surface-2">
+                  <span className="group-open:hidden">Ver descrição completa</span>
+                  <span className="hidden group-open:inline">Mostrar menos</span>
+                </summary>
+                <div className="mt-4 space-y-3">
+                  {paragraphs.slice(3).map((t, i) => (
+                    <p key={i} className="whitespace-pre-line text-[15px] leading-relaxed text-ink/80">
+                      {t}
+                    </p>
+                  ))}
+                </div>
+              </details>
+            )}
+          </div>
           {p.tags.length > 0 && (
             <div className="mt-6 flex flex-wrap gap-2">
               {p.tags.slice(0, 5).map((t) => (

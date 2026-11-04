@@ -77,7 +77,13 @@ export function bookingStatusLabel(s: string | null): { label: string; tone: "su
     case "REJECTED":
       return { label: "Reserva não confirmada", tone: "danger" };
     case "":
+    case "AWAITING_ISSUE":
+    case "ISSUING":
       return { label: "Aguardando emissão", tone: "neutral" };
+    case "BOOKING_FAILED":
+    case "ISSUE_UNKNOWN":
+      // a equipe Subrinho resolve; para a agência é "em processamento"
+      return { label: "Reserva em processamento", tone: "warning" };
     default:
       return { label: s ?? "—", tone: "neutral" };
   }

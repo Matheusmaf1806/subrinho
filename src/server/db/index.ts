@@ -16,7 +16,7 @@ export function resolveDatabaseUrl(env: Record<string, string | undefined> = pro
   const preferred = ["DATABASE_URL", "POSTGRES_URL", "NEON_DATABASE_URL", "DATABASE_URL_UNPOOLED", "POSTGRES_URL_NON_POOLING", "POSTGRES_PRISMA_URL"];
   for (const k of preferred) if (env[k]?.trim()) return { url: env[k]!.trim(), source: k };
   const prefixed = Object.keys(env)
-    .filter((k) => /_(DATABASE_URL|POSTGRES_URL)$/.test(k) && env[k]?.trim())
+    .filter((k) => /_(DATABASE_URL|POSTGRES_URL)$/.test(k) && !/^TEST_/.test(k) && env[k]?.trim()) // nunca o banco de testes
     .sort();
   if (prefixed.length) return { url: env[prefixed[0]]!.trim(), source: prefixed[0] };
   return null;

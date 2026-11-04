@@ -4,14 +4,15 @@ import type { Tx } from "@/server/db";
 import { suppliers, type Category } from "@/server/db/schema";
 import { quoteDisplayPrice, type PricingContext } from "@/server/pricing/cart-pricing";
 import { adaptersFor, getAdapter } from "@/server/suppliers/registry";
-import type { OfferOption, ProductDetail, ProductSummary, SearchParams } from "@/server/suppliers/types";
+import { SupplierError, type OfferOption, type ProductDetail, type ProductSummary, type SearchParams } from "@/server/suppliers/types";
 import type { Decimal } from "@/server/pricing/money";
 import type { InstallmentPlan } from "@/server/pricing/engine";
 
 export type DisplayPrice = { pix: Decimal; installment: Decimal; plan: InstallmentPlan };
 export type PricedSummary = ProductSummary & { price: DisplayPrice; offers: number };
 export type PricedOption = OfferOption & { supplierCode: string; productId: string; price: DisplayPrice | null };
-export type PricedDetail = Omit<ProductDetail, "options"> & { price: DisplayPrice; options: PricedOption[] };
+/** price = null quando o produto existe mas não há disponibilidade para os parâmetros (ex.: hotel lotado). */
+export type PricedDetail = Omit<ProductDetail, "options"> & { price: DisplayPrice | null; options: PricedOption[] };
 
 export async function activeSupplierCodes(tx: Tx): Promise<Set<string>> {
   const rows = await tx.select({ code: suppliers.code }).from(suppliers).where(eq(suppliers.active, true));
@@ -26,10 +27,23 @@ function priceOf(ctx: PricingContext, s: { category: Category; supplierCode: str
   }
 }
 
-export async function searchCatalog(tx: Tx, ctx: PricingContext, category: Category, params: SearchParams): Promise<PricedSummary[]> {
+export async function searchCatalog(
+  tx: Tx,
+  ctx: PricingContext,
+  category: Category,
+  params: SearchParams,
+  opts: { onError?: (supplierCode: string, error: unknown) => void } = {},
+): Promise<PricedSummary[]> {
   const active = await activeSupplierCodes(tx);
   const results = await Promise.all(
-    adaptersFor(category, active).map((a) => a.search(params).catch(() => [] as ProductSummary[])),
+    adaptersFor(category, active).map((a) =>
+      a.search(params).catch((e) => {
+        if (!(e instanceof SupplierError)) console.error(`[busca] ${a.code}:`, e);
+        else if (e.message && !/^Informe|^Escolha|^Cada quarto|^O check|^Estadias/.test(e.message)) console.warn(`[busca] ${a.code}: ${e.message}`);
+        opts.onError?.(a.code, e);
+        return [] as ProductSummary[];
+      }),
+    ),
   );
   const priced: PricedSummary[] = [];
   for (const s of results.flat()) {
@@ -91,7 +105,7 @@ export async function getProductDetail(
     options = [...byTitle.values()];
   }
   options.sort((a, b) => (a.price && b.price ? a.price.pix.comparedTo(b.price.pix) : a.price ? -1 : 1));
-  const price = priceOf(ctx, detail, null, detail);
-  if (!price) return null;
+  const price = detail.lines.length ? priceOf(ctx, detail, null, detail) : null;
+  if (!price && !(detail.category === "LODGING" && detail.supplierCode && options.length === 0)) return null;
   return { ...detail, price, options };
 }

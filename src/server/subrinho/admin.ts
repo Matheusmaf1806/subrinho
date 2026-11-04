@@ -57,13 +57,23 @@ export async function deleteHoliday(tx: Tx, date: string) {
 
 // ───────────── Fornecedores ─────────────
 
-/** Variáveis de ambiente (credenciais) que cada integração real vai precisar — ver .env.example. */
+/**
+ * Variáveis de ambiente (credenciais) de cada integração — ver .env.example.
+ * "A|B" = aceita qualquer um dos nomes (o primeiro é o recomendado).
+ */
 export const SUPPLIER_ENV: Record<string, string[]> = {
   TU_EXPERIENZA: ["TU_EXPERIENZA_API_KEY"],
   NADIO: ["NADIO_API_KEY"],
-  GGT_BEST_BUY: ["GGT_API_KEY"],
+  GGT_BEST_BUY: ["GGT_API_BASE_URL", "GGT_AGENCY_ID", "GGT_USER", "GGT_PASSWORD", "GGT_ENVIRONMENT"],
   RATEHAWK: ["RATEHAWK_KEY_ID", "RATEHAWK_API_KEY"],
-  HOTELBEDS: ["HOTELBEDS_API_KEY", "HOTELBEDS_SECRET"],
+  HOTELBEDS: [
+    "HB_HOTEIS_API_KEY|HOTELBEDS_API_KEY|API_KEY_HH",
+    "HB_HOTEIS_SECRET|HOTELBEDS_SECRET|SECRET_KEY_HH",
+    "HB_HOTEIS_CLIENT_CRT",
+    "HB_HOTEIS_CLIENT_KEY",
+    "HB_HOTEIS_CA_CHAIN",
+    "HOTELBEDS_ENVIRONMENT|HB_HOTEIS_ENVIRONMENT",
+  ],
   MASTER_VACATION_HOME: ["MASTER_VACATION_HOME_API_KEY"],
   MAPRO: ["MAPRO_API_KEY"],
   INTERMAC: ["INTERMAC_API_KEY"],
@@ -100,7 +110,10 @@ export async function listSuppliersForSubrinho(tx: Tx) {
       notes: row?.notes ?? meta?.notes ?? null,
       registered: !!row,
       active: row?.active ?? false,
-      env: env.map((name) => ({ name, configured: !!process.env[name] })),
+      env: env.map((spec) => {
+        const names = spec.split("|");
+        return { name: names[0], configured: names.some((n) => !!process.env[n]?.trim()) };
+      }),
       itemsSold: soldBy.get(code)?.items ?? 0,
       costBrl: soldBy.get(code)?.costBrl ?? "0",
     };

@@ -2,7 +2,9 @@ import type { Category, Currency } from "@/server/db/schema";
 import { createEsimMock, createInsuranceMock, ESIMX_PLANS, HERO_PLANS, INTERMAC_PLANS } from "./mock/single-page";
 import { createHotelsMock, createHousesMock, HOUSES_MAPRO, HOUSES_MVH } from "./mock/lodging";
 import { createTicketsMock, NADIO_CATALOG, TU_EXPERIENZA_CATALOG } from "./mock/tickets";
-import type { SupplierAdapter } from "./types";
+import { createGgtFromEnv } from "./ggt/adapter";
+import { createHotelbedsFromEnv } from "./hotelbeds/adapter";
+import { SupplierError, type SupplierAdapter } from "./types";
 
 export type SupplierMeta = { code: string; name: string; category: Category; defaultCurrency: Currency; notes: string };
 
@@ -22,15 +24,23 @@ export const SUPPLIERS: SupplierMeta[] = [
 
 let adapters: Map<string, SupplierAdapter> | null = null;
 
+/** SUPPLIERS_MODE=mock força o catálogo simulado em tudo (desenvolvimento/testes). */
+export function suppliersMode(): "mock" | "auto" {
+  return process.env.SUPPLIERS_MODE?.trim().toLowerCase() === "mock" ? "mock" : "auto";
+}
+
 function build(): Map<string, SupplierAdapter> {
-  // SUPPLIERS_MODE=mock → catálogo simulado. Para integrar a API real de um fornecedor,
-  // implemente SupplierAdapter (src/server/suppliers/types.ts) e registre aqui.
+  // Fornecedor com credenciais configuradas → API real; sem credenciais → catálogo simulado.
+  // Para integrar outro fornecedor, implemente SupplierAdapter (types.ts) e registre aqui.
+  const real = suppliersMode() === "auto";
+  const ggt = real ? createGgtFromEnv() : null;
+  const hotelbeds = real ? createHotelbedsFromEnv() : null;
   const list: SupplierAdapter[] = [
     createTicketsMock({ code: "TU_EXPERIENZA", name: "Tu Experienza", currency: "EUR", catalog: TU_EXPERIENZA_CATALOG }),
     createTicketsMock({ code: "NADIO", name: "Nadio", currency: "USD", catalog: NADIO_CATALOG }),
-    createHotelsMock({ code: "GGT_BEST_BUY", name: "GGT | Best Buy Hotels", currency: "USD" }),
+    ggt ?? createHotelsMock({ code: "GGT_BEST_BUY", name: "GGT | Best Buy Hotels", currency: "USD" }),
     createHotelsMock({ code: "RATEHAWK", name: "RateHawk", currency: "BRL" }),
-    createHotelsMock({ code: "HOTELBEDS", name: "Hotelbeds", currency: "EUR" }),
+    hotelbeds ?? createHotelsMock({ code: "HOTELBEDS", name: "Hotelbeds", currency: "EUR" }),
     createHousesMock({ code: "MASTER_VACATION_HOME", name: "Master Vacation Home", currency: "USD", catalog: HOUSES_MVH }),
     createHousesMock({ code: "MAPRO", name: "Mapro", currency: "USD", catalog: HOUSES_MAPRO }),
     createInsuranceMock({ code: "INTERMAC", name: "Intermac Seguros", currency: "BRL", plans: INTERMAC_PLANS.map((p) => ({ ...p })) }),
@@ -38,7 +48,29 @@ function build(): Map<string, SupplierAdapter> {
     createEsimMock({ code: "ESIMX", name: "esimx", currency: "USD" }),
   ];
   void ESIMX_PLANS;
-  return new Map(list.map((a) => [a.code, a]));
+  // Nunca misturar catálogo simulado com API real na mesma categoria (o cliente compraria um
+  // hotel fictício): se a categoria tem fornecedor real, os simulados dela saem da vitrine.
+  const liveCategories = new Set(list.filter((a) => a.live).map((a) => a.category));
+  return new Map(list.filter((a) => a.live || !liveCategories.has(a.category)).map((a) => [a.code, a]));
+}
+
+/** Somente testes: refaz o registro (ex.: depois de mudar variáveis de ambiente). */
+export function resetAdapters() {
+  adapters = null;
+}
+
+export function isLiveSupplier(code: string): boolean {
+  adapters ??= build();
+  return adapters.get(code)?.live === true;
+}
+
+/** Situação de cada fornecedor (Painel Subrinho / diagnóstico). */
+export function supplierModes(): { code: string; name: string; category: Category; mode: "live" | "mock" | "hidden" }[] {
+  adapters ??= build();
+  return SUPPLIERS.map((s) => {
+    const a = adapters!.get(s.code);
+    return { code: s.code, name: s.name, category: s.category, mode: !a ? "hidden" : a.live ? "live" : "mock" };
+  });
 }
 
 export function allAdapters(): SupplierAdapter[] {
@@ -49,7 +81,11 @@ export function allAdapters(): SupplierAdapter[] {
 export function getAdapter(code: string): SupplierAdapter {
   adapters ??= build();
   const a = adapters.get(code);
-  if (!a) throw new Error(`Fornecedor desconhecido: ${code}`);
+  if (!a) {
+    // Fornecedor conhecido mas fora da vitrine (simulado numa categoria que já tem API real).
+    if (SUPPLIERS.some((s) => s.code === code)) throw new SupplierError("Este fornecedor não está disponível no momento");
+    throw new Error(`Fornecedor desconhecido: ${code}`);
+  }
   return a;
 }
 

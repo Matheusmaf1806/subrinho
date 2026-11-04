@@ -36,6 +36,7 @@ import { isUuid } from "../../../_lib/form";
 import { canDo, EVENT_LABEL, PAYMENT_METHOD_LABEL, PERMS, USER_TYPE_LABEL, VIEW_PAGE_LABEL } from "../../../_lib/labels";
 import { cancelOrderAction, confirmPaymentAction } from "./actions";
 import { ItemBreakdown } from "./item-breakdown";
+import { needsControlledIssue } from "@/server/bookings/service";
 
 export const metadata = { title: "Detalhe do pedido" };
 
@@ -123,7 +124,7 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
                 <input type="hidden" name="orderId" value={o.id} />
                 <p className="text-sm text-muted">
                   Use quando o pagamento de <strong className="text-ink">{brl(o.amountCharged)}</strong> foi recebido fora do gateway. O pedido passa a
-                  <strong className="text-ink"> Pago</strong>, as reservas são emitidas nos fornecedores e o repasse é agendado.
+                  <strong className="text-ink"> Pago</strong> e o repasse é agendado. Itens de fornecedores com API real (hotéis) ficam “Aguardando emissão” — emita a reserva em cada item.
                 </p>
                 <Field label="Observação (opcional)">
                   <Textarea name="note" maxLength={500} placeholder="Ex.: Pix conferido no extrato do dia" />
@@ -174,7 +175,14 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
       </SectionTitle>
       <div className="space-y-5">
         {items.map((it, idx) => (
-          <ItemBreakdown key={it.id} item={it} index={idx} rules={extras.rules} paymentMethod={o.paymentMethod} />
+          <ItemBreakdown
+            key={it.id}
+            item={it}
+            index={idx}
+            rules={extras.rules}
+            paymentMethod={o.paymentMethod}
+            booking={{ live: needsControlledIssue(it.supplierCode), orderPaid: o.status === "PAID", canAct }}
+          />
         ))}
       </div>
 

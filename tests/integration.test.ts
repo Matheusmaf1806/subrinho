@@ -3,7 +3,39 @@
  *   TEST_DATABASE_URL=postgres://subrinho:subrinho@localhost:5432/subrinho_test npm test
  * Sem TEST_DATABASE_URL o teste é ignorado.
  */
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import type { BookItem, BookContext, BookingResult } from "@/server/suppliers/types";
+
+// Fornecedor "real" de teste (LIVE_TEST) para a emissão controlada de reservas; os demais seguem o registro.
+const liveBook = vi.hoisted(() => ({ calls: [] as { item: unknown; ctx: unknown }[], impl: null as null | ((item: unknown) => Promise<unknown>) }));
+vi.mock("@/server/suppliers/registry", async (orig) => {
+  const real = await orig<typeof import("@/server/suppliers/registry")>();
+  const { SupplierError } = await import("@/server/suppliers/types");
+  const fake = {
+    code: "LIVE_TEST",
+    name: "Hotel de teste",
+    category: "LODGING",
+    defaultCurrency: "USD",
+    live: true,
+    destinations: () => [],
+    search: async () => [],
+    getProduct: async () => null,
+    quote: async () => {
+      throw new SupplierError("não usado");
+    },
+    async book(item: BookItem, ctx: BookContext): Promise<BookingResult> {
+      liveBook.calls.push({ item, ctx });
+      await new Promise((r) => setTimeout(r, 30));
+      if (liveBook.impl) return (await liveBook.impl(item)) as BookingResult;
+      return { bookingRef: "LIVE-1", status: "CONFIRMED", payload: { hotelConfirmation: "H-1" } };
+    },
+  };
+  return {
+    ...real,
+    getAdapter: (code: string) => (code === "LIVE_TEST" ? fake : real.getAdapter(code)),
+    isLiveSupplier: (code: string) => code === "LIVE_TEST" || real.isLiveSupplier(code),
+  };
+});
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { eq, sql } from "drizzle-orm";
@@ -15,7 +47,8 @@ import { upsertMarginRule } from "@/server/admin/margins";
 import { createCoupon } from "@/server/admin/coupons";
 import { recordFxRate } from "@/server/fx";
 import { SUPPLIERS } from "@/server/suppliers/registry";
-import type { Quote } from "@/server/suppliers/types";
+import { SupplierError, type Quote } from "@/server/suppliers/types";
+import { autoIssueOrder, BookingIssueError, issueItemBooking } from "@/server/bookings/service";
 import { addQuoteToCart, applyCouponToCart, changeItemPax, createCart, loadCartView, setAffiliateMarginOverride, CartError } from "@/server/cart/service";
 import { findOrCreateCustomer, markOrderPaid, placeOrder } from "@/server/checkout/service";
 import { closeFortnight, affiliateFinancials } from "@/server/payouts/service";
@@ -154,5 +187,87 @@ describe.skipIf(!url)("fluxo completo (integração)", () => {
     expect(r.payouts[0].scheduledDate).toBe("2026-11-23");
     const fin = await affiliateFinancials(db, affiliateId);
     expect(fin.scheduled).toHaveLength(1);
+  });
+
+  it("hotel de fornecedor real: pago → aguardando emissão → emissão única, com referência e teto de custo", async () => {
+    const { customer } = await findOrCreateCustomer(db, affiliateId, { name: "Hóspede", email: "h@h.com", password: "12345678" });
+    const cart = await createCart(db, affiliateId, { type: "CUSTOMER", id: customer.id });
+    await addQuoteToCart(db, cart, {
+      ...specQuote(),
+      supplierCode: "LIVE_TEST",
+      category: "LODGING",
+      productId: "862326",
+      optionId: "opt-1",
+      title: "Hotel real",
+      serviceDate: addDays(todayLocal(), 60),
+      serviceEndDate: addDays(todayLocal(), 63),
+      lines: [{ type: "STAY", label: "Hospedagem", unitCost: "184.88", quantity: 1 }],
+      pax: { adults: 2, children: 1, childrenAges: [7], rooms: 1 },
+    });
+    const travelers = [
+      { name: "Maria da Silva", type: "ADULT" as const, title: "MRS" as const },
+      { name: "João Silva", type: "ADULT" as const },
+      { name: "Pedro Silva", type: "CHILD" as const, age: 7 },
+    ];
+    const { order } = await placeOrder(db, { cart, customer, payer: { name: "Maria da Silva", email: "h@h.com" }, travelers, paymentMethod: "PIX", installments: 1, revalidate: false });
+    const [item] = await db.select().from(schema.orderItems).where(eq(schema.orderItems.orderId, order.id));
+
+    // antes do pagamento: não emite
+    await expect(issueItemBooking(item.id, { type: "SUBRINHO", name: "Staff" }, db)).rejects.toBeInstanceOf(BookingIssueError);
+
+    liveBook.calls.length = 0;
+    await markOrderPaid(db, order.id, { paidAt: new Date(), data: { simulated: true } });
+    const [awaiting] = await db.select().from(schema.orderItems).where(eq(schema.orderItems.id, item.id));
+    expect(awaiting.supplierStatus).toBe("AWAITING_ISSUE");
+    expect(liveBook.calls).toHaveLength(0); // pagamento confirmado NÃO reserva sozinho
+
+    // pagamento simulado nunca dispara emissão automática
+    await autoIssueOrder(order.id, db);
+    expect(liveBook.calls).toHaveLength(0);
+
+    // duas pessoas clicando ao mesmo tempo → uma reserva só
+    const results = await Promise.allSettled([
+      issueItemBooking(item.id, { type: "SUBRINHO", name: "Staff A" }, db),
+      issueItemBooking(item.id, { type: "SUBRINHO", name: "Staff B" }, db),
+    ]);
+    expect(liveBook.calls).toHaveLength(1);
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    expect((results.find((r) => r.status === "rejected") as PromiseRejectedResult).reason).toBeInstanceOf(BookingIssueError);
+
+    const sent = liveBook.calls[0] as { item: BookItem; ctx: BookContext };
+    expect(sent.item.reference).toBe(`SUB${order.number}-1`);
+    expect(sent.item.maxCost).toEqual({ currency: "USD", amount: "184.8800" });
+    expect(sent.item.serviceEndDate).toBe(addDays(todayLocal(), 63));
+    expect(sent.ctx.travelers.map((t) => t.type)).toEqual(["ADULT", "ADULT", "CHILD"]);
+
+    const [done] = await db.select().from(schema.orderItems).where(eq(schema.orderItems.id, item.id));
+    expect(done).toMatchObject({ supplierStatus: "CONFIRMED", supplierBookingRef: "LIVE-1" });
+    expect(done.supplierPayload).toMatchObject({ reference: `SUB${order.number}-1`, hotelConfirmation: "H-1", issuedBy: expect.any(String) });
+
+    // de novo: já reservado, não chama o fornecedor
+    const again = await issueItemBooking(item.id, { type: "SUBRINHO", name: "Staff" }, db);
+    expect(again.status).toBe("CONFIRMED");
+    expect(liveBook.calls).toHaveLength(1);
+
+    const events = await db.select().from(schema.orderEvents).where(eq(schema.orderEvents.orderId, order.id));
+    expect(events.map((e) => e.type)).toEqual(expect.arrayContaining(["BOOKING_PENDING", "BOOKING_REQUESTED", "BOOKING_CONFIRMED"]));
+  });
+
+  it("falha do fornecedor fica registrada e permite tentar de novo", async () => {
+    const { customer } = await findOrCreateCustomer(db, affiliateId, { name: "Outro", email: "o@o.com", password: "12345678" });
+    const cart = await createCart(db, affiliateId, { type: "CUSTOMER", id: customer.id });
+    await addQuoteToCart(db, cart, { ...specQuote(), supplierCode: "LIVE_TEST", category: "LODGING", productId: "1", optionId: "o", serviceDate: addDays(todayLocal(), 30), serviceEndDate: addDays(todayLocal(), 32), lines: [{ type: "STAY", label: "H", unitCost: "100.00", quantity: 1 }], pax: { adults: 1, children: 0, rooms: 1 } });
+    const { order } = await placeOrder(db, { cart, customer, payer: { name: "Outro Nome", email: "o@o.com" }, travelers: [{ name: "Outro Nome" }], paymentMethod: "PIX", installments: 1, revalidate: false });
+    await markOrderPaid(db, order.id, { paidAt: new Date() });
+    const [item] = await db.select().from(schema.orderItems).where(eq(schema.orderItems.orderId, order.id));
+    liveBook.impl = async () => {
+      throw new SupplierError("O fornecedor aumentou o preço: USD 120.00 (vendido por 100.0000)");
+    };
+    const r1 = await issueItemBooking(item.id, { type: "SUBRINHO", name: "Staff" }, db);
+    expect(r1.status).toBe("BOOKING_FAILED");
+    expect(r1.message).toContain("aumentou o preço");
+    liveBook.impl = null;
+    const r2 = await issueItemBooking(item.id, { type: "SUBRINHO", name: "Staff" }, db);
+    expect(r2.status).toBe("CONFIRMED");
   });
 });

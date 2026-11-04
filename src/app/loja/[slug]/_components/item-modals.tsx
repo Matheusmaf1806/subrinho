@@ -7,6 +7,7 @@ import { Alert, buttonClass, Input } from "@/components/ui";
 import type { PaxRule } from "@/server/suppliers/types";
 import type { ItemVM } from "./cart-vm";
 import { PaxStepper } from "./pax-stepper";
+import { ChildAgesPicker } from "./guests-field";
 
 const KEY: Record<string, string> = { ADULT: "adults", CHILD: "children", SENIOR: "seniors", ROOM: "rooms", UNIT: "units" };
 const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -24,28 +25,51 @@ export function PaxModal({ item, action }: { item: ItemVM; action: (prev: Action
         </>
       }
     >
-      {(close) => (
-        <ActionForm action={action} onSuccess={close}>
-          <p className="mb-3 text-sm text-muted">{item.title}</p>
-          <input type="hidden" name="itemId" value={item.id} />
-          {/* mantém campos não editáveis */}
-          {(["adults", "children", "seniors", "rooms", "units"] as const)
-            .filter((k) => !item.paxRules.some((r: PaxRule) => KEY[r.type] === k) && item.pax[k] !== undefined)
-            .map((k) => (
-              <input key={k} type="hidden" name={k} value={String(item.pax[k] ?? 0)} />
-            ))}
-          <div className="rounded-2xl bg-surface px-4 py-1 [&_button]:bg-white">
-            {item.paxRules.map((r: PaxRule) => (
-              <PaxStepper key={r.type} name={KEY[r.type]} label={r.label} hint={r.hint} min={r.min} max={r.max} defaultValue={Number(item.pax[KEY[r.type] as keyof typeof item.pax] ?? 0)} />
-            ))}
-          </div>
-          <p className="mt-3 text-xs text-muted">Ao salvar, consultamos o fornecedor para trazer o preço correto para a nova quantidade.</p>
-          <SubmitButton variant="accent" className="mt-4 w-full" pendingText="Consultando o fornecedor…">
-            Atualizar
-          </SubmitButton>
-        </ActionForm>
-      )}
+      {(close) => <PaxForm item={item} action={action} onDone={close} />}
     </Modal>
+  );
+}
+
+function PaxForm({ item, action, onDone }: { item: ItemVM; action: (prev: ActionState, fd: FormData) => Promise<ActionState>; onDone: () => void }) {
+  const childRule = item.paxRules.find((r: PaxRule) => r.type === "CHILD" && r.ages);
+  const [ages, setAges] = useState<(number | null)[]>(() => {
+    const n = Number(item.pax.children ?? 0);
+    const cur = item.pax.childrenAges ?? [];
+    return Array.from({ length: n }, (_, i) => (cur[i] ?? null) as number | null);
+  });
+  const missing = !!childRule && ages.some((a) => a === null);
+  return (
+    <ActionForm action={action} onSuccess={onDone}>
+      <p className="mb-3 text-sm text-muted">{item.title}</p>
+      <input type="hidden" name="itemId" value={item.id} />
+      {/* mantém campos não editáveis */}
+      {(["adults", "children", "seniors", "rooms", "units"] as const)
+        .filter((k) => !item.paxRules.some((r: PaxRule) => KEY[r.type] === k) && item.pax[k] !== undefined)
+        .map((k) => (
+          <input key={k} type="hidden" name={k} value={String(item.pax[k] ?? 0)} />
+        ))}
+      {childRule && <input type="hidden" name="childrenAges" value={ages.map((a) => a ?? "").join(",")} />}
+      <div className="rounded-2xl bg-surface px-4 py-1 [&_button]:bg-white">
+        {item.paxRules.map((r: PaxRule) => (
+          <PaxStepper
+            key={r.type}
+            name={KEY[r.type]}
+            label={r.label}
+            hint={r.hint}
+            min={r.min}
+            max={r.max}
+            defaultValue={Number(item.pax[KEY[r.type] as keyof typeof item.pax] ?? 0)}
+            onChange={r === childRule ? (n) => setAges((cur) => (n > cur.length ? [...cur, ...Array(n - cur.length).fill(null)] : cur.slice(0, n))) : undefined}
+          />
+        ))}
+      </div>
+      {childRule && <ChildAgesPicker ages={ages} onChange={setAges} />}
+      {missing && <p className="mt-2 text-[13px] font-medium text-muted">Informe a idade de cada criança para consultar o preço.</p>}
+      <p className="mt-3 text-xs text-muted">Ao salvar, consultamos o fornecedor para trazer o preço correto para a nova quantidade.</p>
+      <SubmitButton variant="accent" className="mt-4 w-full" pendingText="Consultando o fornecedor…" disabled={missing}>
+        Atualizar
+      </SubmitButton>
+    </ActionForm>
   );
 }
 

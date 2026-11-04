@@ -18,6 +18,7 @@ import { hashPassword } from "@/server/auth/password";
 import { randomToken } from "@/lib/random";
 import { describeCoupon } from "@/server/coupons/engine";
 import { getCurrentFx } from "@/server/fx";
+import { needsControlledIssue } from "@/server/bookings/service";
 
 export class CheckoutError extends Error {}
 
@@ -66,6 +67,7 @@ async function revalidateItems(tx: Tx, cart: Cart) {
         pax: it.pax,
       });
       if (linesSignature(q.lines) !== linesSignature(it.lines) || q.currency !== it.costCurrency) {
+        console.warn(`[checkout] preço mudou no fornecedor ${it.supplierCode} (${it.title}): ${it.costCurrency} ${linesSignature(it.lines)} → ${q.currency} ${linesSignature(q.lines)}`);
         await tx.update(cartItems).set({ lines: q.lines, costCurrency: q.currency, supplierQuoteRef: q.quoteRef, quotedAt: new Date() }).where(eq(cartItems.id, it.id));
         changed.push(it.title);
       }
@@ -288,13 +290,21 @@ export async function markOrderPaid(tx: Tx, orderId: string, p: { paidAt: Date; 
 
   await tx.insert(orderEvents).values({ orderId, type: "PAID", data: { paidAt: p.paidAt.toISOString(), payoutDate, ref: p.ref ?? null } });
 
-  // Emissão/reserva nos fornecedores
+  // Emissão/reserva nos fornecedores.
+  // Fornecedor real: o item fica "Aguardando emissão" e a reserva é feita fora desta transação
+  // (src/server/bookings/service.ts — painel Subrinho ou emissão automática com gateway real).
+  // Catálogo simulado: "reserva" instantânea, sem efeito externo.
   const items = await tx.select().from(orderItems).where(eq(orderItems.orderId, orderId));
   for (const it of items) {
+    if (needsControlledIssue(it.supplierCode)) {
+      await tx.update(orderItems).set({ supplierStatus: "AWAITING_ISSUE" }).where(eq(orderItems.id, it.id));
+      await tx.insert(orderEvents).values({ orderId, type: "BOOKING_PENDING", data: { itemId: it.id, supplier: it.supplierCode } });
+      continue;
+    }
     try {
       const b = await getAdapter(it.supplierCode).book(
-        { quoteRef: it.supplierQuoteRef, productId: it.productId, optionId: it.optionId, pax: it.pax },
-        updated.travelers,
+        { quoteRef: it.supplierQuoteRef, productId: it.productId, optionId: it.optionId, pax: it.pax, serviceDate: it.serviceDate, serviceEndDate: it.serviceEndDate, details: it.details },
+        { travelers: updated.travelers, holder: updated.payerData },
       );
       await tx.update(orderItems).set({ supplierBookingRef: b.bookingRef, supplierStatus: b.status, supplierPayload: b.payload }).where(eq(orderItems.id, it.id));
     } catch (e) {

@@ -7,5 +7,7 @@ export default defineConfig({
     environment: "node",
     include: ["tests/**/*.test.ts"],
     testTimeout: 30000,
+    // Testes nunca chamam APIs reais de fornecedores (mesmo se houver credenciais no ambiente).
+    env: { SUPPLIERS_MODE: "mock", SUPPLIER_CACHE: "memory", SUPPLIER_BOOKING: "manual" },
   },
 });

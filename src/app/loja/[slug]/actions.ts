@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/server/db";
-import { affiliateUsers, customers, orders, type PaxConfig, type PersonData } from "@/server/db/schema";
+import { affiliateUsers, cartItems, customers, orders, type PaxConfig, type PersonData } from "@/server/db/schema";
 import { endSession, ensureVisitorId, requestMeta, setStoreAdminMode, startSession } from "@/server/auth/session";
 import { hashPassword, verifyPassword } from "@/server/auth/password";
 import {
@@ -22,6 +22,8 @@ import {
   setAffiliateMarginOverride,
 } from "@/server/cart/service";
 import { CheckoutError, findOrCreateCustomer, markOrderPaid, placeOrder } from "@/server/checkout/service";
+import { autoIssueOrder } from "@/server/bookings/service";
+import { after } from "next/server";
 import { isMockPayments } from "@/server/payments/provider";
 import { PricingError } from "@/server/pricing/engine";
 import { getAdapter } from "@/server/suppliers/registry";
@@ -44,6 +46,12 @@ function paxFrom(fd: FormData): PaxConfig {
   if (fd.has("seniors")) pax.seniors = int(fd.get("seniors"));
   if (fd.has("rooms")) pax.rooms = Math.max(1, int(fd.get("rooms"), 1));
   if (fd.has("units")) pax.units = Math.max(1, int(fd.get("units"), 1));
+  // Hotéis: idade de cada criança ("7,10" ou vários campos childAge)
+  const rawAges = [...String(fd.get("childrenAges") ?? "").split(","), ...fd.getAll("childAge").map(String)].map((x) => x.trim()).filter((x) => x !== "");
+  if (fd.has("childrenAges") || fd.has("childAge")) {
+    const ages = rawAges.map((x) => Number(x)).filter((a) => Number.isInteger(a) && a >= 0 && a <= 17);
+    pax.childrenAges = ages.slice(0, pax.children);
+  }
   return pax;
 }
 
@@ -299,14 +307,35 @@ export async function placeOrderAction(slug: string, token: string, _prev: Actio
       address: Object.values(address).some(Boolean) ? { ...address, country: "BR" } : null,
     };
 
-    // Viajantes
+    // Viajantes (adultos primeiro, depois crianças — é a ordem usada na reserva do hotel)
     const names = fd.getAll("travelerName").map(String);
     const docs = fd.getAll("travelerDocument").map(String);
     const births = fd.getAll("travelerBirthDate").map(String);
+    const types = fd.getAll("travelerType").map(String);
+    const titles = fd.getAll("travelerTitle").map(String);
+    const agesIn = fd.getAll("travelerAge").map(String);
     const travelers: PersonData[] = names
-      .map((n, i) => ({ name: n.trim(), document: docs[i]?.trim() || null, birthDate: births[i] || null }))
+      .map((n, i): PersonData => {
+        const type = types[i] === "CHILD" ? "CHILD" : "ADULT";
+        const title = titles[i] === "MRS" ? "MRS" : titles[i] === "MR" ? "MR" : undefined;
+        const age = agesIn[i] !== undefined && agesIn[i] !== "" ? Number(agesIn[i]) : undefined;
+        return {
+          name: n.trim().replace(/\s+/g, " "),
+          type,
+          ...(title ? { title } : {}),
+          ...(type === "CHILD" && Number.isInteger(age) ? { age } : {}),
+          document: docs[i]?.trim() || null,
+          birthDate: births[i] || null,
+        };
+      })
       .filter((t) => t.name);
     if (!travelers.length) return { error: "Informe ao menos o nome do viajante principal" };
+    const activeItems = await db
+      .select({ category: cartItems.category, pax: cartItems.pax })
+      .from(cartItems)
+      .where(and(eq(cartItems.cartId, cart.id), eq(cartItems.status, "ACTIVE")));
+    const hotelError = hotelGuestsError(activeItems, travelers);
+    if (hotelError) return { error: hotelError };
 
     const method = fd.get("paymentMethod") === "CARD" ? "CARD" : "PIX";
     const card =
@@ -338,6 +367,11 @@ export async function placeOrderAction(slug: string, token: string, _prev: Actio
     );
     if ("declined" in res && res.declined) return { error: `${res.declined}. Tente outro cartão ou pague no Pix.` };
     orderId = res.order.id;
+    // Cartão aprovado: emite as reservas dos fornecedores reais depois da resposta (se habilitado).
+    if (res.approved) {
+      const paidId = res.order.id;
+      after(() => autoIssueOrder(paidId));
+    }
 
     // Cliente que comprou fica logado na loja (para acompanhar o pedido).
     if (viewer.kind === "AFFILIATE") {
@@ -353,6 +387,21 @@ export async function placeOrderAction(slug: string, token: string, _prev: Actio
   }
   refreshCart(slug, token);
   redirect(storePath(store, `/pedido/${orderId}`));
+}
+
+/** Hotéis: nome e sobrenome de todos os hóspedes (adultos e crianças) de cada quarto. */
+function hotelGuestsError(items: { category: string; pax: PaxConfig }[], travelers: PersonData[]): string | null {
+  const hotels = items.filter((i) => i.category === "LODGING");
+  if (!hotels.length) return null;
+  const adults = travelers.filter((t) => t.type !== "CHILD");
+  const children = travelers.filter((t) => t.type === "CHILD");
+  const needAdults = Math.max(...hotels.map((h) => h.pax.adults ?? 0));
+  const needChildren = Math.max(...hotels.map((h) => h.pax.children ?? 0));
+  if (adults.length < needAdults) return `Informe o nome dos ${needAdults} adultos da hospedagem`;
+  if (children.length < needChildren) return `Informe o nome das ${needChildren} crianças da hospedagem`;
+  const incomplete = [...adults.slice(0, needAdults), ...children.slice(0, needChildren)].find((t) => t.name.split(" ").filter(Boolean).length < 2);
+  if (incomplete) return `Informe nome e sobrenome de “${incomplete.name}” (exigência do hotel)`;
+  return null;
 }
 
 /** Somente em ambiente de testes (PAYMENT_PROVIDER=mock): simula a confirmação do Pix. */
