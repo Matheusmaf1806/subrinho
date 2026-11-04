@@ -173,6 +173,9 @@ describe("regras comuns", () => {
       },
     ]);
     expect(roomAmenitiesFrom(["Sem berços (camas para crianças)", "Caminho sem escadas", "Varanda"])).toEqual(["Caminho sem escadas", "Varanda"]);
+    // como vem na GGT: o 1º item na mesma linha do título da lista
+    const real = splitDescription("Taxas obrigatórias (pagas no hotel): Taxa do hotel: 34.04 USD por alojamento, por noite\nA taxa de alojamento inclui: Acesso ao centro de fitness\nCafé no quarto\nCofre no quarto");
+    expect(real.policies[0].items).toEqual(["Taxa do hotel: 34.04 USD por alojamento, por noite", "A taxa de alojamento inclui: Acesso ao centro de fitness, Café no quarto, Cofre no quarto"]);
   });
 
   it("texto sem títulos fica todo em 'sobre'", () => {

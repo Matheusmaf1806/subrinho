@@ -449,7 +449,7 @@ export function createGgtAdapter(cfg: GgtConfig, opts: { fetch?: typeof fetch } 
 
   async function hotelInfo(id: string) {
     return cached(
-      `ggt:info:v3:${id}:${cfg.language}`,
+      `ggt:info:v4:${id}:${cfg.language}`,
       INFO_TTL,
       async () => parseHotelInfo(await client.xml(GGT_OP.HOTEL_INFO, `<Main Version="2.2"><InfoHotelId>${escapeXml(id)}</InfoHotelId><InfoLanguage>${escapeXml(cfg.language)}</InfoLanguage></Main>`, 20_000)),
       { cacheIf: (v) => !!v.name },

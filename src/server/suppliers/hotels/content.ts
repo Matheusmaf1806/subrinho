@@ -259,7 +259,9 @@ function joinSublists(items: string[]): string[] {
       continue;
     }
     out.push(it);
-    open = it.endsWith(":") && it.length <= 60;
+    // abre lista: "Inclui:" sozinho, ou "A taxa inclui: primeiro item" (o resto vem nas linhas seguintes)
+    const m = it.match(/^(.{3,60}):\s*(.{0,60})$/);
+    open = !!m && !/\.$/.test(it) && (m[2] === "" || /inclu/i.test(m[1]));
   }
   return out;
 }
