@@ -4,7 +4,7 @@
  * qualquer cor e com fotos verticais ou horizontais.
  */
 import Link from "next/link";
-import { ArrowUpRight, BadgeCheck, CreditCard, Headphones, MessageCircle, QrCode } from "lucide-react";
+import { ArrowUpRight, BadgeCheck, CreditCard, Headphones, MessageCircle, QrCode, ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/components/ui";
 import { SearchTabs } from "./search-tabs";
@@ -36,7 +36,7 @@ export function StoreHero({
 }) {
   const trust = [
     { icon: CreditCard, text: `Até ${maxInstallments}x sem juros` },
-    ...(pixAvailable ? [{ icon: QrCode, text: "Desconto no Pix" }] : []),
+    pixAvailable ? { icon: QrCode, text: "Desconto no Pix" } : { icon: ShieldCheck, text: "Pagamento seguro" },
     { icon: BadgeCheck, text: "Preço confirmado na hora" },
     { icon: Headphones, text: "Atendimento humano" },
   ];
