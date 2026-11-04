@@ -11,7 +11,7 @@ type Tab = { key: string; label: string; icon: ReactNode; content: ReactNode };
  * - "underline": ícone + rótulo com traço na cor da agência (cartão de busca da home; no celular o
  *   ícone fica em cima do rótulo).
  */
-export function SearchTabs({ tabs, tone = "dark", variant = "pill" }: { tabs: Tab[]; tone?: "dark" | "light"; variant?: "pill" | "underline" }) {
+export function SearchTabs({ tabs, tone = "dark", variant = "pill", center }: { tabs: Tab[]; tone?: "dark" | "light" | "photo"; variant?: "pill" | "underline"; center?: boolean }) {
   const [active, setActive] = useState(tabs[0]?.key ?? "");
   const panels = tabs.map((t) => (
     <div key={t.key} hidden={t.key !== active} role="tabpanel" id={`painel-${t.key}`} aria-labelledby={`aba-${t.key}`}>
@@ -52,7 +52,14 @@ export function SearchTabs({ tabs, tone = "dark", variant = "pill" }: { tabs: Ta
 
   return (
     <div>
-      <div className={cn("no-scrollbar mb-3 inline-flex max-w-full gap-1 overflow-x-auto rounded-full p-1", tone === "dark" ? "bg-accent-fg/10 backdrop-blur" : "bg-surface")} role="tablist">
+      <div className={cn(center && "flex justify-center")}>
+      <div
+        className={cn(
+          "no-scrollbar mb-3 inline-flex max-w-full gap-1 overflow-x-auto rounded-full p-1",
+          tone === "dark" ? "bg-accent-fg/10 backdrop-blur" : tone === "photo" ? "bg-black/30 backdrop-blur-md" : "bg-surface",
+        )}
+        role="tablist"
+      >
         {tabs.map((t) => (
           <button
             key={t.key}
@@ -64,13 +71,14 @@ export function SearchTabs({ tabs, tone = "dark", variant = "pill" }: { tabs: Ta
             onClick={() => setActive(t.key)}
             className={cn(
               "inline-flex h-10 shrink-0 items-center gap-2 rounded-full px-4 text-[14px] font-semibold transition",
-              active === t.key ? "bg-white text-ink shadow-sm" : tone === "dark" ? "text-accent-fg/75 hover:text-accent-fg" : "text-muted hover:text-ink",
+              active === t.key ? "bg-white text-ink shadow-sm" : tone === "dark" ? "text-accent-fg/75 hover:text-accent-fg" : tone === "photo" ? "text-white/80 hover:text-white" : "text-muted hover:text-ink",
             )}
           >
             {t.icon}
             {t.label}
           </button>
         ))}
+      </div>
       </div>
       {panels}
     </div>

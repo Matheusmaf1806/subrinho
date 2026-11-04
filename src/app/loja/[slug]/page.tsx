@@ -11,6 +11,8 @@ import { COMING_SOON } from "./_components/category";
 import { storeCategories } from "./_lib/categories";
 import { ChipSearch, InsuranceSearch, LodgingSearch, TicketsSearch } from "./_components/search-forms";
 import { StoreHero } from "./_components/store-hero";
+import { HeroCentered, HeroCinematic, HeroEditorial, HeroNight, type HeroProps } from "./_components/hero-variants";
+import type { Category } from "@/server/db/schema";
 import { paymentProvider } from "@/server/payments/provider";
 import { getSettings } from "@/server/settings";
 import { CreditCard, MessageCircle, Plane, Search, ShoppingBag, Ticket } from "lucide-react";
@@ -35,6 +37,15 @@ const DESTINATIONS: { name: string; image: PhotoKey; country: string }[] = [
   { name: "Florença", image: "florence", country: "Itália" },
 ];
 
+const OFFER: Partial<Record<Category, string>> = { TICKETS: "ingressos", LODGING: "hotéis", HOUSES: "casas de temporada", INSURANCE: "seguro viagem", CHIP: "chip internacional" };
+
+/** "Ingressos, hotéis e casas de temporada no mesmo carrinho…" — só o que a loja vende. */
+function defaultSubtitle(name: string, live: Category[]) {
+  const items = live.map((c) => OFFER[c]).filter((x): x is string => !!x);
+  const list = items.length > 1 ? `${items.slice(0, -1).join(", ")} e ${items.at(-1)}` : (items[0] ?? "Sua viagem");
+  return `${list.charAt(0).toUpperCase()}${list.slice(1)} no mesmo carrinho, com preço confirmado na hora e o atendimento da ${name}.`;
+}
+
 const SHORTCUT_LABEL: Record<string, string> = { TICKETS: "Ingressos", LODGING: "Hotéis", HOUSES: "Casas", INSURANCE: "Seguro viagem", CHIP: "Chip" };
 
 /** Como a compra funciona (o que de fato acontece). */
@@ -47,8 +58,9 @@ function STEPS(max: number, pix: boolean) {
   ];
 }
 
-export default async function StoreHome({ params }: { params: Promise<{ slug: string }> }) {
+export default async function StoreHome({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ topo?: string }> }) {
   const { slug } = await params;
+  const sp = await searchParams;
   const store = await getStore(slug);
   const ctx = await getStorePricing(store.id);
   const base = `/loja/${store.slug}`;
@@ -69,42 +81,70 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
   // faixa de destinos: leva à busca de ingressos (ou de hotéis, se a loja não vende ingressos)
   const marqueeSlug = live.has("TICKETS") ? "ingressos" : live.has("LODGING") ? "hospedagem" : null;
 
-  const tabs = cats.live.map((c) => {
-    const Icon = c.icon;
-    const action = `${base}/${c.slug}`;
-    const content =
-      c.category === "TICKETS" ? (
-        <TicketsSearch action={action} d={d} destinations={dest("TICKETS")} minDate={minDate} layout="card" />
-      ) : c.category === "LODGING" ? (
-        <LodgingSearch action={action} d={d} destinations={dest("LODGING")} minDate={minDate} layout="card" />
-      ) : c.category === "HOUSES" ? (
-        <LodgingSearch action={action} d={d} destinations={dest("HOUSES")} minDate={minDate} houses layout="card" />
-      ) : c.category === "INSURANCE" ? (
-        <InsuranceSearch action={action} d={d} regions={INSURANCE_REGIONS} minDate={minDate} layout="card" />
-      ) : (
-        <ChipSearch action={action} d={d} destinations={dest("CHIP")} layout="card" />
-      );
-    return { key: c.slug, label: c.short, icon: <Icon className="h-4 w-4" />, content };
-  });
+  const makeTabs = (layout: "card" | "bar") =>
+    cats.live.map((c) => {
+      const Icon = c.icon;
+      const action = `${base}/${c.slug}`;
+      const content =
+        c.category === "TICKETS" ? (
+          <TicketsSearch action={action} d={d} destinations={dest("TICKETS")} minDate={minDate} layout={layout} />
+        ) : c.category === "LODGING" ? (
+          <LodgingSearch action={action} d={d} destinations={dest("LODGING")} minDate={minDate} layout={layout} />
+        ) : c.category === "HOUSES" ? (
+          <LodgingSearch action={action} d={d} destinations={dest("HOUSES")} minDate={minDate} houses layout={layout} />
+        ) : c.category === "INSURANCE" ? (
+          <InsuranceSearch action={action} d={d} regions={INSURANCE_REGIONS} minDate={minDate} layout={layout} />
+        ) : (
+          <ChipSearch action={action} d={d} destinations={dest("CHIP")} layout={layout} />
+        );
+      return { key: c.slug, label: c.short, icon: <Icon className="h-4 w-4" />, content };
+    });
+  const tabs = makeTabs("card");
+  const shortcuts = cats.live.slice(0, 3).map((c) => ({ href: `${base}/${c.slug}`, label: SHORTCUT_LABEL[c.category] ?? c.short, icon: c.icon }));
+  const marquee = marqueeSlug ? [...DESTINATIONS.map((x) => x.name), "Milão", "Veneza", "Barcelona", "Londres"].map((n) => ({ name: n, href: `${base}/${marqueeSlug}?${toQuery({ destino: n })}` })) : [];
+  // prévia das propostas de topo (?topo=1..4) — o padrão continua o atual até a escolha
+  const variant = ["1", "2", "3", "4"].includes(sp.topo ?? "") ? Number(sp.topo) : 0;
+  const heroProps: HeroProps = {
+    name: store.name,
+    lines: brand.heroLines,
+    subtitle: store.heroSubtitle?.trim() || defaultSubtitle(store.name, cats.live.map((c) => c.category)),
+    image: brand.heroImage,
+    image2: brand.heroImage2,
+    tabsCard: tabs,
+    tabsBar: variant === 1 || variant === 2 || variant === 4 ? makeTabs("bar") : [],
+    pixAvailable,
+    maxInstallments: settings.maxInstallments,
+    whatsapp: store.whatsapp,
+    shortcuts,
+    destinations: marquee,
+  };
 
   return (
     <main>
       {/* ───────── Topo ───────── */}
-      <StoreHero
-        name={store.name}
-        lines={brand.heroLines}
-        subtitle={store.heroSubtitle?.trim() || null}
-        image={brand.heroImage}
-        image2={brand.heroImage2}
-        tabs={tabs}
-        pixAvailable={pixAvailable}
-        maxInstallments={settings.maxInstallments}
-        whatsapp={store.whatsapp}
-        shortcuts={cats.live.slice(0, 3).map((c) => ({ href: `${base}/${c.slug}`, label: SHORTCUT_LABEL[c.category] ?? c.short, icon: c.icon }))}
-        destinations={
-          marqueeSlug ? [...DESTINATIONS.map((x) => x.name), "Milão", "Veneza", "Barcelona", "Londres"].map((n) => ({ name: n, href: `${base}/${marqueeSlug}?${toQuery({ destino: n })}` })) : []
-        }
-      />
+      {variant === 1 ? (
+        <HeroCinematic {...heroProps} />
+      ) : variant === 2 ? (
+        <HeroEditorial {...heroProps} />
+      ) : variant === 3 ? (
+        <HeroNight {...heroProps} />
+      ) : variant === 4 ? (
+        <HeroCentered {...heroProps} />
+      ) : (
+        <StoreHero
+          name={store.name}
+          lines={brand.heroLines}
+          subtitle={store.heroSubtitle?.trim() || null}
+          image={brand.heroImage}
+          image2={brand.heroImage2}
+          tabs={tabs}
+          pixAvailable={pixAvailable}
+          maxInstallments={settings.maxInstallments}
+          whatsapp={store.whatsapp}
+          shortcuts={shortcuts}
+          destinations={marquee}
+        />
+      )}
 
       {/* ───────── Categorias (bento) ───────── */}
       <section className="mx-auto mt-24 max-w-[1440px] px-4 sm:px-8">

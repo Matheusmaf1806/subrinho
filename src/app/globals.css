@@ -505,3 +505,67 @@ dialog::backdrop {
   box-decoration-break: clone;
   padding: 0 0.08em;
 }
+
+/* ───────── Topo "cinemático": fotos trocando sozinhas (4 slides de 6s) com zoom lento ───────── */
+@keyframes slide-fade {
+  0% {
+    opacity: 0;
+  }
+  4%,
+  25% {
+    opacity: 1;
+  }
+  30%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes kenburns {
+  from {
+    transform: scale(1.02);
+  }
+  to {
+    transform: scale(1.14);
+  }
+}
+.slide {
+  opacity: 0;
+  animation: slide-fade 24s linear infinite;
+  animation-delay: var(--slide-delay, 0s);
+}
+.slide:first-child {
+  opacity: 1;
+}
+.slide img {
+  animation: kenburns 12s ease-out infinite alternate;
+}
+/* ───────── Topo "noturno": estrelas piscando ───────── */
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+.stars {
+  background-image:
+    radial-gradient(1px 1px at 20px 30px, rgba(255, 255, 255, 0.9), transparent),
+    radial-gradient(1px 1px at 120px 80px, rgba(255, 255, 255, 0.7), transparent),
+    radial-gradient(1.5px 1.5px at 200px 150px, rgba(255, 255, 255, 0.8), transparent),
+    radial-gradient(1px 1px at 280px 40px, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(1px 1px at 330px 200px, rgba(255, 255, 255, 0.7), transparent);
+  background-size: 360px 240px;
+  animation: twinkle 5s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .slide,
+  .slide img,
+  .stars {
+    animation: none !important;
+  }
+  .slide:not(:first-child) {
+    opacity: 0;
+  }
+}

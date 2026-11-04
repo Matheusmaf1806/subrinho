@@ -32,6 +32,9 @@ type Icon = typeof Search;
 /** Caixa de campo do layout "card" (também usada pelos campos de destino com sugestões e de hóspedes). */
 export const cardCell = "relative block rounded-2xl border border-line bg-white transition hover:border-ink/30 focus-within:border-ink focus-within:shadow-[0_0_0_1px_var(--color-ink)]";
 
+/** Célula da barra; no celular ganha fundo cinza claro para parecer campo. */
+const barCell = "relative block rounded-[1.25rem] px-5 py-3 transition hover:bg-surface focus-within:bg-surface max-sm:bg-surface/70 max-sm:px-4 max-sm:py-2.5";
+
 function Bar({ action, children, className, cols, layout = "bar", submit = "Buscar" }: { action: string; children: ReactNode; className?: string; cols: string; layout?: SearchLayout; submit?: string }) {
   if (layout === "card")
     return (
@@ -46,20 +49,21 @@ function Bar({ action, children, className, cols, layout = "bar", submit = "Busc
     <form
       action={action}
       className={cn(
-        "grid gap-1 rounded-[1.75rem] bg-white p-2 ring-1 ring-inset ring-black/[0.06] shadow-[0_30px_80px_-40px_rgba(10,10,11,0.45)] sm:items-center",
+        "grid grid-cols-2 gap-1.5 rounded-[1.75rem] bg-white p-2 ring-1 ring-inset ring-black/[0.06] shadow-[0_30px_80px_-40px_rgba(10,10,11,0.45)] sm:gap-1 sm:items-center",
         cols,
         className,
       )}
     >
       {children}
-      <button type="submit" className="inline-flex h-14 items-center justify-center gap-2 rounded-[1.25rem] bg-ink px-7 text-[15px] font-semibold text-white transition hover:bg-ink-2 sm:rounded-full">
+      <button type="submit" className="col-span-2 inline-flex h-14 items-center justify-center gap-2 rounded-[1.25rem] bg-ink px-7 text-[15px] font-semibold text-white transition hover:bg-ink-2 sm:col-span-1 sm:rounded-full">
         <Search className="h-4 w-4" /> Buscar
       </button>
     </form>
   );
 }
 
-function Cell({ label, children, divider = true, layout = "bar", icon: I, span = "" }: { label: string; children: ReactNode; divider?: boolean; layout?: SearchLayout; icon?: Icon; span?: string }) {
+/** No celular a barra vira grade de 2 colunas: `half` ocupa meia linha (datas, quantidades). */
+function Cell({ label, children, divider = true, layout = "bar", icon: I, span = "", half }: { label: string; children: ReactNode; divider?: boolean; layout?: SearchLayout; icon?: Icon; span?: string; half?: boolean }) {
   if (layout === "card")
     return (
       <label className={cn(cardCell, "py-2.5 pr-4", I ? "pl-11" : "pl-4", span)}>
@@ -69,7 +73,7 @@ function Cell({ label, children, divider = true, layout = "bar", icon: I, span =
       </label>
     );
   return (
-    <label className={cn("relative block rounded-[1.25rem] px-5 py-3 transition hover:bg-surface focus-within:bg-surface", divider && "sm:after:absolute sm:after:inset-y-3 sm:after:right-0 sm:after:w-px sm:after:bg-line")}>
+    <label className={cn(barCell, !half && "col-span-2 sm:col-span-1", divider && "sm:after:absolute sm:after:inset-y-3 sm:after:right-0 sm:after:w-px sm:after:bg-line")}>
       <span className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">{label}</span>
       {children}
     </label>
@@ -89,17 +93,17 @@ function Destination({ options, value, placeholder, layout, span = "col-span-2 s
   );
 }
 
-function NumberCell({ name, label, value, min = 0, max = 20, divider, layout, span }: { name: string; label: string; value?: number; min?: number; max?: number; divider?: boolean; layout?: SearchLayout; span?: string }) {
+function NumberCell({ name, label, value, min = 0, max = 20, divider, layout, span, half = true }: { name: string; label: string; value?: number; min?: number; max?: number; divider?: boolean; layout?: SearchLayout; span?: string; half?: boolean }) {
   return (
-    <Cell label={label} divider={divider} layout={layout} span={span}>
+    <Cell label={label} divider={divider} layout={layout} span={span} half={half}>
       <input type="number" name={name} min={min} max={max} defaultValue={value} inputMode="numeric" className={field} />
     </Cell>
   );
 }
 
-function DateCell({ name, label, value, min, layout, span = "sm:col-span-2" }: { name: string; label: string; value?: string; min?: string; layout?: SearchLayout; span?: string }) {
+function DateCell({ name, label, value, min, layout, span = "sm:col-span-2", full }: { name: string; label: string; value?: string; min?: string; layout?: SearchLayout; span?: string; full?: boolean }) {
   return (
-    <Cell label={label} layout={layout} icon={CalendarDays} span={span}>
+    <Cell label={label} layout={layout} icon={CalendarDays} span={span} half={!full}>
       <input type="date" name={name} defaultValue={value} min={min} required className={field} />
     </Cell>
   );
@@ -111,7 +115,7 @@ export function TicketsSearch({ action, d, destinations, minDate, className, lay
   return (
     <Bar action={action} className={className} layout={layout} submit="Buscar ingressos" cols="sm:grid-cols-[1.8fr_1.1fr_0.7fr_0.7fr_auto]">
       <Destination options={destinations} value={d.destino} placeholder="Roma, Orlando, Paris…" layout={layout} />
-      <DateCell name="data" label="Data da visita" value={d.data} min={minDate} layout={layout} span="col-span-2 sm:col-span-4" />
+      <DateCell name="data" label="Data da visita" value={d.data} min={minDate} layout={layout} span="col-span-2 sm:col-span-4" full />
       <NumberCell name="adultos" label="Adultos" value={d.adultos ?? 2} layout={layout} />
       <NumberCell name="criancas" label="Crianças" value={d.criancas ?? 0} divider={false} layout={layout} />
     </Bar>
@@ -132,7 +136,7 @@ export function LodgingSearch({ action, d, destinations, minDate, className, hou
   // Hotéis: destino com sugestões (todos os destinos dos fornecedores) e hóspedes com idade das crianças.
   return (
     <Bar action={action} className={className} layout={layout} submit="Buscar hotéis" cols="sm:grid-cols-[1.6fr_1fr_1fr_1.25fr_auto]">
-      <DestinationField value={d.destino} destKey={d.dest} placeholder="Para onde você vai?" card={layout === "card"} className={layout === "card" ? "col-span-2 sm:col-span-6" : undefined} />
+      <DestinationField value={d.destino} destKey={d.dest} placeholder="Para onde você vai?" card={layout === "card"} className={layout === "card" ? "col-span-2 sm:col-span-6" : "col-span-2 max-sm:bg-surface/70 max-sm:px-4 max-sm:py-2.5 sm:col-span-1"} />
       <DateCell name="checkin" label="Check-in" value={d.checkin} min={minDate} layout={layout} />
       <DateCell name="checkout" label="Check-out" value={d.checkout} min={minDate} layout={layout} />
       <GuestsField
@@ -141,7 +145,7 @@ export function LodgingSearch({ action, d, destinations, minDate, className, hou
         adults={d.adultos ?? 2}
         ages={(d.idades ?? []).slice(0, d.criancas ?? 0)}
         card={layout === "card"}
-        className={layout === "card" ? "col-span-2 sm:col-span-2" : undefined}
+        className={layout === "card" ? "col-span-2 sm:col-span-2" : "col-span-2 max-sm:bg-surface/70 sm:col-span-1"}
       />
     </Bar>
   );
@@ -169,7 +173,7 @@ export function ChipSearch({ action, d, destinations, className, layout }: FormP
   return (
     <Bar action={action} className={className} layout={layout} submit="Buscar chips" cols="sm:grid-cols-[2fr_0.8fr_auto]">
       <Destination options={destinations} value={d.destino} placeholder="Europa, Estados Unidos, Itália…" layout={layout} span="col-span-2 sm:col-span-5" />
-      <NumberCell name="qtd" label="Chips" value={d.qtd ?? 1} min={1} divider={false} layout={layout} span="col-span-2 sm:col-span-1" />
+      <NumberCell name="qtd" label="Chips" value={d.qtd ?? 1} min={1} divider={false} layout={layout} span="col-span-2 sm:col-span-1" half={false} />
     </Bar>
   );
 }
