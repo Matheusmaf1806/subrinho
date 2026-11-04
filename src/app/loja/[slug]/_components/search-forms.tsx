@@ -53,16 +53,7 @@ function Cell({ label, children, divider = true, half }: { label: string; childr
 }
 
 function Destination({ options, value, placeholder }: { options: string[]; value?: string; placeholder: string }) {
-  return (
-    <Cell label="Destino">
-      <input name="destino" list="destinos" defaultValue={value} placeholder={placeholder} className={field} autoComplete="off" />
-      <datalist id="destinos">
-        {options.map((o) => (
-          <option key={o} value={o} />
-        ))}
-      </datalist>
-    </Cell>
-  );
+  return <DestinationField options={options} value={value} placeholder={placeholder} className={cn(barCell, divided, "col-span-2 sm:col-span-1")} />;
 }
 
 function NumberCell({ name, label, value, min = 0, max = 20, divider, half = true }: { name: string; label: string; value?: number; min?: number; max?: number; divider?: boolean; half?: boolean }) {

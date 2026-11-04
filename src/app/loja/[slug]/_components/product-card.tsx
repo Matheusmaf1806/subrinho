@@ -22,7 +22,7 @@ export function ProductCard({ p, href, note, nights, quick }: { p: PricedSummary
   const perNight = nights && nights > 1 ? Number(p.price.pix.div(nights).toFixed(0)) : null;
   const stars = p.stars ? `${"★".repeat(Math.floor(p.stars))}${p.stars % 1 ? "½" : ""}` : null;
   return (
-    <div className="group relative flex flex-col transition duration-300 ease-out hover:-translate-y-1.5">
+    <div className="group relative flex h-full flex-col transition duration-300 ease-out hover:-translate-y-1.5">
       <Cover
         title={p.title}
         location={p.destination}
@@ -92,7 +92,8 @@ export function ProductCard({ p, href, note, nights, quick }: { p: PricedSummary
           )}
         </div>
         {quickable && (
-          <div className="relative z-10 mt-4 grid grid-cols-2 gap-2">
+          // mt-auto: botões sempre no rodapé do card, alinhados entre cards com títulos de tamanhos diferentes
+          <div className="relative z-10 mt-auto grid grid-cols-2 gap-2 pt-4">
             <QuickAdd ctx={quick!} productRef={productRef(p.supplierCode, p.productId)} category={p.category as "TICKETS" | "LODGING" | "HOUSES"} title={p.title} />
             <Link href={href} className="inline-flex h-10 items-center justify-center rounded-full bg-surface px-4 text-[13px] font-semibold text-ink transition hover:bg-surface-2">
               Mais detalhes

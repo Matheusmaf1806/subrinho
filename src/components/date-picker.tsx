@@ -69,12 +69,23 @@ function Popover({ anchor, open, onClose, children, label }: { anchor: HTMLEleme
     const r = anchor.getBoundingClientRect();
     const w = box.current.offsetWidth;
     const h = box.current.offsetHeight;
-    const below = r.bottom + 8 + h <= window.innerHeight || r.top - 8 - h < 0;
-    setPos({ top: below ? r.bottom + 8 : r.top - 8 - h, left: Math.min(Math.max(8, r.left), window.innerWidth - w - 8) });
+    const vh = window.innerHeight;
+    // abaixo do campo; sem espaço, acima; sem espaço nos dois, encosta na borda que couber (nunca sai da tela)
+    const fitsBelow = r.bottom + 8 + h <= vh - 8;
+    const fitsAbove = r.top - 8 - h >= 8;
+    const top = fitsBelow ? r.bottom + 8 : fitsAbove ? r.top - 8 - h : Math.max(8, vh - h - 8);
+    setPos({ top, left: Math.min(Math.max(8, r.left), window.innerWidth - w - 8) });
   }, [anchor, phone]);
 
   useLayoutEffect(() => {
-    if (open) place();
+    if (!open) return;
+    place();
+    // o calendário muda de altura ao trocar de mês (5 ou 6 semanas): reposiciona
+    const el = box.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => place());
+    ro.observe(el);
+    return () => ro.disconnect();
   }, [open, place]);
 
   useEffect(() => {
@@ -119,7 +130,7 @@ function Popover({ anchor, open, onClose, children, label }: { anchor: HTMLEleme
         role="dialog"
         aria-label={label}
         style={{ top: pos?.top ?? -9999, left: pos?.left ?? -9999 }}
-        className="fixed z-[95] rounded-[1.5rem] bg-white p-4 shadow-[0_30px_80px_-20px_rgba(10,10,11,0.45)] ring-1 ring-black/[0.08]"
+        className="fixed z-[95] max-h-[calc(100vh-16px)] overflow-y-auto overscroll-contain rounded-[1.5rem] bg-white p-4 shadow-[0_30px_80px_-20px_rgba(10,10,11,0.45)] ring-1 ring-black/[0.08]"
       >
         {children}
       </div>

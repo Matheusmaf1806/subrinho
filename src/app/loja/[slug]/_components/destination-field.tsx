@@ -6,12 +6,15 @@ import { cn } from "@/components/ui";
 
 type Suggestion = { key: string; label: string; detail: string };
 
+const fold = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
 /**
  * Campo "Destino" com sugestões (destinos populares em português + cidades dos fornecedores).
  * Envia `destino` (texto) e `dest` (chave do destino escolhido). Se o cliente só digitar, o servidor
- * resolve o texto.
+ * resolve o texto. Com `options`, filtra uma lista fixa aqui mesmo (ingressos, casas, seguro) e envia
+ * só o texto.
  */
-export function DestinationField({ value, destKey, placeholder, className }: { value?: string; destKey?: string; placeholder: string; className?: string }) {
+export function DestinationField({ value, destKey, placeholder, className, options }: { value?: string; destKey?: string; placeholder: string; className?: string; options?: string[] }) {
   const [text, setText] = useState(value ?? "");
   const [key, setKey] = useState(destKey ?? "");
   const [items, setItems] = useState<Suggestion[]>([]);
@@ -22,6 +25,15 @@ export function DestinationField({ value, destKey, placeholder, className }: { v
 
   useEffect(() => {
     if (!open) return;
+    if (options) {
+      const q = fold(text);
+      const hit = options.filter((o) => !q || fold(o).includes(q));
+      // começa com o que foi digitado primeiro
+      hit.sort((a, b) => Number(!fold(a).startsWith(q)) - Number(!fold(b).startsWith(q)));
+      setItems(hit.slice(0, 8).map((o) => ({ key: o, label: o, detail: "" })));
+      setActive(-1);
+      return;
+    }
     const ctrl = new AbortController();
     const t = setTimeout(() => {
       fetch(`/api/public/destinos?q=${encodeURIComponent(text)}`, { signal: ctrl.signal })
@@ -36,7 +48,7 @@ export function DestinationField({ value, destKey, placeholder, className }: { v
       clearTimeout(t);
       ctrl.abort();
     };
-  }, [text, open]);
+  }, [text, open, options]);
 
   const choose = (s: Suggestion) => {
     setText(s.label);
@@ -57,7 +69,7 @@ export function DestinationField({ value, destKey, placeholder, className }: { v
         value={text}
         placeholder={placeholder}
         autoComplete="off"
-        required
+        required={!options}
         role="combobox"
         aria-autocomplete="list"
         aria-expanded={open && items.length > 0}
@@ -85,7 +97,7 @@ export function DestinationField({ value, destKey, placeholder, className }: { v
         }}
         className="mt-0.5 block w-full min-w-0 border-0 bg-transparent p-0 text-[15px] font-semibold text-ink outline-none placeholder:font-medium placeholder:text-muted/70 focus:ring-0"
       />
-      <input type="hidden" name="dest" value={key} />
+      {!options && <input type="hidden" name="dest" value={key} />}
       {open && items.length > 0 && (
         <ul id={listId} role="listbox" className="absolute left-0 right-0 top-full z-40 mt-2 max-h-80 overflow-auto rounded-2xl bg-white p-1.5 shadow-[0_24px_60px_-20px_rgba(10,10,11,0.35)] ring-1 ring-black/[0.06] sm:right-auto sm:min-w-[22rem]">
           {items.map((s, i) => (
