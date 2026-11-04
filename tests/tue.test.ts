@@ -3,9 +3,10 @@
  * com transporte falso no formato da especificação (OAuth2 → produtos → horários → reserva → pedido).
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { cancellationOf, costBasisOf, createTueAdapter, matchesTicketDestination, seasonFor, slotTime, ticketCodes, typeFor, unitCost, type TueProduct, type TueType } from "@/server/suppliers/tue/adapter";
+import { cancellationOf, costBasisOf, durationPt, createTueAdapter, matchesTicketDestination, seasonFor, slotTime, ticketCodes, typeFor, unitCost, type TueProduct, type TueType } from "@/server/suppliers/tue/adapter";
 import { TueApiError, tueConfig, type Transport } from "@/server/suppliers/tue/client";
 import { clearMemoryCache } from "@/server/suppliers/hotels/cache";
+import { todayLocal } from "@/lib/tz";
 
 const ADULT: TueType = { product_type: "ADULT", product_type_id: "T-AD", product_type_label: "Adult", product_type_age_from: 18, product_type_age_to: 64, product_type_pricing: { product_type_list_price: "20.50", product_type_sales_price: "18.50", product_type_resale_price: "16.40" } };
 const CHILD: TueType = { product_type: "CHILD", product_type_id: "T-CH", product_type_age_from: 4, product_type_age_to: 17, product_type_quantity_max: 6, product_type_pricing: { product_type_list_price: "10.00", product_type_sales_price: "9.00", product_type_resale_price: "7.20" } };
@@ -185,7 +186,26 @@ describe("Tu Experienza — preço, temporada e destino", () => {
   it("cancelamento, horário e destino em português", () => {
     expect(cancellationOf({ product_cancellation_allowed: false }, DAY)).toEqual({ text: "Não reembolsável", until: null });
     expect(cancellationOf({ product_cancellation_allowed: true, product_cancellation_policies: [] }, DAY)).toEqual({ text: "Cancelamento grátis até 17/12/2026", until: "2026-12-17" });
-    expect(cancellationOf(COLOSSEUM, DAY).text).toBe("Cancelamento com multa: Cancel 24 hours in advance.");
+    // texto em português a partir dos campos (o texto livre do fornecedor pode vir em espanhol); prazo com folga de 1 dia
+    expect(cancellationOf(COLOSSEUM, DAY)).toEqual({ text: "Cancelamento grátis até 16/12/2026; depois, não reembolsável", until: "2026-12-16" });
+    expect(cancellationOf(COLOSSEUM, null).text).toBe("Cancelamento grátis até 2 dias antes da visita; depois, não reembolsável");
+    const tiers = { product_cancellation_policies: [
+      { cancellation_description: "Cancelación ¡GRATIS! con al menos 72 horas", cancellation_type: "TRAVEL_DATE", cancellation_fee_threshold: 4320, cancellation_fee_percentage: 0 },
+      { cancellation_type: "TRAVEL_DATE", cancellation_fee_threshold: 1440, cancellation_fee_percentage: 50 },
+      { cancellation_type: "TRAVEL_DATE", cancellation_fee_threshold: 0, cancellation_fee_percentage: 100 },
+    ] };
+    expect(cancellationOf(tiers, DAY)).toEqual({ text: "Cancelamento grátis até 14/12/2026; depois, multa de até 100%", until: "2026-12-14" });
+    expect(cancellationOf(tiers, todayLocal()).text).toBe("Cancelamento com multa de até 100% para esta data");
+    expect(cancellationOf({ product_cancellation_policies: [{ cancellation_type: "TRAVEL_DATE", cancellation_fee_threshold: 1440, cancellation_fee_percentage: 0 }] }, DAY)).toEqual({ text: "Cancelamento grátis até 16/12/2026", until: "2026-12-16" });
+    expect(cancellationOf({ product_cancellation_policies: [{ cancellation_type: "BOOKING_DATE", cancellation_fee_threshold: 60, cancellation_fee_percentage: 100 }] }, DAY).until).toBeNull();
+    expect(durationPt("1 day")).toBe("1 dia");
+    expect(durationPt("1.5 hour")).toBe("1,5 h");
+    expect(durationPt("2-3 hours")).toBe("2 a 3 h");
+    expect(durationPt("45 minutes")).toBe("45 min");
+    expect(durationPt("Approx. 2 hours")).toBe("2 h");
+    expect(durationPt("Flexible", 90)).toBe("1 h 30 min");
+    expect(durationPt("", 2880)).toBe("2 dias");
+    expect(durationPt("Flexible")).toBe("Flexible");
     expect(slotTime(`${DAY}T09:30:00+01:00`)).toBe("09:30");
     expect(matchesTicketDestination("Roma", "Coliseu Rome Italy")).toBe(true);
     expect(matchesTicketDestination("Florença", "Uffizi Firenze")).toBe(true);
@@ -244,6 +264,25 @@ describe("Tu Experienza — fluxo do adaptador", () => {
     expect(f.calls.filter((c) => c.path.startsWith("/products?")).map((c) => new URL(`https://x${c.path}`).searchParams.get("page"))).toEqual(["1", "2"]);
     await a.search({ destination: "Paris", date: DAY, pax: { adults: 1, children: 0 } });
     expect(f.calls.filter((c) => c.path.startsWith("/products?")).length).toBe(2); // catálogo em cache
+  });
+
+  it("catálogo vencido: devolve o anterior na hora e atualiza em segundo plano", async () => {
+    const f = fake();
+    const a = createTueAdapter(cfg, { transport: f.transport });
+    const pages = () => f.calls.filter((c) => c.path.startsWith("/products?")).length;
+    await a.search({ destination: "Roma", date: DAY, pax: { adults: 1, children: 0 } });
+    expect(pages()).toBe(2);
+    const now = Date.now();
+    vi.spyOn(Date, "now").mockReturnValue(now + 7 * 3600_000);
+    try {
+      const list = await a.search({ destination: "Roma", date: DAY, pax: { adults: 1, children: 0 } });
+      expect(list.map((x) => x.productId)).toEqual(["P-COL"]);
+      await vi.waitFor(() => expect(pages()).toBe(4)); // baixou o catálogo de novo, sem a busca esperar
+      await a.search({ destination: "Roma", date: DAY, pax: { adults: 1, children: 0 } });
+      expect(pages()).toBe(4); // já está fresco
+    } finally {
+      vi.restoreAllMocks();
+    }
   });
 
   it("detalhe: um horário por opção, preço infantil sem nova consulta e aviso de últimas vagas", async () => {

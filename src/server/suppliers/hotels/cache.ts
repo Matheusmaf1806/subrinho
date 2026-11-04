@@ -4,6 +4,7 @@
  * Requisições idênticas simultâneas são unificadas (uma única chamada ao fornecedor).
  */
 import { and, eq, gt, lt } from "drizzle-orm";
+import { after } from "next/server";
 import { getDb } from "@/server/db";
 import { supplierCache } from "@/server/db/schema";
 
@@ -85,6 +86,44 @@ export async function cached<T>(key: string, ttlSeconds: number, load: () => Pro
   })();
   inflight.set(key, p);
   return p;
+}
+
+/**
+ * Como `cached`, mas depois de `freshSeconds` ainda devolve o valor anterior (até `staleSeconds` a mais)
+ * e baixa o novo em segundo plano — para listas grandes e lentas (catálogo inteiro de um fornecedor).
+ */
+export async function cachedStale<T>(key: string, freshSeconds: number, staleSeconds: number, load: () => Promise<T>): Promise<T> {
+  type Stored = { fetchedAt: number; value: T };
+  const refresh = (): Promise<Stored> => {
+    const k = `${key}#refresh`;
+    const pending = inflight.get(k);
+    if (pending) return pending as Promise<Stored>;
+    const p = (async () => {
+      try {
+        const entry = { fetchedAt: Date.now(), value: await load() };
+        await cacheSet(key, entry, freshSeconds + staleSeconds);
+        return entry;
+      } finally {
+        inflight.delete(k);
+      }
+    })();
+    inflight.set(k, p);
+    return p;
+  };
+  const hit = await cacheGet<{ fetchedAt?: number; value?: T }>(key);
+  if (hit && typeof hit.fetchedAt === "number" && hit.value !== undefined) {
+    if (Date.now() - hit.fetchedAt > freshSeconds * 1000) {
+      const job = () => refresh().catch(() => undefined);
+      try {
+        // depois da resposta (Vercel mantém a função viva); fora de uma requisição, roda solto
+        after(job);
+      } catch {
+        void job();
+      }
+    }
+    return hit.value;
+  }
+  return (await refresh()).value;
 }
 
 /** Somente testes. */

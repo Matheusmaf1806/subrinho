@@ -239,6 +239,15 @@ A visão do afiliado é montada por **lista branca** de campos (`getOrderForAffi
 - **Emissão:** só depois do pagamento real. Bloqueio (`/reservations`) com o preço calculado pela Tue; se o preço do
   servidor passar do esperado, se faltar dado obrigatório ou se o custo subir acima do vendido, o bloqueio é desfeito e
   nada é comprado. Confirmação com a nossa referência; e-mails da Tue ao cliente desligados (o voucher é o nosso).
+- **Política mostrada ao cliente:** montada em português a partir dos campos da política (o texto livre da Tue vem no
+  idioma do fornecedor). “Cancelamento grátis até DD/MM” usa o maior prazo de multa da política + 1 dia de folga (fuso
+  do local da visita); depois, “não reembolsável” ou “multa de até X%”. Regras contadas da data da compra → texto
+  genérico, sem prazo grátis. Sem políticas: grátis até a véspera.
 - **Cancelamento:** pelo Painel Subrinho, sem simulação de multa; a Tue fatura conforme a política do ingresso
   (mostrada ao cliente antes de pagar).
+- **Login na Tue:** usuário e senha literais no Basic (sem codificar o “@” do e-mail); se recusado, no corpo da
+  requisição. Login recusado pausa novas tentativas por 5 minutos; o “Testar conexão” diz se as credenciais são do
+  ambiente de teste ou de produção.
+- **Catálogo:** fica 6 h em cache (compartilhado no banco); depois disso, até 2 dias, a loja mostra o catálogo
+  anterior na hora e baixa o novo em segundo plano. Preço e vagas sempre são reconfirmados no detalhe e na cotação.
 - **Fora da loja por enquanto:** combos/pacotes, produtos com opção ou ponto de encontro obrigatórios.

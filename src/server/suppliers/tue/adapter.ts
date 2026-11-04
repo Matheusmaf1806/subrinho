@@ -33,13 +33,14 @@ import {
   SupplierError,
   SupplierIntegrationError,
 } from "../types";
-import { cached, cacheSet } from "../hotels/cache";
+import { cached, cachedStale, cacheSet } from "../hotels/cache";
 import { asCurrency, ascii, brDate, money2, normalizeText, splitName, stableId, titleCase } from "../hotels/common";
 import { TueApiError, TueClient, tueConfig, type TueConfig, type Transport } from "./client";
 
 export const TUE_CODE = "TU_EXPERIENZA";
 const NAME = "Tu Experienza";
 const CATALOG_TTL = 6 * 3600;
+const CATALOG_STALE = 48 * 3600;
 const DETAIL_TTL = 6 * 3600;
 const DEST_TTL = 24 * 3600;
 const AVAIL_TTL = 3 * 60;
@@ -211,13 +212,39 @@ export function typeLabel(t: TueType, kind: Kind): string {
 export function cancellationOf(p: Pick<TueProduct, "product_cancellation_allowed" | "product_cancellation_policies">, visitDate: string | null): { text: string; until: string | null } {
   if (p.product_cancellation_allowed === false) return { text: "Não reembolsável", until: null };
   const policies = p.product_cancellation_policies ?? [];
-  if (!policies.length) {
-    // "pode cancelar até ser usado": grátis até a véspera da visita (margem segura)
-    const until = visitDate ? addDays(visitDate, -1) : null;
-    return until && until >= todayLocal() ? { text: `Cancelamento grátis até ${brDate(until)}`, until } : { text: "Cancelamento grátis antes do uso", until: null };
+  // o texto livre da política vem no idioma do fornecedor (às vezes espanhol): montamos em português
+  // a partir dos campos estruturados, sempre pelo lado seguro (prazo maior, 1 dia de folga pelo fuso)
+  if (policies.some((x) => x.cancellation_type === "BOOKING_DATE")) return { text: "Cancelamento com multa, conforme a política do ingresso", until: null };
+  const charged = policies.filter((x) => Number(x.cancellation_fee_percentage ?? 0) > 0 || Number(x.cancellation_fee_amount ?? 0) > 0);
+  const maxMinutes = Math.max(0, ...policies.map((x) => Number(x.cancellation_fee_threshold) || 0));
+  const days = Math.ceil(maxMinutes / 1440) + 1;
+  const pct = Math.max(0, ...charged.map((x) => Number(x.cancellation_fee_percentage ?? 0)));
+  const afterwards = !charged.length ? "" : pct >= 100 && charged.length === 1 ? "; depois, não reembolsável" : pct > 0 ? `; depois, multa de até ${pct.toLocaleString("pt-BR")}%` : "; depois, com multa";
+  if (!visitDate) return { text: `Cancelamento grátis até ${days} ${days > 1 ? "dias" : "dia"} antes da visita${afterwards}`, until: null };
+  const until = addDays(visitDate, -days);
+  if (until >= todayLocal()) return { text: `Cancelamento grátis até ${brDate(until)}${afterwards}`, until };
+  if (!charged.length) return { text: "Cancelamento grátis antes do uso", until: null };
+  return { text: pct >= 100 && charged.length === 1 ? "Não reembolsável para esta data" : `Cancelamento com multa${pct > 0 ? ` de até ${pct.toLocaleString("pt-BR")}%` : ""} para esta data`, until: null };
+}
+
+/** "1.5 hour" → "1,5 h", "1 day" → "1 dia", "2-3 hours" → "2 a 3 h"; sem padrão conhecido, usa os minutos. */
+export function durationPt(text: string | undefined | null, minutes?: number | null): string {
+  const t = (text ?? "").trim();
+  const m = t.match(/^(?:approx\.?\s*|aprox\.?\s*|about\s+)?(\d+(?:[.,]\d+)?)(?:\s*(?:-|–|to|a)\s*(\d+(?:[.,]\d+)?))?\s*(minutes?|minutos?|mins?|hours?|horas?|hrs?|h|days?|dias?|d)\.?$/i);
+  if (m) {
+    const n = (v: string) => v.replace(".", ",");
+    const range = m[2] ? `${n(m[1])} a ${n(m[2])}` : n(m[1]);
+    const unit = m[3].toLowerCase();
+    if (unit.startsWith("m")) return `${range} min`;
+    if (unit.startsWith("h")) return `${range} h`;
+    return `${range} ${Number((m[2] ?? m[1]).replace(",", ".")) > 1 ? "dias" : "dia"}`;
   }
-  const desc = policies.map((x) => x.cancellation_description?.trim()).find(Boolean);
-  return { text: desc ? `Cancelamento com multa: ${desc}` : "Cancelamento com multa conforme a política do ingresso", until: null };
+  if (minutes && minutes > 0) {
+    if (minutes >= 1440 && minutes % 1440 === 0) return `${minutes / 1440} ${minutes > 1440 ? "dias" : "dia"}`;
+    const h = Math.floor(minutes / 60);
+    return [h ? `${h} h` : "", minutes % 60 ? `${minutes % 60} min` : ""].filter(Boolean).join(" ");
+  }
+  return t;
 }
 
 const ADMISSION_PT: Record<string, string> = {
@@ -321,7 +348,9 @@ export function createTueAdapter(cfg: TueConfig, opts: { transport?: Transport }
 
   /** Catálogo do distribuidor (todas as páginas), já sem o que não dá para vender pela loja. */
   async function catalog(): Promise<TueProduct[]> {
-    return cached(`tue:${account}:catalog:${cfg.language}`, CATALOG_TTL, async () => {
+    // catálogo velho (até 2 dias) é servido na hora enquanto a versão nova é baixada em segundo plano:
+    // a loja não espera os ~20 s do catálogo completo; preço e vagas são reconfirmados no detalhe e na cotação
+    return cachedStale(`tue:${account}:catalog-v2:${cfg.language}`, CATALOG_TTL, CATALOG_STALE, async () => {
       const out: TueProduct[] = [];
       for (let page = 1; page <= MAX_PAGES; page++) {
         const rs = await client.get<ListEnvelope<TueProduct>>("/products", { distributor_id: cfg.distributorId, product_content_language: cfg.language, items_per_page: 500, page }, 45_000);
@@ -471,7 +500,7 @@ export function createTueAdapter(cfg: TueConfig, opts: { transport?: Transport }
         location: [place.venue, [place.city, place.country].filter(Boolean).join(", ")].filter(Boolean).join(" · "),
         destination: place.city,
         imageUrl: imagesOf(p)[0] ?? null,
-        tags: [p.product_content?.product_duration_text, p.product_cancellation_allowed === false ? null : "Cancelável"].filter((x): x is string => !!x),
+        tags: [durationPt(p.product_content?.product_duration_text, p.product_duration), p.product_cancellation_allowed === false ? null : "Cancelável"].filter((x): x is string => !!x),
         currency: currencyOf(p),
         lines,
       };
@@ -575,8 +604,7 @@ export function createTueAdapter(cfg: TueConfig, opts: { transport?: Transport }
         lines: [],
       };
       const gallery = imagesOf(p);
-      const minutes = p.product_duration ?? 0;
-      const duration = c.product_duration_text || (minutes ? `${Math.floor(minutes / 60) ? `${Math.floor(minutes / 60)}h` : ""}${minutes % 60 ? `${minutes % 60}min` : ""}` : "");
+      const duration = durationPt(c.product_duration_text, p.product_duration);
       return {
         ...base,
         description,
@@ -806,6 +834,7 @@ function slim(p: TueProduct): TueProduct {
     product_booking_quantity_min: p.product_booking_quantity_min,
     product_booking_quantity_max: p.product_booking_quantity_max,
     product_cancellation_allowed: p.product_cancellation_allowed,
+    product_duration: p.product_duration,
     product_payment_detail: p.product_payment_detail,
     product_locations: (p.product_locations ?? []).slice(0, 2).map((l) => ({ location_name: l.location_name, location_type: l.location_type, location_address: { city: l.location_address?.city, country: l.location_address?.country } })),
     product_destinations: p.product_destinations,
