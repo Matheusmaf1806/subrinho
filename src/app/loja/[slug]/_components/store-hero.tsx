@@ -164,15 +164,17 @@ export function StoreHero({
         </div>
 
         {/* celular: mosaico compacto abaixo da busca */}
-        <div className="mx-auto grid max-w-[1440px] grid-cols-4 gap-2 px-4 pb-2 sm:px-8 lg:hidden">
-          <PhotoTile src={image} className="col-span-2 row-span-2 aspect-square" delay={200} />
-          {shortcut(s1, "brand", "aspect-square p-3 [&_span:last-child]:text-[13px]", 260)}
-          {shortcut(s2, "light", "aspect-square p-3 [&_span:last-child]:text-[13px]", 320)}
+        <div className="mx-auto px-4 pb-2 sm:px-8 lg:hidden">
+          <div className="grid aspect-[2/1] grid-cols-4 grid-rows-2 gap-2">
+          <PhotoTile src={image} className="col-span-2 row-span-2" delay={200} />
+          {shortcut(s1, "brand", "p-3 [&_span:last-child]:text-[13px]", 260)}
+          {shortcut(s2, "light", "p-3 [&_span:last-child]:text-[13px]", 320)}
           <div className="col-span-2 flex flex-col justify-center rounded-2xl bg-ink px-3 text-white">
             <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/50">Pague em até</span>
             <span className="text-[1.2rem] font-semibold leading-tight tracking-[-0.03em]">
               {maxInstallments}x <span className="text-accent">sem juros</span>
             </span>
+          </div>
           </div>
         </div>
       </section>
