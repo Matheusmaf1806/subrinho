@@ -292,7 +292,7 @@ export function HotelAmenities({ h }: { h: HotelContent }) {
   const groups = [...h.amenities, ...(h.roomAmenities.length ? [{ group: "Nos quartos", items: h.roomAmenities }] : [])];
   if (!groups.length) return null;
   return (
-    <section id="comodidades" className="scroll-mt-36">
+    <section id="comodidades" className="scroll-mt-[calc(var(--store-top,72px)+72px)]">
       <SectionHeading eyebrow="Comodidades" title="O que o hotel oferece" />
       <div className="grid gap-x-8 gap-y-8 sm:grid-cols-2 xl:grid-cols-3">
         {groups.map((g) => {
@@ -349,7 +349,7 @@ export function HotelLocation({ h, address, title }: { h: HotelContent; address:
     </ul>
   );
   return (
-    <section id="localizacao" className="scroll-mt-36">
+    <section id="localizacao" className="scroll-mt-[calc(var(--store-top,72px)+72px)]">
       <SectionHeading eyebrow="Localização" title="Onde fica">
         {open && (
           <a href={open} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold text-ink ring-1 ring-inset ring-black/10 transition hover:ring-ink/30">
@@ -413,7 +413,7 @@ export function HotelPolicies({ h }: { h: HotelContent }) {
   }
   if (!rows.length) return null;
   return (
-    <section id="politicas" className="scroll-mt-36">
+    <section id="politicas" className="scroll-mt-[calc(var(--store-top,72px)+72px)]">
       <SectionHeading eyebrow="Antes de reservar" title="Políticas e informações" />
       <dl className="divide-y divide-line overflow-hidden rounded-[1.75rem] bg-white ring-1 ring-inset ring-black/[0.07]">
         {rows.map((r) => (

@@ -2,6 +2,7 @@
 import { Search } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/components/ui";
+import { DateInput, DateRange } from "@/components/date-picker";
 import { DestinationField } from "./destination-field";
 import { GuestsField } from "./guests-field";
 
@@ -72,12 +73,14 @@ function NumberCell({ name, label, value, min = 0, max = 20, divider, half = tru
   );
 }
 
+/** Data única na barra (calendário próprio, em português). */
 function DateCell({ name, label, value, min, full }: { name: string; label: string; value?: string; min?: string; full?: boolean }) {
-  return (
-    <Cell label={label} half={!full}>
-      <input type="date" name={name} defaultValue={value} min={min} required className={field} />
-    </Cell>
-  );
+  return <DateInput name={name} label={label} defaultValue={value} min={min} variant="bar" className={cn(full && "col-span-2 sm:col-span-1", divided)} />;
+}
+
+/** Duas datas (check-in/check-out, ida/volta) num calendário só, cada uma na sua célula. */
+function DateRangeCells({ names, labels, values, min, unit }: { names: [string, string]; labels: [string, string]; values: [string | undefined, string | undefined]; min?: string; unit?: "noite" | "dia" }) {
+  return <DateRange names={names} labels={labels} defaultValues={values} min={min} variant="bar" unit={unit} cellClassName={[divided, divided]} />;
 }
 
 type FormProps = { action: string; d: SearchDefaults; className?: string };
@@ -98,8 +101,7 @@ export function LodgingSearch({ action, d, destinations, minDate, className, hou
     return (
       <Bar action={action} className={className} cols="sm:grid-cols-[1.6fr_1fr_1fr_0.65fr_0.65fr_auto]">
         <Destination options={destinations} value={d.destino} placeholder="Orlando" />
-        <DateCell name="checkin" label="Check-in" value={d.checkin} min={minDate} />
-        <DateCell name="checkout" label="Check-out" value={d.checkout} min={minDate} />
+        <DateRangeCells names={["checkin", "checkout"]} labels={["Check-in", "Check-out"]} values={[d.checkin, d.checkout]} min={minDate} />
         <NumberCell name="adultos" label="Adultos" value={d.adultos ?? 2} min={1} />
         <NumberCell name="criancas" label="Crianças" value={d.criancas ?? 0} divider={false} />
       </Bar>
@@ -108,8 +110,7 @@ export function LodgingSearch({ action, d, destinations, minDate, className, hou
   return (
     <Bar action={action} className={className} cols="sm:grid-cols-[1.6fr_1fr_1fr_1.25fr_auto]">
       <DestinationField value={d.destino} destKey={d.dest} placeholder="Para onde você vai?" className={cn(barCell, divided, "col-span-2 sm:col-span-1")} />
-      <DateCell name="checkin" label="Check-in" value={d.checkin} min={minDate} />
-      <DateCell name="checkout" label="Check-out" value={d.checkout} min={minDate} />
+      <DateRangeCells names={["checkin", "checkout"]} labels={["Check-in", "Check-out"]} values={[d.checkin, d.checkout]} min={minDate} />
       <GuestsField
         key={`${d.quartos}-${d.adultos}-${(d.idades ?? []).join(",")}`}
         rooms={d.quartos ?? 1}
@@ -131,8 +132,7 @@ export function InsuranceSearch({ action, d, regions, minDate, className }: Form
           ))}
         </select>
       </Cell>
-      <DateCell name="ida" label="Ida" value={d.ida} min={minDate} />
-      <DateCell name="volta" label="Volta" value={d.volta} min={minDate} />
+      <DateRangeCells names={["ida", "volta"]} labels={["Ida", "Volta"]} values={[d.ida, d.volta]} min={minDate} unit="dia" />
       <NumberCell name="adultos" label="Até 64 anos" value={d.adultos ?? 1} />
       <NumberCell name="seniores" label="65 a 85 anos" value={d.seniores ?? 0} divider={false} />
     </Bar>

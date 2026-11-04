@@ -1,3 +1,4 @@
+import { DateInput } from "@/components/date-picker";
 import { notFound, redirect } from "next/navigation";
 import { Marked } from "../../_components/journal";
 import { Lock, ShieldCheck } from "lucide-react";
@@ -135,7 +136,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ slug:
                     </label>
                     <label className="block">
                       <span className={lab}>Nascimento</span>
-                      <Input name="customerBirthDate" type="date" />
+                      <DateInput name="customerBirthDate" birth placeholder="Escolha a data" />
                     </label>
                   </div>
                 )}
@@ -181,7 +182,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ slug:
             </ActionForm>
           )}
         </div>
-        <aside className="lg:sticky lg:top-28 lg:self-start">
+        <aside className="lg:sticky lg:top-[calc(var(--store-top,72px)+24px)] lg:self-start">
           <CartSummary t={t} couponAction={applyCouponAction.bind(null, slug, token)} removeCoupon={(layer) => removeCouponAction.bind(null, slug, token, layer)} />
         </aside>
       </div>

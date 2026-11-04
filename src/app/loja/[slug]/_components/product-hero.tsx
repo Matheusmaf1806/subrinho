@@ -140,7 +140,7 @@ export function ProductHero({ p, back, cta }: { p: PricedDetail; back: { href: s
 /** Painel de reserva fixo à direita. */
 export function BookingPanel({ title, children, id }: { title: string; children: React.ReactNode; id?: string }) {
   return (
-    <aside id={id} className="scroll-mt-24 lg:sticky lg:top-28 lg:self-start">
+    <aside id={id} className="scroll-mt-[calc(var(--store-top,72px)+24px)] lg:sticky lg:top-[calc(var(--store-top,72px)+24px)] lg:self-start">
       <div data-enter style={{ "--d": "160ms" } as React.CSSProperties} className="relative overflow-hidden rounded-[2rem] bg-white p-6 ring-1 ring-inset ring-black/[0.07] shadow-[0_40px_100px_-50px_rgba(10,10,11,0.45)] sm:p-7">
         <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-1.5 bg-[repeating-linear-gradient(90deg,var(--color-accent)_0_18px,transparent_18px_26px)] opacity-80" />
         <p className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-accent-ink">

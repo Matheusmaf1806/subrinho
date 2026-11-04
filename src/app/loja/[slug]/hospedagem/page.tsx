@@ -11,6 +11,7 @@ import { daysBetween } from "@/lib/tz";
 import { categoryAvailable } from "../_lib/categories";
 import { ComingSoon } from "../_components/coming-soon";
 import { getStore, getStorePricing } from "../_lib/store";
+import { quickContext } from "../_lib/quick";
 import { storeInsight } from "../_lib/insight";
 import { LodgingSearch } from "../_components/search-forms";
 import { lodgingQuery, parseSearch, supplierParams } from "../_components/search-params";
@@ -65,6 +66,7 @@ export default async function LodgingPage({ params, searchParams }: { params: Pr
   const reveal = await storeInsight(store.id);
   const raw = await searchParams;
   const { d, minDate } = parseSearch(raw);
+  const quick = await quickContext(store, d, minDate);
   const base = `/loja/${store.slug}/hospedagem`;
   const live = adaptersFor("LODGING").some((a) => a.live);
   const searched = !!(d.destino || d.dest);
@@ -178,7 +180,7 @@ export default async function LodgingPage({ params, searchParams }: { params: Pr
             ) : (
               <div className="grid gap-x-5 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {shown.map((p) => (
-                  <ProductCard key={productRef(p.supplierCode, p.productId)} p={p} href={`${base}/${productRef(p.supplierCode, p.productId)}?${q}`} note={`total · ${nights} noite${nights > 1 ? "s" : ""}`} nights={nights} />
+                  <ProductCard key={productRef(p.supplierCode, p.productId)} p={p} href={`${base}/${productRef(p.supplierCode, p.productId)}?${q}`} note={`total · ${nights} noite${nights > 1 ? "s" : ""}`} nights={nights} quick={quick} />
                 ))}
               </div>
             )}

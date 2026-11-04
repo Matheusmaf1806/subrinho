@@ -1,5 +1,6 @@
 "use client";
 
+import { DateInput } from "@/components/date-picker";
 import { CreditCard, QrCode } from "lucide-react";
 import { useState } from "react";
 import { cn, Input, Select } from "@/components/ui";
@@ -220,7 +221,7 @@ export function TravelerFields({
             </label>
             <label className="block">
               <span className={lab}>Nascimento{hotel && <span className="font-normal normal-case tracking-normal"> · opcional</span>}</span>
-              <Input name="travelerBirthDate" type="date" />
+              <DateInput name="travelerBirthDate" birth placeholder="Escolha a data" />
             </label>
           </div>
         );

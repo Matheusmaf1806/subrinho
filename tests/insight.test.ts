@@ -29,12 +29,21 @@ describe("storeInsight", () => {
     expect(await storeInsight(STORE)).toEqual({ supplier: false, commission: false });
   });
 
-  it("equipe Subrinho: só OWNER e ADMIN veem o fornecedor", async () => {
-    for (const [role, ok] of [["OWNER", true], ["ADMIN", true], ["FINANCE", false], ["SUPPORT", false]] as const) {
+  it("equipe Subrinho: só o super admin (OWNER) vê o fornecedor", async () => {
+    for (const [role, ok] of [["OWNER", true], ["ADMIN", false], ["FINANCE", false], ["SUPPORT", false]] as const) {
       sess.sub = { id: "u", role, active: true };
       expect((await storeInsight(STORE)).supplier).toBe(ok);
       expect((await storeInsight(STORE)).commission).toBe(false);
     }
+  });
+
+  it("super admin navegando também como agência no mesmo navegador: não vê o fornecedor", async () => {
+    sess.sub = { id: "u", role: "OWNER", active: true };
+    sess.viewer = { kind: "AFFILIATE", sessionId: "s", user: { role: "ADMIN" }, adminMode: true, canAdmin: true };
+    expect(await storeInsight(STORE)).toEqual({ supplier: false, commission: true });
+    sess.viewer = null;
+    sess.panel = { user: { role: "AGENT" }, affiliate: { id: OTHER } };
+    expect((await storeInsight(STORE)).supplier).toBe(false);
   });
 
   it("agência: comissão só para o ADMIN da própria loja", async () => {

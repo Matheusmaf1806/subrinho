@@ -1,3 +1,4 @@
+import { DateInput } from "@/components/date-picker";
 import Link from "next/link";
 import { Download, FileChartColumn } from "lucide-react";
 import { Badge, ButtonLink, Card, CardBody, CardHeader, EmptyState, Field, Input, PageHeader, Table, Td, Th, THead, Tr } from "@/components/ui";
@@ -68,7 +69,7 @@ export default async function SubrinhoReportsPage() {
             {canClose ? (
               <ActionForm action={closeFortnightAction} className="space-y-3">
                 <Field label="Qualquer data da quinzena" hint="Fecha a quinzena que contém esta data (precisa já ter terminado).">
-                  <Input type="date" name="date" defaultValue={last.start} max={addDays(today, -1)} required />
+                  <DateInput name="date" defaultValue={last.start} max={addDays(today, -1)} />
                 </Field>
                 <SubmitButton pendingText="Fechando…">Fechar quinzena</SubmitButton>
               </ActionForm>

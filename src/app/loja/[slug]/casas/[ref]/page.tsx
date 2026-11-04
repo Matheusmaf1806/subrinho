@@ -1,3 +1,4 @@
+import { DateRange } from "@/components/date-picker";
 import { notFound } from "next/navigation";
 import { BadgeCheck, CalendarX2, Info } from "lucide-react";
 import { db } from "@/server/db";
@@ -12,6 +13,7 @@ import { SupplierTag } from "../../_components/reveal";
 import { parseSearch, supplierParams, toQuery } from "../../_components/search-params";
 import { BookingPanel, ProductHero } from "../../_components/product-hero";
 import { RelatedProducts } from "../../_components/related";
+import { quickContext } from "../../_lib/quick";
 import { AddToCartForm } from "../../_components/add-to-cart";
 import { PaxStepper } from "../../_components/pax-stepper";
 import { PriceTag } from "../../_components/price-tag";
@@ -70,14 +72,7 @@ export default async function HouseDetail({
       <BookingPanel title="Reserve a casa" id="reservar">
         <div className="space-y-5">
           <form action={self} className="grid grid-cols-2 gap-2">
-            <label className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-              Check-in
-              <Input type="date" name="checkin" defaultValue={d.checkin} min={parsed.minDate} className="mt-1" />
-            </label>
-            <label className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-              Check-out
-              <Input type="date" name="checkout" defaultValue={d.checkout} min={parsed.minDate} className="mt-1" />
-            </label>
+            <DateRange names={["checkin", "checkout"]} labels={["Check-in", "Check-out"]} defaultValues={[d.checkin, d.checkout]} min={parsed.minDate} variant="card" />
             <input type="hidden" name="adultos" value={d.adultos} />
             <input type="hidden" name="criancas" value={d.criancas} />
             {d.destino && <input type="hidden" name="destino" value={d.destino} />}
@@ -141,6 +136,7 @@ export default async function HouseDetail({
       </div>
       <div className="mt-16">
         <RelatedProducts
+          quick={await quickContext(store, d, parsed.minDate)}
           ctx={ctx}
           reveal={reveal}
           category="HOUSES"

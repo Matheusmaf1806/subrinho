@@ -1,3 +1,4 @@
+import { DateInput } from "@/components/date-picker";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Receipt, Search } from "lucide-react";
@@ -72,10 +73,10 @@ export default async function AfiliadoPedidosPage({ searchParams }: { searchPara
             </Select>
           </Field>
           <Field label="Criado de">
-            <Input type="date" name="de" defaultValue={from ?? ""} />
+            <DateInput name="de" defaultValue={from ?? ""} placeholder="Desde o início" />
           </Field>
           <Field label="Até">
-            <Input type="date" name="ate" defaultValue={to ?? ""} />
+            <DateInput name="ate" defaultValue={to ?? ""} placeholder="Até hoje" />
           </Field>
           <div className="flex gap-2 sm:col-span-2 lg:col-span-1">
             <button type="submit" className={buttonClass("primary", "md", "flex-1 lg:flex-none")}>

@@ -1,3 +1,4 @@
+import { DateInput } from "@/components/date-picker";
 import { CalendarDays, UserPlus } from "lucide-react";
 import { Badge, Card, CardBody, CardHeader, EmptyState, Field, Input, PageHeader, Select, Table, Td, Th, THead, Tr, buttonClass } from "@/components/ui";
 import { ActionForm, Modal, SubmitButton } from "@/components/ui-client";
@@ -99,7 +100,7 @@ export default async function SubrinhoSettingsPage() {
             <CardBody className="border-b border-line">
               <ActionForm action={addHolidayAction} resetOnSuccess className="grid gap-3 sm:grid-cols-[auto_1fr_auto] sm:items-end">
                 <Field label="Data">
-                  <Input type="date" name="date" required />
+                  <DateInput name="date" />
                 </Field>
                 <Field label="Nome">
                   <Input name="name" required minLength={2} maxLength={120} placeholder="Aniversário de São Paulo" />

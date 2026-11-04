@@ -1,5 +1,6 @@
 "use client";
 
+import { DateInput } from "@/components/date-picker";
 import { useState } from "react";
 import { ActionForm, SubmitButton, type ActionState } from "@/components/ui-client";
 import { cn, Input } from "@/components/ui";
@@ -60,7 +61,7 @@ export function CustomerAuth({ login, register, agency, next, initial = "login" 
           </label>
           <label className="block">
             <span className={lab}>Data de nascimento</span>
-            <Input name="birthDate" type="date" />
+            <DateInput name="birthDate" birth placeholder="Escolha a data" />
           </label>
           <label className="block sm:col-span-2">
             <span className={lab}>Senha (mín. 8 caracteres)</span>

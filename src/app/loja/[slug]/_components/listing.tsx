@@ -34,7 +34,7 @@ export function ListingHeader({ title, subtitle, children, image, eyebrow, compa
   );
   if (compact)
     return (
-      <section className="relative isolate overflow-x-clip">
+      <section className="relative isolate z-20 overflow-x-clip">
         <Paper />
         <div className="mx-auto max-w-[1440px] px-4 pb-4 pt-6 sm:px-8 sm:pt-9">
           {chip}
@@ -50,7 +50,7 @@ export function ListingHeader({ title, subtitle, children, image, eyebrow, compa
       </section>
     );
   return (
-    <section className="relative isolate overflow-x-clip">
+    <section className="relative isolate z-20 overflow-x-clip">
       <Paper />
       <div className="mx-auto grid max-w-[1440px] items-center gap-8 px-4 pt-8 sm:px-8 sm:pt-12 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div data-enter>

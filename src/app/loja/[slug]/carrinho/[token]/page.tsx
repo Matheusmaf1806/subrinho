@@ -119,7 +119,7 @@ export default async function CartPage({ params, searchParams }: { params: Promi
               />
             ))}
           </div>
-          <aside className="space-y-3 lg:sticky lg:top-28 lg:self-start">
+          <aside className="space-y-3 lg:sticky lg:top-[calc(var(--store-top,72px)+24px)] lg:self-start">
             {!open ? (
               <div className="rounded-[2rem] bg-surface p-6 text-[15px] text-muted">
                 Os valores pagos estão no pedido{paidOrder ? ` ${orderNumber(paidOrder.number)}` : ""}. Para uma nova viagem,{" "}

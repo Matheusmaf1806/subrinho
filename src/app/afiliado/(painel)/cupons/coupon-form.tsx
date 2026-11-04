@@ -1,5 +1,6 @@
 "use client";
 
+import { DateInput } from "@/components/date-picker";
 import { useActionState, useId, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import { ActionForm, Modal, SubmitButton, type ActionState } from "@/components/ui-client";
@@ -243,10 +244,10 @@ function CouponFields({ initial, categories }: { initial: CouponFormValues; cate
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Válido a partir de (opcional)">
-          <Input type="date" name="startsAt" value={v.startsAt} onChange={(e) => set("startsAt", e.target.value)} />
+          <DateInput name="startsAt" value={v.startsAt} onChange={(iso) => set("startsAt", iso)} placeholder="Desde já" />
         </Field>
         <Field label="Válido até (opcional)" hint="Inclui o dia inteiro (horário de Brasília)">
-          <Input type="date" name="endsAt" min={v.startsAt || undefined} value={v.endsAt} onChange={(e) => set("endsAt", e.target.value)} />
+          <DateInput name="endsAt" min={v.startsAt || undefined} value={v.endsAt} onChange={(iso) => set("endsAt", iso)} placeholder="Sem data de fim" />
         </Field>
       </div>
 

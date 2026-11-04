@@ -7,6 +7,7 @@ import { Alert, ButtonLink } from "@/components/ui";
 import { categoryAvailable } from "../_lib/categories";
 import { ComingSoon } from "../_components/coming-soon";
 import { getStore, getStorePricing } from "../_lib/store";
+import { quickContext } from "../_lib/quick";
 import { storeInsight } from "../_lib/insight";
 import { TicketsSearch } from "../_components/search-forms";
 import { parseSearch, supplierParams, toQuery } from "../_components/search-params";
@@ -29,6 +30,7 @@ export default async function TicketsPage({ params, searchParams }: { params: Pr
   const reveal = await storeInsight(store.id);
   const raw = await searchParams;
   const { d, minDate } = parseSearch(raw);
+  const quick = await quickContext(store, d, minDate);
   const failures: { message: string | null }[] = [];
   const results = await searchCatalog(db, ctx, "TICKETS", supplierParams(d, "tickets"), {
       reveal,
@@ -73,7 +75,7 @@ export default async function TicketsPage({ params, searchParams }: { params: Pr
         ) : (
           <div className="grid gap-x-5 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {shown.map((p) => (
-              <ProductCard key={productRef(p.supplierCode, p.productId)} p={p} href={`${base}/${productRef(p.supplierCode, p.productId)}?${q}`} note="por adulto" />
+              <ProductCard key={productRef(p.supplierCode, p.productId)} p={p} href={`${base}/${productRef(p.supplierCode, p.productId)}?${q}`} note="por adulto" quick={quick} />
             ))}
           </div>
         )}

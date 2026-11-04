@@ -9,6 +9,7 @@ import { ArrowChip, cn } from "@/components/ui";
 import { photo, type PhotoKey } from "@/lib/images";
 import { noEmDash } from "@/lib/text";
 import { getStore, getStorePricing, storeBrand } from "./_lib/store";
+import { quickContext } from "./_lib/quick";
 import { storeInsight } from "./_lib/insight";
 import { COMING_SOON } from "./_components/category";
 import { storeCategories } from "./_lib/categories";
@@ -75,6 +76,7 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
   const base = `/loja/${store.slug}`;
   const brand = storeBrand(store);
   const { d, minDate } = parseSearch({});
+  const quick = await quickContext(store, d, minDate);
   const dest = (cat: Parameters<typeof adaptersFor>[0]) => [...new Set(adaptersFor(cat).flatMap((a) => a.destinations().map((x) => x.name)))];
 
   const cats = await storeCategories();
@@ -169,7 +171,7 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
           <div className="grid gap-x-5 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
             {tickets.slice(0, 4).map((p, i) => (
               <div key={productRef(p.supplierCode, p.productId)} data-reveal style={{ "--i": i } as React.CSSProperties}>
-                <ProductCard p={p} href={`${base}/ingressos/${productRef(p.supplierCode, p.productId)}`} note="adulto" />
+                <ProductCard p={p} href={`${base}/ingressos/${productRef(p.supplierCode, p.productId)}`} note="adulto" quick={quick} />
               </div>
             ))}
           </div>
@@ -269,7 +271,7 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
           <div className="grid gap-x-5 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
             {hotels.slice(0, 4).map((p, i) => (
               <div key={productRef(p.supplierCode, p.productId)} data-reveal style={{ "--i": i } as React.CSSProperties}>
-                <ProductCard p={p} href={`${base}/hospedagem/${productRef(p.supplierCode, p.productId)}`} note="5 noites" />
+                <ProductCard p={p} href={`${base}/hospedagem/${productRef(p.supplierCode, p.productId)}`} note="5 noites" quick={quick} />
               </div>
             ))}
           </div>

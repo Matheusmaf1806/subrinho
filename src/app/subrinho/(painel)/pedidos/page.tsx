@@ -1,3 +1,4 @@
+import { DateInput } from "@/components/date-picker";
 import Form from "next/form";
 import Link from "next/link";
 import { Search, ShoppingBag } from "lucide-react";
@@ -87,10 +88,10 @@ export default async function SubrinhoOrdersPage({ searchParams }: { searchParam
             </Select>
           </Field>
           <Field label="Criado de">
-            <Input type="date" name="de" defaultValue={from} />
+            <DateInput name="de" defaultValue={from} placeholder="Desde o início" />
           </Field>
           <Field label="até">
-            <Input type="date" name="ate" defaultValue={to} />
+            <DateInput name="ate" defaultValue={to} placeholder="Até hoje" />
           </Field>
           <div className="flex gap-2">
             <button type="submit" className={buttonClass("primary", "md", "flex-1 lg:flex-none")}>

@@ -13,6 +13,7 @@ import { getStore, getStorePricing } from "../../_lib/store";
 import { storeInsight } from "../../_lib/insight";
 import { SupplierTag } from "../../_components/reveal";
 import { RelatedProducts } from "../../_components/related";
+import { quickContext } from "../../_lib/quick";
 import { lodgingQuery, parseSearch, supplierParams } from "../../_components/search-params";
 import { LodgingSearch } from "../../_components/search-forms";
 import { MobileSearchToggle } from "../../_components/search-toggle";
@@ -146,7 +147,7 @@ export default async function HotelDetail({
       </div>
 
       {/* ───────── Menu das seções ───────── */}
-      <nav className="no-scrollbar sticky top-[72px] z-30 -mx-4 mt-8 flex gap-1 overflow-x-auto border-b border-line bg-white/90 px-4 backdrop-blur-xl sm:-mx-8 sm:px-8" aria-label="Seções do hotel">
+      <nav className="no-scrollbar sticky top-[var(--store-top,72px)] z-30 -mx-4 mt-8 flex gap-1 overflow-x-auto border-b border-line bg-white/90 px-4 backdrop-blur-xl sm:-mx-8 sm:px-8" aria-label="Seções do hotel">
         {nav.map((n) => (
           <a key={n.href} href={n.href} className="shrink-0 border-b-2 border-transparent px-3 py-4 text-[14px] font-semibold text-muted transition hover:border-ink/30 hover:text-ink">
             {n.label}
@@ -157,26 +158,26 @@ export default async function HotelDetail({
       <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_370px] xl:gap-14">
         <div className="min-w-0 space-y-16">
         {/* ───────── Visão geral ───────── */}
-        <section id="visao-geral" className="scroll-mt-36">
+        <section id="visao-geral" className="scroll-mt-[calc(var(--store-top,72px)+72px)]">
           <HotelOverview h={h} allAmenities={allAmenities} />
         </section>
 
         <HotelIssues h={h} />
 
         {/* ───────── Quartos ───────── */}
-        <section id="quartos" className="scroll-mt-36">
+        <section id="quartos" className="scroll-mt-[calc(var(--store-top,72px)+72px)]">
           <SectionHeading eyebrow="Quartos" title="Escolha o seu quarto" />
           <p className="-mt-3 mb-5 text-[15px] text-muted">
             {date(d.checkin)} a {date(d.checkout)} · {nights} noite{nights > 1 ? "s" : ""} · {pax}
             {ages.length ? ` (${ages.map((a) => (a === 0 ? "< 1 ano" : `${a} ano${a > 1 ? "s" : ""}`)).join(", ")})` : ""}
           </p>
-          <div id="alterar-busca" className="mb-6 scroll-mt-36">
+          <div id="alterar-busca" className="mb-6 scroll-mt-[calc(var(--store-top,72px)+72px)]">
             <MobileSearchToggle summary="Alterar datas ou hóspedes" detail={`${date(d.checkin)} a ${date(d.checkout)} · ${pax}`}>
               <LodgingSearch action={`${base}/${ref}`} d={{ ...d, destino: d.destino || p.destination }} destinations={[p.destination]} minDate={minDate} />
             </MobileSearchToggle>
           </div>
           {common.length > 0 && (
-            <div id="avisos-quartos" className="mb-5 scroll-mt-36 rounded-[1.25rem] bg-amber-50/70 p-4 ring-1 ring-inset ring-amber-200/70 sm:px-5">
+            <div id="avisos-quartos" className="mb-5 scroll-mt-[calc(var(--store-top,72px)+72px)] rounded-[1.25rem] bg-amber-50/70 p-4 ring-1 ring-inset ring-amber-200/70 sm:px-5">
               <p className="text-[13px] font-semibold text-ink">Avisos das opções</p>
               <ul className="mt-1.5 space-y-1">
                 {common.map((n) => (
@@ -307,7 +308,7 @@ export default async function HotelDetail({
 
         {/* painel de reserva: acompanha a rolagem no computador */}
         <aside className="hidden lg:block">
-          <div className="sticky top-[136px]">
+          <div className="sticky top-[calc(var(--store-top,72px)+68px)]">
             <BookingSummary
               h={h}
               price={fromPrice}
@@ -325,6 +326,7 @@ export default async function HotelDetail({
 
       <div className="mt-16">
         <RelatedProducts
+          quick={await quickContext(store, d, minDate)}
           ctx={ctx}
           reveal={reveal}
           category="LODGING"

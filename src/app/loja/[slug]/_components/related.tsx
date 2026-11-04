@@ -11,6 +11,7 @@ import type { Category } from "@/server/db/schema";
 import type { SearchParams } from "@/server/suppliers/types";
 import { productRef } from "@/server/suppliers/refs";
 import { ProductCard } from "./product-card";
+import type { QuickCtx } from "./quick-add";
 
 type Props = {
   ctx: PricingContext;
@@ -24,6 +25,7 @@ type Props = {
   title: string;
   note?: string;
   nights?: number;
+  quick?: QuickCtx;
 };
 
 export function RelatedProducts(props: Props) {
@@ -60,7 +62,7 @@ function RelatedSkeleton({ title }: { title: string }) {
   );
 }
 
-async function RelatedList({ ctx, reveal, category, params, current, hrefBase, query, title, note, nights }: Props) {
+async function RelatedList({ ctx, reveal, category, params, current, hrefBase, query, title, note, nights, quick }: Props) {
   if (!params.destination) return null;
   const list = await searchCatalog(db, ctx, category, params, { reveal }).catch(() => []);
   const others = list.filter((x) => !(x.supplierCode === current.supplierCode && x.productId === current.productId) && !(current.groupKey && x.groupKey === current.groupKey));
@@ -73,7 +75,7 @@ async function RelatedList({ ctx, reveal, category, params, current, hrefBase, q
     <Shell title={title}>
       <div className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
         {top.map((p) => (
-          <ProductCard key={`${p.supplierCode}-${p.productId}`} p={p} href={`${hrefBase}/${productRef(p.supplierCode, p.productId)}${query ? `?${query}` : ""}`} note={note} nights={nights} />
+          <ProductCard key={`${p.supplierCode}-${p.productId}`} p={p} href={`${hrefBase}/${productRef(p.supplierCode, p.productId)}${query ? `?${query}` : ""}`} note={note} nights={nights} quick={quick} />
         ))}
       </div>
     </Shell>

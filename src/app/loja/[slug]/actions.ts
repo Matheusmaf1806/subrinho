@@ -26,7 +26,8 @@ import { autoIssueOrder } from "@/server/bookings/service";
 import { after } from "next/server";
 import { isMockPayments, paymentProvider } from "@/server/payments/provider";
 import { capturePaypalCheckout, createPaypalCheckout } from "@/server/payments/paypal-checkout";
-import { parseProductRef } from "@/server/suppliers/refs";
+import { parseProductRef, productRef } from "@/server/suppliers/refs";
+import { getProductDetail } from "@/server/catalog";
 import { PricingError } from "@/server/pricing/engine";
 import { getAdapter } from "@/server/suppliers/registry";
 import { SupplierError, SupplierIntegrationError } from "@/server/suppliers/types";
@@ -37,7 +38,8 @@ import { loadCartView } from "@/server/cart/service";
 import { storeInsight } from "./_lib/insight";
 import { toItemVMs, totalsVM } from "./_components/cart-vm";
 import { categoryLabel } from "./_components/category";
-import { actorOf, currentCartToken, getStore, safeNext, setCurrentCartToken, storePath, viewerFor } from "./_lib/store";
+import { actorOf, currentCartToken, getStore, getStorePricing, safeNext, setCurrentCartToken, storePath, viewerFor } from "./_lib/store";
+import { parseSearch, supplierParams } from "./_components/search-params";
 
 /** Mensagem para o cliente. Falha técnica de fornecedor (credencial, rede) nunca aparece crua. */
 const userError = (e: unknown): string | null => {
@@ -540,4 +542,67 @@ export async function simulatePixPaymentAction(slug: string, orderId: string) {
   if (!o || o.status !== "PENDING_PAYMENT") return;
   await db.transaction((tx) => markOrderPaid(tx, o.id, { paidAt: new Date(), ref: o.paymentRef, data: { simulated: true } }));
   revalidatePath(storePath(store, `/pedido/${orderId}`));
+}
+
+// ───────────── Adicionar rápido (cards da vitrine) ─────────────
+
+export type QuickInput = { date?: string; checkin?: string; checkout?: string; adults: number; children: number; ages?: number[]; rooms?: number };
+export type QuickOption = {
+  /** Referência neutra para adicionar (o hotel pode ter a opção em outro fornecedor). */
+  ref: string;
+  optionId: string;
+  title: string;
+  subtitle: string | null;
+  pix: string;
+  installment: string;
+  /** "por adulto" (ingresso) ou total da estadia. */
+  per: "adult" | "stay";
+  freeCancel: boolean;
+  available: boolean;
+  /** Só para o ADMIN da agência. */
+  commission?: string;
+};
+
+/** Opções e preços de um produto para as datas/pessoas escolhidas no adicionar rápido. */
+export async function quickOptionsAction(slug: string, ref: string, input: QuickInput): Promise<{ options: QuickOption[]; error?: string }> {
+  const store = await getStore(slug);
+  const target = parseProductRef(ref);
+  if (!target) return { options: [], error: "Produto indisponível" };
+  const adapter = getAdapter(target.supplierCode);
+  const kind = adapter.category === "TICKETS" ? "tickets" : adapter.category === "LODGING" ? "lodging" : adapter.category === "HOUSES" ? "houses" : null;
+  if (!kind) return { options: [], error: "Abra a página do produto para escolher" };
+  const ages = (input.ages ?? []).slice(0, input.children);
+  const { d } = parseSearch({
+    data: input.date,
+    checkin: input.checkin,
+    checkout: input.checkout,
+    adultos: String(input.adults),
+    criancas: String(input.children),
+    quartos: String(input.rooms ?? 1),
+    idades: ages.join(","),
+  });
+  const [ctx, reveal] = await Promise.all([getStorePricing(store.id), storeInsight(store.id)]);
+  try {
+    const p = await getProductDetail(db, ctx, target.supplierCode, target.productId, supplierParams(d, kind), { reveal });
+    if (!p) return { options: [], error: "Sem disponibilidade para estas datas" };
+    const options = p.options
+      .filter((o) => o.price)
+      .map(
+        (o): QuickOption => ({
+          ref: productRef(o.supplierCode, o.productId),
+          optionId: o.optionId,
+          title: o.title,
+          subtitle: (kind === "lodging" ? (o.attributes?.find((a) => a.label === "Regime")?.value ?? o.description) : o.description) ?? null,
+          pix: o.price!.pix.toString(),
+          installment: o.price!.installment.toString(),
+          per: kind === "tickets" ? "adult" : "stay",
+          freeCancel: !!o.freeCancellationUntil,
+          available: o.available,
+          ...(o.price!.commission ? { commission: o.price!.commission.amount.toString() } : {}),
+        }),
+      );
+    return options.length ? { options } : { options: [], error: kind === "lodging" ? "Sem quartos para estas datas e hóspedes" : "Sem disponibilidade para estas datas" };
+  } catch (e) {
+    return { options: [], error: userError(e) ?? "Não foi possível consultar agora. Tente de novo." };
+  }
 }

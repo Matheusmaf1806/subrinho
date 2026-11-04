@@ -1,5 +1,6 @@
 "use client";
 
+import { DateInput } from "@/components/date-picker";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ActionForm, SubmitButton, type ActionState } from "@/components/ui-client";
@@ -54,25 +55,24 @@ export function TicketBooking({
   return (
     <ActionForm action={action} className="space-y-4" onSuccess={() => openCartDrawer({ added: true })}>
       <input type="hidden" name="ref" value={productRef} />
-      <label className="block">
+      <div>
         <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Data da visita</span>
-        <Input
-          type="date"
+        <DateInput
           name="date"
+          label="Data da visita"
+          variant="field"
           defaultValue={defaultDate}
           min={minDate}
-          required
           // horários e preços dependem da data: recarrega a página com a nova data
-          onChange={(e) => {
-            if (!e.target.value) return;
+          onChange={(v) => {
             const sp = new URLSearchParams(window.location.search);
-            sp.set("data", e.target.value);
+            sp.set("data", v);
             sp.set("adultos", String(adults));
             sp.set("criancas", String(children));
             router.replace(`?${sp}`, { scroll: false });
           }}
         />
-      </label>
+      </div>
       {options.length === 0 && (
         <p className="rounded-2xl bg-amber-50 px-4 py-3.5 text-sm text-amber-950">Sem horários disponíveis nesta data. Escolha outra data acima.</p>
       )}
@@ -94,10 +94,16 @@ export function TicketBooking({
                 {o.description && <span className="block text-xs text-muted">{o.description}</span>}
                 {o.supplier && <span className="mt-1 inline-block rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-900">{o.supplier}</span>}
               </span>
-              <span className="text-right text-xs leading-tight text-muted tabular">
-                <span className="block text-[15px] font-semibold text-ink">{fmt(o.adultPix)}</span>
-                adulto{o.childPix !== null && <span className="block">{fmt(o.childPix)} criança</span>}
-                {o.adultCommission !== undefined && <span className="mt-1 inline-block rounded-full bg-emerald-600 px-2 py-0.5 font-semibold text-white">comissão {fmt(o.adultCommission)}</span>}
+              <span className="flex shrink-0 flex-col items-end text-right text-xs leading-tight text-muted tabular">
+                <span className="text-[15px] font-semibold text-ink">{fmt(o.adultPix)}</span>
+                <span>por adulto</span>
+                {o.childPix !== null && <span>{fmt(o.childPix)} por criança</span>}
+                {o.adultCommission !== undefined && (
+                  <span className="mt-2 whitespace-nowrap rounded-full bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white">
+                    comissão {fmt(o.adultCommission)}
+                    {o.childCommission ? ` · ${fmt(o.childCommission)} criança` : ""}
+                  </span>
+                )}
               </span>
             </label>
           ))}

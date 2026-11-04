@@ -2,8 +2,10 @@ import Link from "next/link";
 import { MapPin, Star } from "lucide-react";
 import type { PricedSummary } from "@/server/catalog";
 import { brl } from "@/lib/format";
+import { productRef } from "@/server/suppliers/refs";
 import { Cover } from "./cover";
 import { RevealTags } from "./reveal";
+import { QuickAdd, type QuickCtx } from "./quick-add";
 
 function bathroomsLabel(n: number) {
   const whole = Math.floor(n);
@@ -11,11 +13,16 @@ function bathroomsLabel(n: number) {
   return `${txt} banheiro${n > 1 ? "s" : ""}`;
 }
 
-export function ProductCard({ p, href, note, nights }: { p: PricedSummary; href: string; note?: string; nights?: number }) {
+/**
+ * Card da vitrine. Com `quick`, mostra "Adicionar" (pergunta datas/pessoas e adiciona sem sair da
+ * página) e "Mais detalhes"; sem ele, o card inteiro leva ao produto.
+ */
+export function ProductCard({ p, href, note, nights, quick }: { p: PricedSummary; href: string; note?: string; nights?: number; quick?: QuickCtx }) {
+  const quickable = !!quick && (p.category === "TICKETS" || p.category === "LODGING" || p.category === "HOUSES");
   const perNight = nights && nights > 1 ? Number(p.price.pix.div(nights).toFixed(0)) : null;
   const stars = p.stars ? `${"★".repeat(Math.floor(p.stars))}${p.stars % 1 ? "½" : ""}` : null;
   return (
-    <Link href={href} className="group flex flex-col transition duration-300 ease-out hover:-translate-y-1.5">
+    <div className="group relative flex flex-col transition duration-300 ease-out hover:-translate-y-1.5">
       <Cover
         title={p.title}
         location={p.destination}
@@ -31,7 +38,12 @@ export function ProductCard({ p, href, note, nights }: { p: PricedSummary; href:
         }
       />
       <div className="flex flex-1 flex-col px-1 pt-4">
-        <h3 className="text-[17px] font-semibold leading-snug tracking-[-0.02em] text-ink">{p.title}</h3>
+        <h3 className="text-[17px] font-semibold leading-snug tracking-[-0.02em] text-ink">
+          {/* o link cobre o card inteiro; os botões ficam por cima */}
+          <Link href={href} className="after:absolute after:inset-0 after:content-[''] focus-visible:outline-none">
+            {p.title}
+          </Link>
+        </h3>
         {(stars || p.perks) && (
           <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] font-semibold">
             {stars && (
@@ -73,11 +85,21 @@ export function ProductCard({ p, href, note, nights }: { p: PricedSummary; href:
             {perNight !== null && <p className="text-xs text-muted tabular">≈ {brl(perNight)} por noite</p>}
             <RevealTags supplier={p.revealSupplier} commission={p.price.commission} className="mt-2" />
           </div>
-          <span className="mb-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface text-ink transition duration-300 group-hover:-rotate-45 group-hover:bg-accent group-hover:text-accent-fg" aria-hidden>
-            →
-          </span>
+          {!quickable && (
+            <span className="mb-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface text-ink transition duration-300 group-hover:-rotate-45 group-hover:bg-accent group-hover:text-accent-fg" aria-hidden>
+              →
+            </span>
+          )}
         </div>
+        {quickable && (
+          <div className="relative z-10 mt-4 grid grid-cols-2 gap-2">
+            <QuickAdd ctx={quick!} productRef={productRef(p.supplierCode, p.productId)} category={p.category as "TICKETS" | "LODGING" | "HOUSES"} title={p.title} />
+            <Link href={href} className="inline-flex h-10 items-center justify-center rounded-full bg-surface px-4 text-[13px] font-semibold text-ink transition hover:bg-surface-2">
+              Mais detalhes
+            </Link>
+          </div>
+        )}
       </div>
-    </Link>
+    </div>
   );
 }

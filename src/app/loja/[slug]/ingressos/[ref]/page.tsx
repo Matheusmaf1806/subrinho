@@ -10,6 +10,7 @@ import { parseSearch, supplierParams, toQuery } from "../../_components/search-p
 import { BookingPanel, ProductHero } from "../../_components/product-hero";
 import { TicketBooking } from "../../_components/ticket-booking";
 import { RelatedProducts } from "../../_components/related";
+import { quickContext } from "../../_lib/quick";
 import { addToCartAction } from "../../actions";
 
 // Consulta o produto e os horários da data no fornecedor.
@@ -81,6 +82,7 @@ export default async function TicketDetail({
       </div>
       <div className="mt-16">
         <RelatedProducts
+          quick={await quickContext(store, d, minDate)}
           ctx={ctx}
           reveal={reveal}
           category="TICKETS"
