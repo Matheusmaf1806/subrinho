@@ -79,6 +79,9 @@ function assertOpen(cart: Cart) {
 export async function addQuoteToCart(tx: Tx, cart: Cart, q: Quote): Promise<CartItem> {
   assertOpen(cart);
   if (q.expiresAt && q.expiresAt <= new Date()) throw new CartError("A data deste serviço já passou");
+  // tarifa zerada no fornecedor (produto sem preço para a data): não entra no carrinho
+  if (!q.lines.length || q.lines.reduce((sum, l) => sum + Number(l.unitCost) * l.quantity, 0) <= 0)
+    throw new CartError("Este produto está sem preço para a data escolhida. Escolha outra data ou outra opção.");
   const [item] = await tx
     .insert(cartItems)
     .values({

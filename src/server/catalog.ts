@@ -50,7 +50,8 @@ export async function searchCatalog(
   const priced: PricedSummary[] = [];
   for (const s of results.flat()) {
     const price = priceOf(ctx, s, null, s);
-    if (price) priced.push({ ...s, price, offers: 1 });
+    // sem tarifa (preço zero) não dá para vender: fica fora da vitrine e da busca
+    if (price && price.pix.gt(0)) priced.push({ ...s, price, offers: 1 });
   }
   // Mesmo hotel em vários fornecedores → mostra o menor preço.
   const grouped = new Map<string, PricedSummary>();

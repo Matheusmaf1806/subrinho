@@ -657,6 +657,12 @@ describe.skipIf(!url)("fluxo completo (integração)", () => {
     expect(pp.calls.some((c) => c.path === `/v2/checkout/orders/${idB}/capture`)).toBe(false);
   });
 
+  it("produto com tarifa zerada no fornecedor não entra no carrinho", async () => {
+    const cart = await createCart(db, affiliateId, { type: "ANONYMOUS" });
+    await expect(addQuoteToCart(db, cart, { ...specQuote(), lines: [{ type: "ADULT", label: "Adulto", unitCost: "0.00", quantity: 2 }] })).rejects.toThrow(/sem preço/);
+    await expect(addQuoteToCart(db, cart, { ...specQuote(), lines: [] })).rejects.toThrow(/sem preço/);
+  });
+
   it("cartão do ambiente de testes (sem gateway) é sempre pagamento simulado", async () => {
     const { customer } = await findOrCreateCustomer(db, affiliateId, { name: "Teste Cartão", email: "cartao@mock.com", password: "12345678" });
     const cart = await createCart(db, affiliateId, { type: "CUSTOMER", id: customer.id });
