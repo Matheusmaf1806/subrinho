@@ -11,10 +11,10 @@ const fold = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").t
 /**
  * Campo "Destino" com sugestões (destinos populares em português + cidades dos fornecedores).
  * Envia `destino` (texto) e `dest` (chave do destino escolhido). Se o cliente só digitar, o servidor
- * resolve o texto. Com `options`, filtra uma lista fixa aqui mesmo (ingressos, casas, seguro) e envia
- * só o texto.
+ * resolve o texto. Com `options` (ingressos, casas, seguro), mostra primeiro as cidades do fornecedor,
+ * completa com as sugestões gerais e envia só o texto.
  */
-export function DestinationField({ value, destKey, placeholder, className, options }: { value?: string; destKey?: string; placeholder: string; className?: string; options?: string[] }) {
+export function DestinationField({ value, destKey, placeholder, className, options, general = true }: { value?: string; destKey?: string; placeholder: string; className?: string; options?: string[]; general?: boolean }) {
   const [text, setText] = useState(value ?? "");
   const [key, setKey] = useState(destKey ?? "");
   const [items, setItems] = useState<Suggestion[]>([]);
@@ -22,26 +22,32 @@ export function DestinationField({ value, destKey, placeholder, className, optio
   const [active, setActive] = useState(-1);
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
-  // lista fixa vazia (fornecedor sem catálogo de destinos): usa as sugestões gerais, enviando só o texto
-  const local = options && options.length > 0 ? options : null;
-
   useEffect(() => {
     if (!open) return;
-    if (local) {
-      const q = fold(text);
-      const hit = local.filter((o) => !q || fold(o).includes(q));
-      // começa com o que foi digitado primeiro
-      hit.sort((a, b) => Number(!fold(a).startsWith(q)) - Number(!fold(b).startsWith(q)));
-      setItems(hit.slice(0, 8).map((o) => ({ key: o, label: o, detail: "" })));
+    // com lista do fornecedor (ingressos, casas, seguro): as cidades dele primeiro, já na hora; depois
+    // completa com as sugestões gerais (a lista dele pode vir curta ou vazia)
+    const q = fold(text);
+    const mine: Suggestion[] = (options ?? [])
+      .filter((o) => !q || fold(o).includes(q))
+      .sort((a, b) => Number(!fold(a).startsWith(q)) - Number(!fold(b).startsWith(q)))
+      .slice(0, 8)
+      .map((o) => ({ key: o, label: o, detail: "" }));
+    if (options) {
+      setItems(mine);
       setActive(-1);
-      return;
+      // regiões/países (chip, seguro) não combinam com as cidades das sugestões gerais
+      if (!general) return;
     }
     const ctrl = new AbortController();
     const t = setTimeout(() => {
       fetch(`/api/public/destinos?q=${encodeURIComponent(text)}`, { signal: ctrl.signal })
         .then((r) => (r.ok ? r.json() : { items: [] }))
         .then((d: { items?: Suggestion[] }) => {
-          setItems(d.items ?? []);
+          const general = d.items ?? [];
+          if (options) {
+            const seen = new Set(mine.map((m) => fold(m.label)));
+            setItems([...mine, ...general.filter((g) => !seen.has(fold(g.label)))].slice(0, 8));
+          } else setItems(general);
           setActive(-1);
         })
         .catch(() => {});
@@ -50,7 +56,7 @@ export function DestinationField({ value, destKey, placeholder, className, optio
       clearTimeout(t);
       ctrl.abort();
     };
-  }, [text, open, local]);
+  }, [text, open, options, general]);
 
   const choose = (s: Suggestion) => {
     setText(s.label);

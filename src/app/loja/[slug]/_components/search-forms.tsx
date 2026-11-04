@@ -52,8 +52,8 @@ function Cell({ label, children, divider = true, half }: { label: string; childr
   );
 }
 
-function Destination({ options, value, placeholder }: { options: string[]; value?: string; placeholder: string }) {
-  return <DestinationField options={options} value={value} placeholder={placeholder} className={cn(barCell, divided, "col-span-2 sm:col-span-1")} />;
+function Destination({ options, value, placeholder, general }: { options: string[]; value?: string; placeholder: string; general?: boolean }) {
+  return <DestinationField options={options} general={general} value={value} placeholder={placeholder} className={cn(barCell, divided, "col-span-2 sm:col-span-1")} />;
 }
 
 function NumberCell({ name, label, value, min = 0, max = 20, divider, half = true }: { name: string; label: string; value?: number; min?: number; max?: number; divider?: boolean; half?: boolean }) {
@@ -133,7 +133,7 @@ export function InsuranceSearch({ action, d, regions, minDate, className }: Form
 export function ChipSearch({ action, d, destinations, className }: FormProps & { destinations: string[] }) {
   return (
     <Bar action={action} className={className} cols="sm:grid-cols-[2fr_0.8fr_auto]">
-      <Destination options={destinations} value={d.destino} placeholder="Europa, Estados Unidos, Itália…" />
+      <Destination options={destinations} value={d.destino} placeholder="Europa, Estados Unidos, Itália…" general={false} />
       <NumberCell name="qtd" label="Chips" value={d.qtd ?? 1} min={1} divider={false} half={false} />
     </Bar>
   );
