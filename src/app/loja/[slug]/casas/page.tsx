@@ -10,7 +10,7 @@ import { addDays, daysBetween } from "@/lib/tz";
 import { categoryAvailable } from "../_lib/categories";
 import { ComingSoon } from "../_components/coming-soon";
 import { getStore, getStorePricing } from "../_lib/store";
-import { quickContext } from "../_lib/quick";
+import { explicitFrom, quickContext } from "../_lib/quick";
 import { storeInsight } from "../_lib/insight";
 import { LodgingSearch } from "../_components/search-forms";
 import { parseSearch, supplierParams, toQuery } from "../_components/search-params";
@@ -54,7 +54,7 @@ export default async function HousesPage({ params, searchParams }: { params: Pro
   const reveal = await storeInsight(store.id);
   const raw = await searchParams;
   const parsed = parseSearch(raw);
-  const quick = await quickContext(store, parsed.d, parsed.minDate);
+  const quick = await quickContext(store, parsed.d, parsed.minDate, explicitFrom(raw));
   // Casas: estadia padrão de 7 noites
   const d = { ...parsed.d, checkout: raw.checkout ? parsed.d.checkout : addDays(parsed.d.checkin, 7) };
   const failures: { code: string; message: string | null }[] = [];

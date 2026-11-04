@@ -63,7 +63,20 @@ export function guestsSummary(rooms: number, adults: number, children: number): 
  * Quartos, adultos, crianças e a idade de cada criança — num único campo com painel.
  * Envia: quartos, adultos, criancas, idades ("7,10").
  */
-export function GuestsField({ rooms: r0 = 1, adults: a0 = 2, ages: ages0 = [], className }: { rooms?: number; adults?: number; ages?: number[]; className?: string }) {
+export function GuestsField({
+  rooms: r0 = 1,
+  adults: a0 = 2,
+  ages: ages0 = [],
+  className,
+  onChange,
+}: {
+  rooms?: number;
+  adults?: number;
+  ages?: number[];
+  className?: string;
+  /** Avisa cada mudança (ex.: o adicionar rápido recalcula o preço). Idade null = ainda não escolhida. */
+  onChange?: (v: { rooms: number; adults: number; ages: (number | null)[] }) => void;
+}) {
   const [rooms, setRooms] = useState(r0);
   const [adults, setAdults] = useState(Math.max(a0, r0));
   const [ages, setAges] = useState<(number | null)[]>(ages0);
@@ -71,6 +84,16 @@ export function GuestsField({ rooms: r0 = 1, adults: a0 = 2, ages: ages0 = [], c
   const [error, setError] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const id = useId();
+  const first = useRef(true);
+  const notify = useRef(onChange);
+  notify.current = onChange;
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    notify.current?.({ rooms, adults, ages });
+  }, [rooms, adults, ages]);
 
   // Bloqueia a busca enquanto faltar idade de criança.
   useEffect(() => {
@@ -117,7 +140,7 @@ export function GuestsField({ rooms: r0 = 1, adults: a0 = 2, ages: ages0 = [], c
       <input type="hidden" name="adultos" value={adults} />
       <input type="hidden" name="criancas" value={ages.length} />
       <input type="hidden" name="idades" value={ages.map((a) => a ?? "").join(",")} />
-      <div id={id} hidden={!open} className="absolute right-0 top-full z-40 mt-2 w-[min(92vw,24rem)] rounded-2xl bg-white p-4 shadow-[0_24px_60px_-20px_rgba(10,10,11,0.35)] ring-1 ring-black/[0.06]">
+      <div id={id} hidden={!open} data-guests-panel={open ? "open" : undefined} className="absolute right-0 top-full z-40 mt-2 w-[min(92vw,24rem)] rounded-2xl bg-white p-4 shadow-[0_24px_60px_-20px_rgba(10,10,11,0.35)] ring-1 ring-black/[0.06]">
         <Stepper
           label="Quartos"
           value={rooms}

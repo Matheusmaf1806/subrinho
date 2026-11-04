@@ -94,7 +94,7 @@ export function ProductCard({ p, href, note, nights, quick }: { p: PricedSummary
         {quickable && (
           // mt-auto: botões sempre no rodapé do card, alinhados entre cards com títulos de tamanhos diferentes
           <div className="relative z-10 mt-auto grid grid-cols-2 gap-2 pt-4">
-            <QuickAdd ctx={quick!} productRef={productRef(p.supplierCode, p.productId)} category={p.category as "TICKETS" | "LODGING" | "HOUSES"} title={p.title} destination={p.destination} />
+            <QuickAdd ctx={quick!} productRef={productRef(p.supplierCode, p.productId)} category={p.category as "TICKETS" | "LODGING" | "HOUSES"} title={p.title} destination={p.destination} href={href} />
             <Link href={href} className="inline-flex h-10 items-center justify-center rounded-full bg-surface px-4 text-[13px] font-semibold text-ink transition hover:bg-surface-2">
               Mais detalhes
             </Link>

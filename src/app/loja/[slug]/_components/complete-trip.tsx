@@ -56,7 +56,7 @@ export async function CompleteTrip({
         hrefBase={`${base}/ingressos`}
         query={toQuery({ destino: city, data: day, adultos: d.adultos, criancas: d.criancas })}
         note="adulto"
-        quick={{ ...quick, defaults: { ...quick.defaults, date: day } }}
+        quick={{ ...quick, defaults: { ...quick.defaults, date: day, confirmed: { ...quick.defaults.confirmed, date: quick.defaults.confirmed.date || quick.defaults.confirmed.stay } } }}
       />
     );
   }
@@ -82,7 +82,7 @@ export async function CompleteTrip({
       query={lodging ? lodgingQuery(s) : toQuery({ destino: city, checkin, checkout, adultos: d.adultos, criancas: d.criancas })}
       note={`${STAY_NIGHTS} noites`}
       nights={STAY_NIGHTS}
-      quick={{ ...quick, defaults: { ...quick.defaults, checkin, checkout } }}
+      quick={{ ...quick, defaults: { ...quick.defaults, checkin, checkout, confirmed: { ...quick.defaults.confirmed, stay: quick.defaults.confirmed.stay || quick.defaults.confirmed.date } } }}
     />
   );
 }

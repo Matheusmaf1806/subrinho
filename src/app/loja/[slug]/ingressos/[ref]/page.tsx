@@ -11,7 +11,7 @@ import { BookingPanel, ProductHero } from "../../_components/product-hero";
 import { TicketBooking } from "../../_components/ticket-booking";
 import { RelatedProducts } from "../../_components/related";
 import { CompleteTrip } from "../../_components/complete-trip";
-import { quickContext } from "../../_lib/quick";
+import { explicitFrom, quickContext } from "../../_lib/quick";
 import { addToCartAction } from "../../actions";
 
 // Consulta o produto e os horários da data no fornecedor.
@@ -31,10 +31,11 @@ export default async function TicketDetail({
   const store = await getStore(slug);
   const ctx = await getStorePricing(store.id);
   const reveal = await storeInsight(store.id);
-  const { d, minDate } = parseSearch(await searchParams);
+  const raw = await searchParams;
+  const { d, minDate } = parseSearch(raw);
   const p = await getProductDetail(db, ctx, supplier, productId, supplierParams(d, "tickets"), { reveal }).catch(() => null);
   if (!p || p.category !== "TICKETS") notFound();
-  const quick = await quickContext(store, d, minDate);
+  const quick = await quickContext(store, d, minDate, explicitFrom(raw));
 
   const adapter = getAdapter(supplier);
   const childRule = p.paxRules.find((r) => r.type === "CHILD");

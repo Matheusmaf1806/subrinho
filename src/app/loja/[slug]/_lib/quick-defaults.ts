@@ -10,7 +10,24 @@ import { addDays } from "@/lib/tz";
 import type { SearchDefaults } from "../_components/search-forms";
 import { currentCartToken, type Store } from "./store";
 
-export type QuickDefaults = { date: string; checkin: string; checkout: string; adults: number; children: number; ages: number[]; rooms: number; fromCart: boolean };
+export type QuickDefaults = {
+  date: string;
+  checkin: string;
+  checkout: string;
+  adults: number;
+  children: number;
+  ages: number[];
+  rooms: number;
+  fromCart: boolean;
+  /**
+   * As datas foram escolhidas pelo cliente (na busca ou no carrinho)? Só então o adicionar rápido já
+   * abre com os preços; datas sugeridas pelo sistema pedem confirmação antes.
+   */
+  confirmed: { date: boolean; stay: boolean };
+};
+
+/** O que veio escolhido na URL da página (busca). */
+export type Explicit = { date?: boolean; stay?: boolean };
 
 export type OpenCartItem = {
   category: Category;
@@ -51,24 +68,38 @@ export async function quickDefaults(
   store: Store,
   d: Required<SearchDefaults>,
   minDate: string,
-  opts: { items?: OpenCartItem[]; stayFromTicket?: boolean } = {},
+  opts: { items?: OpenCartItem[]; stayFromTicket?: boolean; explicit?: Explicit } = {},
 ): Promise<QuickDefaults> {
-  const base: QuickDefaults = { date: d.data, checkin: d.checkin, checkout: d.checkout, adults: Math.max(1, d.adultos), children: d.criancas, ages: d.criancas ? d.idades : [], rooms: d.quartos, fromCart: false };
+  const base: QuickDefaults = {
+    date: d.data,
+    checkin: d.checkin,
+    checkout: d.checkout,
+    adults: Math.max(1, d.adultos),
+    children: d.criancas,
+    ages: d.criancas ? d.idades : [],
+    rooms: d.quartos,
+    fromCart: false,
+    confirmed: { date: !!opts.explicit?.date, stay: !!opts.explicit?.stay },
+  };
   const items = opts.items ?? (await openCartItems(store));
   if (!items.length) return base;
-  const out = { ...base, fromCart: true };
+  const out = { ...base, fromCart: true, confirmed: { ...base.confirmed } };
   const ok = (v: string | null | undefined) => !!v && v >= minDate;
   const stay = items.find((i) => (i.category === "LODGING" || i.category === "HOUSES") && ok(i.serviceDate) && ok(i.serviceEndDate));
   const ticket = items.find((i) => i.category === "TICKETS" && ok(i.serviceDate));
   if (stay) {
     out.checkin = stay.serviceDate!;
     out.checkout = stay.serviceEndDate!;
+    // o ingresso sugerido cai dentro da estadia do carrinho
+    out.confirmed = { date: true, stay: true };
   } else if (ticket && opts.stayFromTicket) {
     // só ingresso: hospedagem chegando um dia antes da visita
     const before = addDays(ticket.serviceDate!, -1);
     out.checkin = before >= minDate ? before : minDate;
     out.checkout = addDays(out.checkin, STAY_AROUND_TICKET);
+    out.confirmed.stay = true;
   }
+  if (ticket) out.confirmed.date = true;
   // ingresso: a mesma data de outro ingresso; senão, o 1º dia da hospedagem
   out.date = ticket?.serviceDate ?? (stay ? addDays(stay.serviceDate!, 1) : base.date);
   if (stay && out.date >= out.checkout) out.date = out.checkin;

@@ -28,6 +28,7 @@ import { isMockPayments, paymentProvider } from "@/server/payments/provider";
 import { capturePaypalCheckout, createPaypalCheckout } from "@/server/payments/paypal-checkout";
 import { parseProductRef, productRef } from "@/server/suppliers/refs";
 import { getProductDetail } from "@/server/catalog";
+import { quoteDisplayPrice } from "@/server/pricing/cart-pricing";
 import { PricingError } from "@/server/pricing/engine";
 import { getAdapter } from "@/server/suppliers/registry";
 import { SupplierError, SupplierIntegrationError } from "@/server/suppliers/types";
@@ -557,19 +558,28 @@ export async function crossSellAction(slug: string): Promise<CrossSell | null> {
 }
 
 export type QuickInput = { date?: string; checkin?: string; checkout?: string; adults: number; children: number; ages?: number[]; rooms?: number };
+export type QuickPrice = { pix: string; installment: string; planCount: number; planInstallment: string };
 export type QuickOption = {
   /** Referência neutra para adicionar (o hotel pode ter a opção em outro fornecedor). */
   ref: string;
   optionId: string;
   title: string;
   subtitle: string | null;
+  /** Preço de referência: por adulto (ingresso) ou da estadia inteira (hotel/casa). */
   pix: string;
   installment: string;
-  /** "por adulto" (ingresso) ou total da estadia. */
   per: "adult" | "stay";
+  /** Ingresso: preço de 1 criança (null = sem preço de criança informado). */
+  childPix?: string | null;
+  /** Total para as datas e pessoas escolhidas (null = não deu para calcular aqui; o carrinho confirma). */
+  total: QuickPrice | null;
+  /** false = o total não inclui as crianças (o fornecedor não informa o preço delas antes de cotar). */
+  totalComplete: boolean;
   freeCancel: boolean;
   available: boolean;
-  /** Só para o ADMIN da agência. */
+  /** Hotel: primeira foto do tipo de quarto (servida pela loja). */
+  photo?: string | null;
+  /** Só para o ADMIN da agência (sobre o total). */
   commission?: string;
 };
 
@@ -595,10 +605,42 @@ export async function quickOptionsAction(slug: string, ref: string, input: Quick
   try {
     const p = await getProductDetail(db, ctx, target.supplierCode, target.productId, supplierParams(d, kind), { reveal });
     if (!p) return { options: [], error: "Sem disponibilidade para estas datas" };
+    const price = (x: { pix: { toString(): string }; installment: { toString(): string }; plan: { count: number; installment: { toString(): string } } }): QuickPrice => ({
+      pix: x.pix.toString(),
+      installment: x.installment.toString(),
+      planCount: x.plan.count,
+      planInstallment: x.plan.installment.toString(),
+    });
+    const scale = <L extends { quantity: number }>(lines: L[], q: number) => lines.map((l) => ({ ...l, quantity: l.quantity * q })).filter((l) => l.quantity > 0);
     const options = p.options
       .filter((o) => o.price)
-      .map(
-        (o): QuickOption => ({
+      .map((o): QuickOption => {
+        const target = { category: p.category, supplierCode: o.supplierCode, productId: o.productId, optionId: o.optionId };
+        let total = price(o.price!);
+        let commission = o.price!.commission?.amount.toString();
+        let childPix: string | null = null;
+        let totalComplete = true;
+        if (kind === "tickets") {
+          // ingresso: o preço da vitrine é de 1 adulto; aqui o total é para as pessoas escolhidas
+          const childLines = o.childLines?.length ? o.childLines : null;
+          try {
+            childPix = childLines ? quoteDisplayPrice(ctx, target, o.currency, childLines, null).pix.toString() : null;
+          } catch {
+            childPix = null;
+          }
+          totalComplete = !d.criancas || !!childLines;
+          const lines = [...scale(o.lines, d.adultos), ...(childLines ? scale(childLines, d.criancas) : [])];
+          try {
+            if (lines.length) {
+              const t = quoteDisplayPrice(ctx, target, o.currency, lines, o.minSellPrice ?? null, { commission: reveal.commission });
+              total = price(t);
+              commission = t.commission?.amount.toString();
+            }
+          } catch {
+            /* mantém o preço de 1 adulto */
+          }
+        }
+        return {
           ref: productRef(o.supplierCode, o.productId),
           optionId: o.optionId,
           title: o.title,
@@ -606,11 +648,17 @@ export async function quickOptionsAction(slug: string, ref: string, input: Quick
           pix: o.price!.pix.toString(),
           installment: o.price!.installment.toString(),
           per: kind === "tickets" ? "adult" : "stay",
+          childPix,
+          total,
+          totalComplete,
           freeCancel: !!o.freeCancellationUntil,
           available: o.available,
-          ...(o.price!.commission ? { commission: o.price!.commission.amount.toString() } : {}),
-        }),
-      );
+          photo: kind === "lodging" ? (o.room?.photos?.[0] ?? null) : null,
+          ...(commission ? { commission } : {}),
+        };
+      })
+      // do mais barato ao mais caro (disponíveis primeiro)
+      .sort((a, b) => Number(b.available) - Number(a.available) || Number(a.total?.pix ?? a.pix) - Number(b.total?.pix ?? b.pix));
     return options.length ? { options } : { options: [], error: kind === "lodging" ? "Sem quartos para estas datas e hóspedes" : "Sem disponibilidade para estas datas" };
   } catch (e) {
     return { options: [], error: userError(e) ?? "Não foi possível consultar agora. Tente de novo." };

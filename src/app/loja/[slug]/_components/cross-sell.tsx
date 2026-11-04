@@ -53,7 +53,7 @@ export function CrossSellBlock({ slug, data, pixAvailable, onNavigate }: { slug:
                   {s.commission && <span className="block text-[11px] font-semibold text-emerald-700 tabular">comissão {fmt(s.commission)}</span>}
                   {s.supplier && <span className="mt-0.5 inline-block rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-900">{s.supplier}</span>}
                 </p>
-                <QuickAdd ctx={ctx} productRef={s.ref} category={s.category} title={s.title} destination={data.destination} size="sm" className="shrink-0" />
+                <QuickAdd ctx={ctx} productRef={s.ref} category={s.category} title={s.title} destination={data.destination} href={s.href} size="sm" className="shrink-0" />
               </div>
             </div>
           </li>

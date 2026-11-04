@@ -11,7 +11,7 @@ import { daysBetween } from "@/lib/tz";
 import { categoryAvailable } from "../_lib/categories";
 import { ComingSoon } from "../_components/coming-soon";
 import { getStore, getStorePricing } from "../_lib/store";
-import { quickContext } from "../_lib/quick";
+import { explicitFrom, quickContext } from "../_lib/quick";
 import { storeInsight } from "../_lib/insight";
 import { LodgingSearch } from "../_components/search-forms";
 import { lodgingQuery, parseSearch, supplierParams } from "../_components/search-params";
@@ -66,7 +66,7 @@ export default async function LodgingPage({ params, searchParams }: { params: Pr
   const reveal = await storeInsight(store.id);
   const raw = await searchParams;
   const { d, minDate } = parseSearch(raw);
-  const quick = await quickContext(store, d, minDate);
+  const quick = await quickContext(store, d, minDate, explicitFrom(raw));
   const base = `/loja/${store.slug}/hospedagem`;
   const live = adaptersFor("LODGING").some((a) => a.live);
   const searched = !!(d.destino || d.dest);

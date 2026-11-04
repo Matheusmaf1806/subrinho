@@ -14,7 +14,7 @@ import { storeInsight } from "../../_lib/insight";
 import { SupplierTag } from "../../_components/reveal";
 import { RelatedProducts } from "../../_components/related";
 import { CompleteTrip } from "../../_components/complete-trip";
-import { quickContext } from "../../_lib/quick";
+import { explicitFrom, quickContext } from "../../_lib/quick";
 import { lodgingQuery, parseSearch, supplierParams } from "../../_components/search-params";
 import { LodgingSearch } from "../../_components/search-forms";
 import { MobileSearchToggle } from "../../_components/search-toggle";
@@ -46,13 +46,14 @@ export default async function HotelDetail({
   const store = await getStore(slug);
   const ctx = await getStorePricing(store.id);
   const reveal = await storeInsight(store.id);
-  const { d, minDate } = parseSearch(await searchParams);
+  const raw = await searchParams;
+  const { d, minDate } = parseSearch(raw);
   const p = await getProductDetail(db, ctx, supplier, productId, supplierParams(d, "lodging"), { reveal }).catch((e) => {
     console.error(`[hotel] ${supplier}/${productId}:`, e);
     return null;
   });
   if (!p || p.category !== "LODGING") notFound();
-  const quick = await quickContext(store, d, minDate);
+  const quick = await quickContext(store, d, minDate, explicitFrom(raw));
   const nights = daysBetween(d.checkin, d.checkout);
   const add = addToCartAction.bind(null, slug);
   const base = `/loja/${slug}/hospedagem`;

@@ -14,7 +14,7 @@ import { parseSearch, supplierParams, toQuery } from "../../_components/search-p
 import { BookingPanel, ProductHero } from "../../_components/product-hero";
 import { RelatedProducts } from "../../_components/related";
 import { CompleteTrip } from "../../_components/complete-trip";
-import { quickContext } from "../../_lib/quick";
+import { explicitFrom, quickContext } from "../../_lib/quick";
 import { AddToCartForm } from "../../_components/add-to-cart";
 import { PaxStepper } from "../../_components/pax-stepper";
 import { PriceTag } from "../../_components/price-tag";
@@ -45,7 +45,7 @@ export default async function HouseDetail({
     return null;
   });
   if (!p || p.category !== "HOUSES") notFound();
-  const quick = await quickContext(store, d, parsed.minDate);
+  const quick = await quickContext(store, d, parsed.minDate, explicitFrom(sp));
   const o = p.options[0];
   const nights = daysBetween(d.checkin, d.checkout);
   const adultRule = p.paxRules.find((r) => r.type === "ADULT");

@@ -113,7 +113,7 @@ function Popover({ anchor, open, onClose, children, label }: { anchor: HTMLEleme
   if (!open || typeof document === "undefined") return null;
   return createPortal(
     phone ? (
-      <div className="fixed inset-0 z-[95] flex items-end bg-black/40" role="presentation">
+      <div data-date-popover className="fixed inset-0 z-[95] flex items-end bg-black/40" role="presentation">
         <div ref={box} role="dialog" aria-label={label} className="max-h-[92vh] w-full overflow-y-auto rounded-t-[1.75rem] bg-white p-4 pb-6 shadow-2xl">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-[15px] font-semibold text-ink">{label}</p>
@@ -129,6 +129,7 @@ function Popover({ anchor, open, onClose, children, label }: { anchor: HTMLEleme
         ref={box}
         role="dialog"
         aria-label={label}
+        data-date-popover
         style={{ top: pos?.top ?? -9999, left: pos?.left ?? -9999 }}
         className="fixed z-[95] max-h-[calc(100vh-16px)] overflow-y-auto overscroll-contain rounded-[1.5rem] bg-white p-4 shadow-[0_30px_80px_-20px_rgba(10,10,11,0.45)] ring-1 ring-black/[0.08]"
       >
@@ -271,7 +272,8 @@ const TRIGGER: Record<DateVariant, string> = {
 };
 
 function Trigger({ variant, label, value, placeholder, onClick, active, triggerRef, className, id }: { variant: DateVariant; label?: string; value: string | null; placeholder: string; onClick: () => void; active: boolean; triggerRef?: (el: HTMLButtonElement | null) => void; className?: string; id?: string }) {
-  const text = value ? formatDateBr(value) : placeholder;
+  // ano só quando não é o ano atual ("seg, 14 dez" / "qua, 13 jan 2027"): cabe nos campos estreitos
+  const text = value ? formatDateBr(value, { year: value.slice(0, 4) !== String(new Date().getFullYear()) }) : placeholder;
   if (variant === "field")
     return (
       <button id={id} ref={triggerRef} type="button" onClick={onClick} aria-haspopup="dialog" aria-expanded={active} className={cn(TRIGGER.field, active && "ring-2 ring-ink", className)}>
