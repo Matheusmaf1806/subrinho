@@ -225,3 +225,20 @@ A visão do afiliado é montada por **lista branca** de campos (`getOrderForAffi
 - O nome fica apenas no banco e no Painel Subrinho (operação interna: emitir, cancelar, conferir custos).
 - **Exceção contratual:** a Hotelbeds exige no voucher a frase “Payable through <empresa>, acting as agent…”. Ela só
   aparece em reservas da Hotelbeds e pode ser retirada se a Hotelbeds dispensar por escrito.
+
+## 11. Ingressos (Tu Experienza)
+
+> `src/server/suppliers/tue/` · testes: `tests/tue.test.ts`
+
+- **Preço:** custo por tipo de ingresso (adulto, criança, sênior → adulto quando não há tarifa própria) da temporada
+  da data, mais as variações do horário. Base de custo = preço de revenda ao distribuidor; sem ele, o preço de venda
+  ao público (lado seguro) com `costBasis: "sales"` no item para a equipe conferir.
+- **Horários:** produtos com disponibilidade mostram um horário por opção (com “últimas N vagas”); a troca de data
+  recarrega os horários. A cotação confere de novo vagas e preço antes de ir ao carrinho e no checkout.
+- **Limites:** mínimo/máximo por reserva e por tipo, data de início de vendas e fim do produto.
+- **Emissão:** só depois do pagamento real. Bloqueio (`/reservations`) com o preço calculado pela Tue; se o preço do
+  servidor passar do esperado, se faltar dado obrigatório ou se o custo subir acima do vendido, o bloqueio é desfeito e
+  nada é comprado. Confirmação com a nossa referência; e-mails da Tue ao cliente desligados (o voucher é o nosso).
+- **Cancelamento:** pelo Painel Subrinho, sem simulação de multa; a Tue fatura conforme a política do ingresso
+  (mostrada ao cliente antes de pagar).
+- **Fora da loja por enquanto:** combos/pacotes, produtos com opção ou ponto de encontro obrigatórios.

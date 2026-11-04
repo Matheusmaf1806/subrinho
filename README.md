@@ -197,6 +197,22 @@ página do hotel, sem gastar uma nova busca no fornecedor.
 **Diagnóstico:** Painel Subrinho → Fornecedores (modo de cada fornecedor, validade do certificado, “Testar conexão”,
 “Atualizar destinos”) e `GET /api/health?fornecedores` (testa as conexões, somente leitura).
 
+## Ingressos com API real — Tu Experienza (Tue Distributor API v2.0)
+
+`src/server/suppliers/tue/` — OAuth2 (`TUEXPERIENCIA_USERNAME`/`PASSWORD` → token Bearer) e distribuidor
+(`TUEXPERIENCIA_DISTRIBUTOR_ID`); produção por padrão (`TUEXPERIENCIA_ENVIRONMENT=test` usa o sandbox).
+
+| Etapa | Chamada |
+|---|---|
+| Busca | `GET /products` (todas as páginas, cache de 6 h) — só produtos simples e ativos; “Roma” encontra “Rome”, “Florença” encontra “Firenze” |
+| Ingresso | produto + `GET /availability` da data: uma opção por horário, com vagas e preço infantil |
+| Cotação | horário revalidado (vagas) + preço por tipo (adulto, criança…) da temporada e do horário |
+| Reserva | procura pedido com a nossa referência (nunca duplica) → `POST /reservations` (bloqueio + preço do servidor conferido) → `POST /orders` `CONFIRM_RESERVATION`; sem resposta → procura antes de falhar |
+| Voucher / status / cancelamento | `GET` / `DELETE /orders/{ref}` — o voucher mostra um QR code por ingresso |
+
+Custo = preço de revenda ao distribuidor (`resale_price`); se a API não informar, o preço de venda (nunca vende
+abaixo do custo) e a cotação marca `costBasis: "sales"`.
+
 ## Casas de temporada com API real — MAPRO
 
 `src/server/suppliers/mapro/` (Channels API, token Bearer). Fluxo:

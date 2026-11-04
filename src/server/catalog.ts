@@ -111,7 +111,7 @@ export async function getProductDetail(
   const price = detail.lines.length ? priceOf(ctx, detail, null, detail) : null;
   // hospedagem/casa sem disponibilidade nas datas: a página aparece com o motivo (sem preço)
   const unavailable = options.length === 0 || options.every((o) => !o.available);
-  if (!price && !((detail.category === "LODGING" || detail.category === "HOUSES") && unavailable)) return null;
+  if (!price && !((detail.category === "LODGING" || detail.category === "HOUSES" || detail.category === "TICKETS") && unavailable)) return null;
   return {
     ...detail,
     description: stripSupplierMentions(detail.description),

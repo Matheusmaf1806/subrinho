@@ -51,6 +51,8 @@ export type OfferOption = {
   freeCancellationUntil?: string | null;
   /** Não vender abaixo deste valor (ex.: Hotelbeds hotelMandatory / tarifa comissionada). */
   minSellPrice?: MinSellPrice | null;
+  /** Ingressos: custo de 1 criança nesta opção (evita consultar o fornecedor só para exibir o preço). */
+  childLines?: PriceLine[] | null;
   available: boolean;
 };
 

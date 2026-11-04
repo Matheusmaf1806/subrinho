@@ -9,13 +9,15 @@ import { HB_CODE, createHotelbedsAdapter } from "../hotelbeds/adapter";
 import { hotelbedsConfig, hotelbedsMissing, inspectCertificate, type CertificateInfo } from "../hotelbeds/client";
 import { MAPRO_CODE, MAPRO_DEMO_CUSTOMERS, createMaproFromEnv } from "../mapro/adapter";
 import { maproConfig, maproMissing } from "../mapro/client";
+import { TUE_CODE, createTueFromEnv } from "../tue/adapter";
+import { tueConfig, tueMissing } from "../tue/client";
 import { isLiveSupplier, suppliersMode } from "../registry";
 import { SupplierError } from "../types";
 
 export type HotelIntegration = {
   code: string;
   name: string;
-  category: "LODGING" | "HOUSES";
+  category: "LODGING" | "HOUSES" | "TICKETS";
   configured: boolean;
   live: boolean;
   environment: string | null;
@@ -37,7 +39,19 @@ export async function hotelIntegrations(): Promise<HotelIntegration[]> {
   const ggt = ggtConfig();
   const hb = hotelbedsConfig();
   const ggtMissing = ["GGT_API_BASE_URL", "GGT_AGENCY_ID", "GGT_USER", "GGT_PASSWORD"].filter((n) => !process.env[n]?.trim());
+  const tue = tueConfig();
   return [
+    {
+      code: TUE_CODE,
+      name: "Tu Experienza",
+      category: "TICKETS",
+      configured: !!tue,
+      live: isLiveSupplier(TUE_CODE),
+      environment: tue ? `${tue.environment} · ${new URL(tue.baseUrl).host}` : null,
+      missing: tueMissing(),
+      destinations: null,
+      destinationsUpdatedAt: null,
+    },
     {
       code: GGT_CODE,
       name: "GGT | Best Buy Hotels",
@@ -107,6 +121,14 @@ export async function testHotelIntegration(code: string): Promise<{ ok: boolean;
       await a.client.booking("GET", `/bookings?start=${today}&end=${addDays(today, 1)}&filterType=CREATION&from=1&to=1`, undefined, 30_000);
       await a.client.content(`/types/languages?fields=all&from=1&to=1`, 20_000);
       return done(true, `Conectado à Hotelbeds (${cfg.environment}) — mTLS e assinatura aceitos · certificado vence em ${cert.daysLeft} dias`);
+    }
+    if (code === TUE_CODE) {
+      const a = createTueFromEnv();
+      if (!a) return done(false, `Faltam variáveis: ${tueMissing().join(", ")}`);
+      // token OAuth2 + 1 produto do catálogo: valida usuário, senha e distribuidor (somente leitura)
+      await a.client.accessToken(true);
+      const rs = await a.client.get<{ data?: { total_items?: number } }>("/products", { distributor_id: a.client.cfg.distributorId, items_per_page: 1 }, 30_000);
+      return done(true, `Conectado à Tu Experienza (${a.client.cfg.environment}) — ${rs.data?.total_items ?? "?"} produtos no catálogo do distribuidor`);
     }
     if (code === MAPRO_CODE) {
       const a = createMaproFromEnv();

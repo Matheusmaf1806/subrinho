@@ -71,6 +71,7 @@ type ErrorRS = { error?: string; error_description?: string; error_message?: str
 
 export class TueClient {
   private token: { value: string; type: string; until: number } | null = null;
+  private pending: Promise<string> | null = null;
 
   constructor(
     readonly cfg: TueConfig,
@@ -80,6 +81,15 @@ export class TueClient {
   /** Token Bearer (renova quando falta menos de 1 minuto). */
   async accessToken(force = false): Promise<string> {
     if (!force && this.token && this.token.until > Date.now() + 60_000) return `${this.token.type} ${this.token.value}`;
+    // consultas em paralelo usam o mesmo pedido de token (a Tue pede para não gerar tokens à toa)
+    if (this.pending) return this.pending;
+    this.pending = this.fetchToken().finally(() => {
+      this.pending = null;
+    });
+    return this.pending;
+  }
+
+  private async fetchToken(): Promise<string> {
     const basic = Buffer.from(`${encodeURIComponent(this.cfg.username)}:${encodeURIComponent(this.cfg.password)}`).toString("base64");
     const rs = await this.raw<TokenRS>("POST", "/oauth2/token", { grant_type: "client_credentials" }, { Authorization: `Basic ${basic}` }, 30_000);
     if (!rs.access_token) throw new SupplierIntegrationError("Tue /oauth2/token: resposta sem access_token", { path: "/oauth2/token" });

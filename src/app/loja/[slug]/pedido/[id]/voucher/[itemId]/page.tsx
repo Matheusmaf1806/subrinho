@@ -14,6 +14,8 @@ import { getStore, viewerFor } from "../../../../_lib/store";
 import { StoreMark } from "../../../../_components/store-mark";
 import { stripSupplierMentions, stripSupplierMentionsList } from "@/lib/supplier-names";
 import { PrintButton } from "./print-button";
+import QRCode from "qrcode";
+import { type Store } from "../../../../_lib/store";
 
 export const metadata = { title: "Voucher" };
 
@@ -84,7 +86,8 @@ export default async function VoucherPage({ params }: { params: Promise<{ slug: 
   if (!order || (viewer.kind === "CUSTOMER" && order.customerId !== viewer.customer.id)) notFound();
   const all = await db.select({ id: orderItems.id }).from(orderItems).where(eq(orderItems.orderId, id)).orderBy(orderItems.id);
   const [item] = await db.select().from(orderItems).where(and(eq(orderItems.id, itemId), eq(orderItems.orderId, id)));
-  if (!item || (item.category !== "LODGING" && item.category !== "HOUSES") || item.supplierStatus !== "CONFIRMED" || !item.supplierBookingRef) notFound();
+  if (!item || !["LODGING", "HOUSES", "TICKETS"].includes(item.category) || item.supplierStatus !== "CONFIRMED" || !item.supplierBookingRef) notFound();
+  if (item.category === "TICKETS") return <TicketVoucher slug={slug} order={order} item={item} store={store} />;
   const house = item.category === "HOUSES";
 
   const d = (item.details ?? {}) as Details;
@@ -240,6 +243,100 @@ export default async function VoucherPage({ params }: { params: Promise<{ slug: 
               ? "Guarde este voucher e tenha um documento com foto na chegada. Siga as instruções de acesso da administradora."
               : "Apresente este voucher e um documento com foto no check-in. Taxas locais indicadas acima são pagas diretamente no hotel."}
           </p>
+        </footer>
+      </article>
+    </main>
+  );
+}
+
+type TicketPayload = {
+  codes?: { label: string; code: string }[];
+  codeFormat?: string | null;
+  travelDate?: string | null;
+  vouchersReleased?: boolean;
+  voucher?: { tickets?: { codes?: { label: string; code: string }[]; codeFormat?: string | null; released?: boolean } };
+};
+
+/** Voucher dos ingressos: um código (QR) por pessoa, data/horário e titular — sem marca do fornecedor. */
+async function TicketVoucher({ slug, order, item, store }: { slug: string; order: typeof orders.$inferSelect; item: typeof orderItems.$inferSelect; store: Store }) {
+  const p = (item.supplierPayload ?? {}) as TicketPayload;
+  const d = (item.details ?? {}) as { slotFrom?: string | null; cancellation?: string; notes?: string[] };
+  const codes = p.voucher?.tickets?.codes ?? p.codes ?? [];
+  const format = p.voucher?.tickets?.codeFormat ?? p.codeFormat ?? "QR_CODE";
+  const textOnly = /^(NONE|LINK|PDF|IMAGE|OTHER)$/.test(format ?? "");
+  const qrs = textOnly ? [] : await Promise.all(codes.map((c) => QRCode.toString(c.code, { type: "svg", margin: 1, width: 180 })));
+  const time = (d.slotFrom ?? "").match(/T(\d{2}:\d{2})/)?.[1] ?? null;
+  const holder = (order.travelers ?? []).find((t) => t.type !== "CHILD" && t.name?.trim())?.name ?? order.customerData.name;
+  const notes = stripSupplierMentionsList(d.notes);
+  return (
+    <main className="mx-auto max-w-[820px] px-4 py-10 sm:px-8 print:max-w-none print:p-0">
+      <div className="mb-6 flex items-center justify-between gap-3 print:hidden">
+        <a href={`/loja/${slug}/pedido/${order.id}`} className="inline-flex h-9 items-center rounded-full bg-surface px-4 text-[13px] font-semibold text-ink hover:bg-surface-2">
+          ← Voltar ao pedido
+        </a>
+        <PrintButton />
+      </div>
+      <article className="rounded-[2rem] bg-white p-6 ring-1 ring-inset ring-black/[0.08] sm:p-10 print:rounded-none print:p-0 print:ring-0">
+        <header className="flex flex-wrap items-start justify-between gap-4 border-b border-line pb-6">
+          <div className="flex items-center gap-3">
+            <StoreMark store={store} />
+            <div>
+              <p className="text-[15px] font-semibold text-ink">{store.name}</p>
+              <p className="text-[12px] text-muted">Voucher de ingressos</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Localizador</p>
+            <p className="font-mono text-xl font-semibold text-ink">{item.supplierBookingRef}</p>
+            <p className="mt-1 inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-800">Reserva confirmada</p>
+          </div>
+        </header>
+        <section className="mt-6">
+          <h1 className="text-[1.75rem] font-semibold leading-tight tracking-[-0.03em] text-ink">{item.title}</h1>
+          <dl className="mt-4">
+            <Row label="Data da visita">
+              {item.serviceDate ? date(item.serviceDate) : "Ingresso aberto"}
+              {time ? ` · ${time}` : ""}
+            </Row>
+            {item.location && <Row label="Local">{item.location}</Row>}
+            <Row label="Titular">{holder}</Row>
+            <Row label="Ingressos">
+              {[item.pax.adults ? `${item.pax.adults} adulto${item.pax.adults > 1 ? "s" : ""}` : null, item.pax.children ? `${item.pax.children} criança${item.pax.children > 1 ? "s" : ""}` : null].filter(Boolean).join(" e ")}
+            </Row>
+            <Row label="Pedido">{orderNumber(order.number)}</Row>
+          </dl>
+        </section>
+        <section className="mt-6">
+          <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">Códigos de entrada</h2>
+          {codes.length === 0 ? (
+            <p className="rounded-2xl bg-amber-50 px-4 py-3 text-[14px] text-amber-950">Os códigos de entrada ainda estão sendo liberados. Volte a esta página em instantes.</p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {codes.map((c, i) => (
+                <div key={`${c.code}-${i}`} className="flex items-center gap-4 rounded-2xl border border-line p-4 print:break-inside-avoid">
+                  {qrs[i] && <div className="h-[120px] w-[120px] shrink-0 [&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: qrs[i] }} />}
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-semibold text-muted">{c.label}</p>
+                    <p className="break-all font-mono text-[15px] font-semibold text-ink">{c.code}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+        {(d.cancellation || notes.length > 0) && (
+          <section className="mt-6">
+            <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">Observações</h2>
+            {d.cancellation && <p className="text-[14px] text-ink">{/^cancelamento|reembols/i.test(d.cancellation) ? d.cancellation : `Cancelamento: ${d.cancellation}`}</p>}
+            {notes.map((n) => (
+              <p key={n} className="mt-1 text-[14px] text-ink">
+                {n}
+              </p>
+            ))}
+          </section>
+        )}
+        <footer className="mt-8 border-t border-line pt-5 text-[12px] text-muted">
+          <p>Apresente os códigos na entrada (no celular ou impressos) e tenha um documento com foto. Cada código vale para uma pessoa.</p>
         </footer>
       </article>
     </main>

@@ -83,14 +83,16 @@ export async function GET(request: Request) {
   // Hotéis com API real (sem rede; ?fornecedores testa a conexão de cada um)
   let hoteis: Record<string, unknown> | undefined;
   let casas: Record<string, unknown> | undefined;
+  let ingressos: Record<string, unknown> | undefined;
   if (checks.tabelas?.ok && privileged) {
     try {
       const list = await hotelIntegrations();
       hoteis = {};
       casas = {};
+      ingressos = {};
       for (const h of list) {
         const test = testSuppliers && h.configured ? await testHotelIntegration(h.code) : null;
-        (h.category === "HOUSES" ? casas : hoteis)[h.code] = {
+        (h.category === "HOUSES" ? casas : h.category === "TICKETS" ? ingressos : hoteis)[h.code] = {
           modo: h.live ? "API real" : h.configured ? "credenciais ok, mas SUPPLIERS_MODE=mock" : "fora da loja (sem credenciais)",
           ambiente: h.environment,
           variaveis_faltando: h.missing.length ? h.missing : undefined,
@@ -102,6 +104,7 @@ export async function GET(request: Request) {
     } catch {
       hoteis = undefined;
       casas = undefined;
+      ingressos = undefined;
     }
   }
 
@@ -134,7 +137,7 @@ export async function GET(request: Request) {
         status: ok ? "tudo certo" : "atenção",
         ambiente: process.env.VERCEL_ENV ?? "local",
         checks,
-        ...(privileged ? { cambio, hoteis, casas } : { fornecedores: "entre no Painel Subrinho (ou use Authorization: Bearer <CRON_SECRET>) para ver fornecedores e câmbio" }),
+        ...(privileged ? { cambio, ingressos, hoteis, casas } : { fornecedores: "entre no Painel Subrinho (ou use Authorization: Bearer <CRON_SECRET>) para ver fornecedores e câmbio" }),
       },
       null,
       2,

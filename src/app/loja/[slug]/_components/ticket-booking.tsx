@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { ActionForm, SubmitButton, type ActionState } from "@/components/ui-client";
 import { cn, Input } from "@/components/ui";
 import { PaxStepper } from "./pax-stepper";
@@ -29,6 +30,7 @@ export function TicketBooking({
   defaultAdults: number;
   defaultChildren: number;
 }) {
+  const router = useRouter();
   const [opt, setOpt] = useState(options.find((o) => o.available)?.optionId ?? options[0]?.optionId);
   const [adults, setAdults] = useState(Math.max(defaultAdults, 1));
   const [children, setChildren] = useState(defaultChildren);
@@ -38,8 +40,30 @@ export function TicketBooking({
   return (
     <ActionForm action={action} className="space-y-4">
       <input type="hidden" name="ref" value={productRef} />
-      <fieldset>
-        <legend className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Tipo de ingresso</legend>
+      <label className="block">
+        <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Data da visita</span>
+        <Input
+          type="date"
+          name="date"
+          defaultValue={defaultDate}
+          min={minDate}
+          required
+          // horários e preços dependem da data: recarrega a página com a nova data
+          onChange={(e) => {
+            if (!e.target.value) return;
+            const sp = new URLSearchParams(window.location.search);
+            sp.set("data", e.target.value);
+            sp.set("adultos", String(adults));
+            sp.set("criancas", String(children));
+            router.replace(`?${sp}`, { scroll: false });
+          }}
+        />
+      </label>
+      {options.length === 0 && (
+        <p className="rounded-2xl bg-amber-50 px-4 py-3.5 text-sm text-amber-950">Sem horários disponíveis nesta data. Escolha outra data acima.</p>
+      )}
+      <fieldset hidden={options.length === 0}>
+        <legend className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">{options.length > 1 ? "Horário / tipo de ingresso" : "Ingresso"}</legend>
         <div className="space-y-2">
           {options.map((o) => (
             <label
@@ -63,10 +87,6 @@ export function TicketBooking({
           ))}
         </div>
       </fieldset>
-      <label className="block">
-        <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Data da visita</span>
-        <Input type="date" name="date" defaultValue={defaultDate} min={minDate} required />
-      </label>
       <div className="rounded-2xl bg-surface px-4 py-1 [&_button]:bg-white">
         <PaxStepper name="adults" label="Adultos" min={0} max={20} defaultValue={adults} onChange={setAdults} />
         {current?.childPix !== null && <PaxStepper name="children" label="Crianças" hint={childLabel} min={0} max={20} defaultValue={children} onChange={setChildren} />}
@@ -78,7 +98,7 @@ export function TicketBooking({
         </div>
         <p className="mt-1 text-xs text-white/50">Confirmado com o fornecedor ao adicionar. Também em 10x sem juros.</p>
       </div>
-      <SubmitButton variant="accent" size="lg" className="w-full" pendingText="Consultando o fornecedor…" disabled={adults + children === 0}>
+      <SubmitButton variant="accent" size="lg" className="w-full" pendingText="Consultando o fornecedor…" disabled={adults + children === 0 || !current?.available}>
         Adicionar ao carrinho
       </SubmitButton>
     </ActionForm>

@@ -10,6 +10,9 @@ import { BookingPanel, ProductHero } from "../../_components/product-hero";
 import { TicketBooking } from "../../_components/ticket-booking";
 import { addToCartAction } from "../../actions";
 
+// Consulta o produto e os horários da data no fornecedor.
+export const maxDuration = 60;
+
 export default async function TicketDetail({
   params,
   searchParams,
@@ -33,8 +36,9 @@ export default async function TicketDetail({
     p.options.map(async (o) => {
       let childPix: number | null = null;
       try {
-        const q = await adapter.quote({ productId, optionId: o.optionId, date: d.data, pax: { adults: 0, children: 1 } });
-        childPix = Number(quoteDisplayPrice(ctx, { ...p, optionId: o.optionId }, q.currency, q.lines).pix.toString());
+        // o fornecedor já informa o custo infantil da opção; senão, cota 1 criança
+        const lines = o.childLines !== undefined ? o.childLines : (await adapter.quote({ productId, optionId: o.optionId, date: d.data, pax: { adults: 0, children: 1 } })).lines;
+        childPix = lines?.length ? Number(quoteDisplayPrice(ctx, { ...p, optionId: o.optionId }, o.currency, lines).pix.toString()) : null;
       } catch {
         childPix = null;
       }
@@ -51,7 +55,7 @@ export default async function TicketDetail({
 
   return (
     <main className="mx-auto grid max-w-[1440px] gap-10 px-4 py-8 sm:px-8 lg:grid-cols-[1fr_440px] xl:gap-16">
-      <ProductHero p={p} back={{ href: `/loja/${slug}/ingressos?${toQuery({ data: d.data, adultos: d.adultos, criancas: d.criancas })}`, label: "Voltar para ingressos" }} />
+      <ProductHero p={p} back={{ href: `/loja/${slug}/ingressos?${toQuery({ destino: d.destino, data: d.data, adultos: d.adultos, criancas: d.criancas })}`, label: "Voltar para ingressos" }} />
       <BookingPanel title="Escolha seus ingressos">
           <TicketBooking
             action={addToCartAction.bind(null, slug)}

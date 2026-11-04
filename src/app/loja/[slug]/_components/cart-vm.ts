@@ -25,7 +25,7 @@ export function toItemVMs(view: View, opts: { adminMode: boolean }) {
       pax: i.pax as PaxConfig,
       paxRules: ((i.details as { paxRules?: PaxRule[] }).paxRules ?? []) as PaxRule[],
       lines: i.lines.map((l) => ({ label: l.label, quantity: l.quantity })),
-      hotel: i.category === "LODGING" || i.category === "HOUSES" ? hotelInfo(i.details as Record<string, unknown>) : null,
+      hotel: i.category === "LODGING" || i.category === "HOUSES" || i.category === "TICKETS" ? hotelInfo(i.details as Record<string, unknown>) : null,
       listPix: money(f.netAffiliate),
       pix: money(f.finalPix),
       installment: money(f.finalInstallment),
