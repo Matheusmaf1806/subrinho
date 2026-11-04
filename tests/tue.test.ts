@@ -4,7 +4,7 @@
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { cancellationOf, costBasisOf, createTueAdapter, matchesTicketDestination, seasonFor, slotTime, ticketCodes, typeFor, unitCost, type TueProduct, type TueType } from "@/server/suppliers/tue/adapter";
-import { tueConfig, type Transport } from "@/server/suppliers/tue/client";
+import { TueApiError, tueConfig, type Transport } from "@/server/suppliers/tue/client";
 import { clearMemoryCache } from "@/server/suppliers/hotels/cache";
 
 const ADULT: TueType = { product_type: "ADULT", product_type_id: "T-AD", product_type_label: "Adult", product_type_age_from: 18, product_type_age_to: 64, product_type_pricing: { product_type_list_price: "20.50", product_type_sales_price: "18.50", product_type_resale_price: "16.40" } };
@@ -81,7 +81,7 @@ const ORDER = {
   ],
 };
 
-type Opts = { existing?: boolean; checkoutRequired?: boolean; serverTotal?: string; orderTimeout?: boolean; token401Once?: boolean };
+type Opts = { existing?: boolean; checkoutRequired?: boolean; serverTotal?: string; orderTimeout?: boolean; token401Once?: boolean; basicRefused?: boolean; bodyRefused?: boolean };
 
 function fake(o: Opts = {}) {
   const calls: { method: string; path: string; body?: unknown; headers: Record<string, string> }[] = [];
@@ -95,6 +95,9 @@ function fake(o: Opts = {}) {
     calls.push({ method: req.method, path: `${path}${u.search}`, body, headers: req.headers });
     const json = (v: unknown, status = 200) => ({ status, body: JSON.stringify(v) });
     if (path === "/oauth2/token") {
+      const viaBody = !req.headers.Authorization;
+      if ((viaBody && o.bodyRefused) || (!viaBody && o.basicRefused))
+        return json({ error: "UNAUTHORIZED", error_description: "Authentication is required and has failed or has not yet been provided.", errors: ["Username or password is wrong"] }, 401);
       tokens++;
       return json({ access_token: `tok${tokens}`, token_type: "Bearer", expires_in: 3600 });
     }
@@ -203,9 +206,33 @@ describe("Tu Experienza — fluxo do adaptador", () => {
     const a = createTueAdapter(cfg, { transport: f.transport });
     await a.search({ destination: "Roma", date: DAY, pax: { adults: 1, children: 0 } });
     const tok = f.calls.find((c) => c.path === "/oauth2/token")!;
-    expect(tok.headers.Authorization).toBe(`Basic ${Buffer.from("user%40agencia:s3nh%40").toString("base64")}`);
+    // usuário e senha literais: a Tue não decodifica o Basic (um "@" virando %40 é recusado)
+    expect(tok.headers.Authorization).toBe(`Basic ${Buffer.from("user@agencia:s3nh@").toString("base64")}`);
     expect(tok.body).toEqual({ grant_type: "client_credentials" });
     expect(f.tokens()).toBe(2); // o primeiro foi recusado (401) e renovado
+  });
+
+  it("Basic recusado → usuário e senha no corpo (alternativa da API)", async () => {
+    const f = fake({ basicRefused: true });
+    const a = createTueAdapter(cfg, { transport: f.transport });
+    await a.search({ destination: "Roma", date: DAY, pax: { adults: 1, children: 0 } });
+    const toks = f.calls.filter((c) => c.path === "/oauth2/token");
+    expect(toks).toHaveLength(2);
+    expect(toks[1].headers.Authorization).toBeUndefined();
+    expect(toks[1].body).toEqual({ username: "user@agencia", password: "s3nh@" });
+    expect(f.calls.find((c) => c.path.startsWith("/products?"))!.headers.Authorization).toBe("Bearer tok1");
+  });
+
+  it("credenciais recusadas: erro claro e sem repetir o login a cada busca", async () => {
+    const f = fake({ basicRefused: true, bodyRefused: true });
+    const a = createTueAdapter(cfg, { transport: f.transport });
+    const err = await a.search({ destination: "Roma", date: DAY, pax: { adults: 1, children: 0 } }).catch((e) => e);
+    expect(err).toBeInstanceOf(TueApiError);
+    expect(err.message).toContain("Username or password is wrong");
+    expect(err.message).toContain("TUEXPERIENCIA_USERNAME");
+    const before = f.calls.length;
+    await a.search({ destination: "Paris", date: DAY, pax: { adults: 1, children: 0 } }).catch(() => null);
+    expect(f.calls.length).toBe(before); // pausa de alguns minutos antes de tentar de novo
   });
 
   it("busca: todas as páginas, só o que dá para vender, destino em português e preço de revenda da temporada", async () => {

@@ -72,6 +72,8 @@ type ErrorRS = { error?: string; error_description?: string; error_message?: str
 export class TueClient {
   private token: { value: string; type: string; until: number } | null = null;
   private pending: Promise<string> | null = null;
+  private rejected: TueApiError | null = null;
+  private rejectedUntil = 0;
 
   constructor(
     readonly cfg: TueConfig,
@@ -90,8 +92,29 @@ export class TueClient {
   }
 
   private async fetchToken(): Promise<string> {
-    const basic = Buffer.from(`${encodeURIComponent(this.cfg.username)}:${encodeURIComponent(this.cfg.password)}`).toString("base64");
-    const rs = await this.raw<TokenRS>("POST", "/oauth2/token", { grant_type: "client_credentials" }, { Authorization: `Basic ${basic}` }, 30_000);
+    if (this.rejectedUntil > Date.now()) throw this.rejected!;
+    // Basic com usuário:senha literais (a Tue compara o texto exato — um e-mail com "@" codificado como %40 é recusado)
+    const basic = Buffer.from(`${this.cfg.username}:${this.cfg.password}`).toString("base64");
+    let rs: TokenRS;
+    try {
+      rs = await this.raw<TokenRS>("POST", "/oauth2/token", { grant_type: "client_credentials" }, { Authorization: `Basic ${basic}` }, 30_000);
+    } catch (e) {
+      if (!(e instanceof TueApiError && e.status === 401)) throw e;
+      // alternativa prevista na API: usuário e senha no corpo (sem nenhuma codificação no caminho)
+      try {
+        rs = await this.raw<TokenRS>("POST", "/oauth2/token", { username: this.cfg.username, password: this.cfg.password }, {}, 30_000);
+      } catch (e2) {
+        if (e2 instanceof TueApiError && (e2.status === 401 || e2.status === 400)) {
+          // credenciais recusadas: não insiste por alguns minutos (a Tue pede para não repetir logins recusados)
+          this.rejected = e2.status === 401 ? e2 : e;
+          this.rejectedUntil = Date.now() + 5 * 60_000;
+          throw this.rejected;
+        }
+        throw e2;
+      }
+    }
+    this.rejected = null;
+    this.rejectedUntil = 0;
     if (!rs.access_token) throw new SupplierIntegrationError("Tue /oauth2/token: resposta sem access_token", { path: "/oauth2/token" });
     this.token = { value: rs.access_token, type: rs.token_type || "Bearer", until: Date.now() + Math.max(60, Number(rs.expires_in) || 3600) * 1000 };
     return `${this.token.type} ${this.token.value}`;
@@ -152,7 +175,7 @@ export class TueClient {
       const detail = Array.isArray(e.errors) && e.errors.length ? ` — ${e.errors.map((x) => (typeof x === "string" ? x : JSON.stringify(x))).join("; ").slice(0, 300)}` : "";
       const msg =
         res.status === 401 || res.status === 403
-          ? `${e.error_description || e.error_message || "credenciais recusadas"} — confira TUEXPERIENCIA_USERNAME/PASSWORD/DISTRIBUTOR_ID e o ambiente (TUEXPERIENCIA_ENVIRONMENT=${this.cfg.environment})`
+          ? `${detail ? detail.slice(3) : e.error_description || e.error_message || "credenciais recusadas"} — confira TUEXPERIENCIA_USERNAME/PASSWORD/DISTRIBUTOR_ID e o ambiente (TUEXPERIENCIA_ENVIRONMENT=${this.cfg.environment})`
           : `${e.error_description || e.error_message || res.body.slice(0, 200) || "erro sem descrição"}${detail}`;
       throw new TueApiError(res.status, e.error ?? "", msg, label, e.error_reference ?? null);
     }

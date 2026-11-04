@@ -10,7 +10,7 @@ import { hotelbedsConfig, hotelbedsMissing, inspectCertificate, type Certificate
 import { MAPRO_CODE, MAPRO_DEMO_CUSTOMERS, createMaproFromEnv } from "../mapro/adapter";
 import { maproConfig, maproMissing } from "../mapro/client";
 import { TUE_CODE, createTueFromEnv } from "../tue/adapter";
-import { tueConfig, tueMissing } from "../tue/client";
+import { TueApiError, TueClient, tueConfig, tueMissing } from "../tue/client";
 import { isLiveSupplier, suppliersMode } from "../registry";
 import { SupplierError } from "../types";
 
@@ -126,7 +126,24 @@ export async function testHotelIntegration(code: string): Promise<{ ok: boolean;
       const a = createTueFromEnv();
       if (!a) return done(false, `Faltam variáveis: ${tueMissing().join(", ")}`);
       // token OAuth2 + 1 produto do catálogo: valida usuário, senha e distribuidor (somente leitura)
-      await a.client.accessToken(true);
+      try {
+        await a.client.accessToken(true);
+      } catch (e) {
+        if (!(e instanceof TueApiError && e.status === 401) || process.env.TUEXPERIENCIA_API_URL?.trim()) throw e;
+        // login recusado: as credenciais podem ser do outro ambiente da Tu Experienza (sandbox × produção)
+        const cfg = a.client.cfg;
+        const other = cfg.environment === "live" ? "test" : "live";
+        const ok = await new TueClient({ ...cfg, environment: other, baseUrl: cfg.baseUrl.replace(`distributor-${cfg.environment}.`, `distributor-${other}.`) })
+          .accessToken(true)
+          .then(() => true, () => false);
+        if (!ok) throw e;
+        return done(
+          false,
+          other === "test"
+            ? "Login recusado na produção (live): estas credenciais são do ambiente de TESTE (sandbox) da Tu Experienza. Peça à Tu Experienza o usuário e a senha de produção — com credenciais de teste os ingressos não valem."
+            : "Login recusado no ambiente de teste: estas credenciais são de PRODUÇÃO. Remova TUEXPERIENCIA_ENVIRONMENT (ou use live) na Vercel.",
+        );
+      }
       const rs = await a.client.get<{ data?: { total_items?: number } }>("/products", { distributor_id: a.client.cfg.distributorId, items_per_page: 1 }, 30_000);
       return done(true, `Conectado à Tu Experienza (${a.client.cfg.environment}) — ${rs.data?.total_items ?? "?"} produtos no catálogo do distribuidor`);
     }
