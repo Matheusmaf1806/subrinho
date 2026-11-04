@@ -8,10 +8,37 @@ export type Tx = DB | Parameters<Parameters<DB["transaction"]>[0]>[0];
 
 const globalForDb = globalThis as unknown as { __subrinhoPool?: pg.Pool; __subrinhoDb?: DB };
 
+/**
+ * URL do PostgreSQL. Além de DATABASE_URL, aceita os nomes que a integração Neon/Postgres
+ * da Vercel costuma criar (inclusive com prefixo personalizado, ex.: STORAGE_DATABASE_URL).
+ */
+export function resolveDatabaseUrl(env: Record<string, string | undefined> = process.env): { url: string; source: string } | null {
+  const preferred = ["DATABASE_URL", "POSTGRES_URL", "NEON_DATABASE_URL", "DATABASE_URL_UNPOOLED", "POSTGRES_URL_NON_POOLING", "POSTGRES_PRISMA_URL"];
+  for (const k of preferred) if (env[k]?.trim()) return { url: env[k]!.trim(), source: k };
+  const prefixed = Object.keys(env)
+    .filter((k) => /_(DATABASE_URL|POSTGRES_URL)$/.test(k) && env[k]?.trim())
+    .sort();
+  if (prefixed.length) return { url: env[prefixed[0]]!.trim(), source: prefixed[0] };
+  return null;
+}
+
+export class DatabaseNotConfiguredError extends Error {
+  constructor() {
+    super("Banco de dados não configurado: defina DATABASE_URL (Vercel → Settings → Environment Variables) e faça Redeploy");
+  }
+}
+
 function createPool() {
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) throw new Error("DATABASE_URL não configurada");
-  return new pg.Pool({ connectionString, max: Number(process.env.DB_POOL_MAX ?? 10) });
+  const resolved = resolveDatabaseUrl();
+  if (!resolved) throw new DatabaseNotConfiguredError();
+  // Serverless (Vercel): poucas conexões por instância; use a URL "pooled" do Neon (host com -pooler).
+  const serverless = !!process.env.VERCEL;
+  return new pg.Pool({
+    connectionString: resolved.url,
+    max: Number(process.env.DB_POOL_MAX ?? (serverless ? 3 : 10)),
+    idleTimeoutMillis: serverless ? 10_000 : 30_000,
+    connectionTimeoutMillis: 10_000,
+  });
 }
 
 export function getDb(): DB {
