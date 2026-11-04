@@ -3,10 +3,10 @@ import { LogOut, ShieldCheck, ShoppingBag, User } from "lucide-react";
 import type { StoreViewer } from "@/server/auth/session";
 import type { Store } from "../_lib/store";
 import { logoutAction, toggleAdminModeAction } from "../actions";
-import { STORE_CATEGORIES } from "./category";
+import type { StoreCategory } from "../_lib/categories";
 import { StoreMark } from "./store-mark";
 
-export function StoreHeader({ store, viewer, cartCount, cartHref }: { store: Store; viewer: StoreViewer | null; cartCount: number; cartHref: string }) {
+export function StoreHeader({ store, viewer, cartCount, cartHref, categories }: { store: Store; viewer: StoreViewer | null; cartCount: number; cartHref: string; categories: StoreCategory[] }) {
   const base = `/loja/${store.slug}`;
   return (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl">
@@ -43,7 +43,7 @@ export function StoreHeader({ store, viewer, cartCount, cartHref }: { store: Sto
           )}
         </Link>
         <nav className="hidden items-center gap-1 rounded-full bg-surface p-1 lg:flex">
-          {STORE_CATEGORIES.map((c) => (
+          {categories.map((c) => (
             <Link key={c.slug} href={`${base}/${c.slug}`} className="rounded-full px-4 py-2 text-[14px] font-medium text-ink/70 transition hover:bg-white hover:text-ink">
               {c.short}
             </Link>
@@ -78,7 +78,7 @@ export function StoreHeader({ store, viewer, cartCount, cartHref }: { store: Sto
         </div>
       </div>
       <nav className="no-scrollbar flex gap-1.5 overflow-x-auto px-4 pb-3 lg:hidden">
-        {STORE_CATEGORIES.map((c) => (
+        {categories.map((c) => (
           <Link key={c.slug} href={`${base}/${c.slug}`} className="shrink-0 rounded-full bg-surface px-4 py-2 text-[13px] font-semibold text-ink">
             {c.short}
           </Link>

@@ -15,7 +15,7 @@ function photosOf(p: PricedDetail): string[] {
 export function ProductHero({ p, back, cta }: { p: PricedDetail; back: { href: string; label: string }; cta?: { href: string; label: string; note?: string; mobileOnly?: boolean } }) {
   const photos = photosOf(p);
   const paragraphs = p.description.split(/\n{2,}/).map((x) => x.trim()).filter(Boolean);
-  const info = p.info.filter((i) => i.label !== "Fornecedor");
+  const info = p.info.filter((i) => !/fornecedor/i.test(i.label));
   return (
     <div className="min-w-0 space-y-10">
       <div>

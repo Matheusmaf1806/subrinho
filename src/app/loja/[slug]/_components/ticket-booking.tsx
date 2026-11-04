@@ -11,8 +11,7 @@ const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", curren
 
 export function TicketBooking({
   action,
-  supplier,
-  productId,
+  productRef,
   options,
   childLabel,
   defaultDate,
@@ -21,8 +20,8 @@ export function TicketBooking({
   defaultChildren,
 }: {
   action: (prev: ActionState, fd: FormData) => Promise<ActionState>;
-  supplier: string;
-  productId: string;
+  /** Referência neutra do produto (sem o nome do fornecedor). */
+  productRef: string;
   options: Opt[];
   childLabel: string;
   defaultDate: string;
@@ -38,8 +37,7 @@ export function TicketBooking({
 
   return (
     <ActionForm action={action} className="space-y-4">
-      <input type="hidden" name="supplier" value={supplier} />
-      <input type="hidden" name="productId" value={productId} />
+      <input type="hidden" name="ref" value={productRef} />
       <fieldset>
         <legend className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Tipo de ingresso</legend>
         <div className="space-y-2">

@@ -520,7 +520,6 @@ export function createMaproAdapter(cfg: MaproConfig, opts: { transport?: Transpo
           ...(p.resort?.title ? [{ label: "Condomínio", value: p.resort.title.trim() }] : []),
           ...(hourText(p.checkinTime) ? [{ label: "Check-in", value: `a partir das ${hourText(p.checkinTime)}` }] : []),
           ...(hourText(p.checkoutTime) ? [{ label: "Check-out", value: `até ${hourText(p.checkoutTime)}` }] : []),
-          { label: "Fornecedor", value: NAME },
         ],
       };
     },

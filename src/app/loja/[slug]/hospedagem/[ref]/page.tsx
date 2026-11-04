@@ -1,18 +1,19 @@
 import { notFound } from "next/navigation";
 import { BadgeCheck, Info } from "lucide-react";
 import { db } from "@/server/db";
+import { parseProductRef, productRef } from "@/server/suppliers/refs";
 import { getProductDetail } from "@/server/catalog";
 import { Badge } from "@/components/ui";
 import { brl, date, paxSummary } from "@/lib/format";
 import { daysBetween } from "@/lib/tz";
-import { getStore, getStorePricing } from "../../../_lib/store";
-import { lodgingQuery, parseSearch, supplierParams } from "../../../_components/search-params";
-import { ProductHero } from "../../../_components/product-hero";
-import { LodgingSearch } from "../../../_components/search-forms";
-import { MobileSearchToggle } from "../../../_components/search-toggle";
-import { AddToCartForm } from "../../../_components/add-to-cart";
-import { PriceTag } from "../../../_components/price-tag";
-import { addToCartAction } from "../../../actions";
+import { getStore, getStorePricing } from "../../_lib/store";
+import { lodgingQuery, parseSearch, supplierParams } from "../../_components/search-params";
+import { ProductHero } from "../../_components/product-hero";
+import { LodgingSearch } from "../../_components/search-forms";
+import { MobileSearchToggle } from "../../_components/search-toggle";
+import { AddToCartForm } from "../../_components/add-to-cart";
+import { PriceTag } from "../../_components/price-tag";
+import { addToCartAction } from "../../actions";
 
 // Consulta disponibilidade + conteúdo do hotel no fornecedor; "Reservar" cota de novo (preço final).
 export const maxDuration = 60;
@@ -21,10 +22,13 @@ export default async function HotelDetail({
   params,
   searchParams,
 }: {
-  params: Promise<{ slug: string; supplier: string; productId: string }>;
+  params: Promise<{ slug: string; ref: string }>;
   searchParams: Promise<Record<string, string>>;
 }) {
-  const { slug, supplier, productId } = await params;
+  const { slug, ref } = await params;
+  const target = parseProductRef(ref);
+  if (!target) notFound();
+  const { supplierCode: supplier, productId } = target;
   const store = await getStore(slug);
   const ctx = await getStorePricing(store.id);
   const { d, minDate } = parseSearch(await searchParams);
@@ -69,7 +73,7 @@ export default async function HotelDetail({
         </div>
         <div className="mb-6">
           <MobileSearchToggle summary="Alterar datas ou hóspedes" detail={`${date(d.checkin)} a ${date(d.checkout)} · ${pax}`}>
-            <LodgingSearch action={`${base}/${supplier}/${productId}`} d={{ ...d, destino: d.destino || p.destination }} destinations={[p.destination]} minDate={minDate} />
+            <LodgingSearch action={`${base}/${ref}`} d={{ ...d, destino: d.destino || p.destination }} destinations={[p.destination]} minDate={minDate} />
           </MobileSearchToggle>
         </div>
         {p.options.length === 0 ? (
@@ -82,7 +86,7 @@ export default async function HotelDetail({
             {p.options.map((o) => {
               const free = o.attributes?.find((a) => a.label === "Cancelamento");
               return (
-                <li key={`${o.supplierCode}-${o.optionId}`} className="grid gap-5 rounded-[2rem] bg-surface p-6 sm:grid-cols-[1fr_auto] sm:items-center sm:p-7">
+                <li key={`${o.productId}-${o.optionId}`} className="grid gap-5 rounded-[2rem] bg-surface p-6 sm:grid-cols-[1fr_auto] sm:items-center sm:p-7">
                   <div className="min-w-0">
                     <p className="text-xl font-semibold tracking-[-0.03em] text-ink">{o.title}</p>
                     {o.description && <p className="mt-1 text-[15px] text-muted">{o.description}</p>}
@@ -128,8 +132,7 @@ export default async function HotelDetail({
                         label="Reservar"
                         buttonClassName="w-full sm:w-auto"
                         hidden={{
-                          supplier: o.supplierCode,
-                          productId: o.productId,
+                          ref: productRef(o.supplierCode, o.productId),
                           optionId: o.optionId,
                           checkIn: d.checkin,
                           checkOut: d.checkout,

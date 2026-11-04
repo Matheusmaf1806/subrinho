@@ -1,17 +1,18 @@
 import { notFound } from "next/navigation";
 import { BadgeCheck, CalendarX2, Info } from "lucide-react";
 import { db } from "@/server/db";
+import { parseProductRef, productRef } from "@/server/suppliers/refs";
 import { getProductDetail } from "@/server/catalog";
 import { Input } from "@/components/ui";
 import { brl, date } from "@/lib/format";
 import { addDays, daysBetween } from "@/lib/tz";
-import { getStore, getStorePricing } from "../../../_lib/store";
-import { parseSearch, supplierParams, toQuery } from "../../../_components/search-params";
-import { BookingPanel, ProductHero } from "../../../_components/product-hero";
-import { AddToCartForm } from "../../../_components/add-to-cart";
-import { PaxStepper } from "../../../_components/pax-stepper";
-import { PriceTag } from "../../../_components/price-tag";
-import { addToCartAction } from "../../../actions";
+import { getStore, getStorePricing } from "../../_lib/store";
+import { parseSearch, supplierParams, toQuery } from "../../_components/search-params";
+import { BookingPanel, ProductHero } from "../../_components/product-hero";
+import { AddToCartForm } from "../../_components/add-to-cart";
+import { PaxStepper } from "../../_components/pax-stepper";
+import { PriceTag } from "../../_components/price-tag";
+import { addToCartAction } from "../../actions";
 
 // Consulta o conteúdo da casa e a cotação das datas na administradora; "Reservar" cota de novo.
 export const maxDuration = 60;
@@ -20,10 +21,13 @@ export default async function HouseDetail({
   params,
   searchParams,
 }: {
-  params: Promise<{ slug: string; supplier: string; productId: string }>;
+  params: Promise<{ slug: string; ref: string }>;
   searchParams: Promise<Record<string, string>>;
 }) {
-  const { slug, supplier, productId } = await params;
+  const { slug, ref } = await params;
+  const target = parseProductRef(ref);
+  if (!target) notFound();
+  const { supplierCode: supplier, productId } = target;
   const store = await getStore(slug);
   const ctx = await getStorePricing(store.id);
   const sp = await searchParams;
@@ -38,7 +42,7 @@ export default async function HouseDetail({
   const nights = daysBetween(d.checkin, d.checkout);
   const adultRule = p.paxRules.find((r) => r.type === "ADULT");
   const childRule = p.paxRules.find((r) => r.type === "CHILD");
-  const self = `/loja/${slug}/casas/${supplier}/${productId}`;
+  const self = `/loja/${slug}/casas/${ref}`;
   const cancel = o?.attributes?.find((a) => a.label === "Cancelamento");
   const capacity = adultRule?.max ?? 0;
   const guests = d.adultos + d.criancas;
@@ -116,7 +120,7 @@ export default async function HouseDetail({
           )}
 
           {o && (available || tooMany) && (
-            <AddToCartForm action={addToCartAction.bind(null, slug)} label="Reservar casa" hidden={{ supplier, productId, optionId: o.optionId, checkIn: d.checkin, checkOut: d.checkout }}>
+            <AddToCartForm action={addToCartAction.bind(null, slug)} label="Reservar casa" hidden={{ ref: productRef(supplier, productId), optionId: o.optionId, checkIn: d.checkin, checkOut: d.checkout }}>
               <div className="rounded-2xl bg-surface px-4 py-1 [&_button]:bg-white">
                 <PaxStepper name="adults" label="Adultos" min={1} max={adultRule?.max ?? 12} defaultValue={Math.min(Math.max(1, d.adultos), adultRule?.max ?? 12)} />
                 <PaxStepper name="children" label="Crianças" hint={childRule?.hint} min={0} max={childRule?.max ?? 10} defaultValue={Math.min(d.criancas, childRule?.max ?? 10)} />

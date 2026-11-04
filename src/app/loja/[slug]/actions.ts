@@ -25,6 +25,7 @@ import { CheckoutError, findOrCreateCustomer, markOrderPaid, placeOrder } from "
 import { autoIssueOrder } from "@/server/bookings/service";
 import { after } from "next/server";
 import { isMockPayments } from "@/server/payments/provider";
+import { parseProductRef } from "@/server/suppliers/refs";
 import { PricingError } from "@/server/pricing/engine";
 import { getAdapter } from "@/server/suppliers/registry";
 import { SupplierError, SupplierIntegrationError } from "@/server/suppliers/types";
@@ -81,10 +82,11 @@ export async function addToCartAction(slug: string, _prev: ActionState, fd: Form
   const viewer = await viewerFor(store);
   let token: string;
   try {
-    const supplier = String(fd.get("supplier") ?? "");
-    const adapter = getAdapter(supplier);
+    const target = parseProductRef(String(fd.get("ref") ?? ""));
+    if (!target) return { error: "Produto indisponível" };
+    const adapter = getAdapter(target.supplierCode);
     const quote = await adapter.quote({
-      productId: String(fd.get("productId") ?? ""),
+      productId: target.productId,
       optionId: str(fd.get("optionId")) ?? null,
       date: str(fd.get("date")),
       checkIn: str(fd.get("checkIn")),

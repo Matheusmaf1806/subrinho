@@ -1,22 +1,26 @@
 import { notFound } from "next/navigation";
 import { db } from "@/server/db";
+import { parseProductRef, productRef } from "@/server/suppliers/refs";
 import { getProductDetail } from "@/server/catalog";
 import { quoteDisplayPrice } from "@/server/pricing/cart-pricing";
 import { getAdapter } from "@/server/suppliers/registry";
-import { getStore, getStorePricing } from "../../../_lib/store";
-import { parseSearch, supplierParams, toQuery } from "../../../_components/search-params";
-import { BookingPanel, ProductHero } from "../../../_components/product-hero";
-import { TicketBooking } from "../../../_components/ticket-booking";
-import { addToCartAction } from "../../../actions";
+import { getStore, getStorePricing } from "../../_lib/store";
+import { parseSearch, supplierParams, toQuery } from "../../_components/search-params";
+import { BookingPanel, ProductHero } from "../../_components/product-hero";
+import { TicketBooking } from "../../_components/ticket-booking";
+import { addToCartAction } from "../../actions";
 
 export default async function TicketDetail({
   params,
   searchParams,
 }: {
-  params: Promise<{ slug: string; supplier: string; productId: string }>;
+  params: Promise<{ slug: string; ref: string }>;
   searchParams: Promise<Record<string, string>>;
 }) {
-  const { slug, supplier, productId } = await params;
+  const { slug, ref } = await params;
+  const target = parseProductRef(ref);
+  if (!target) notFound();
+  const { supplierCode: supplier, productId } = target;
   const store = await getStore(slug);
   const ctx = await getStorePricing(store.id);
   const { d, minDate } = parseSearch(await searchParams);
@@ -51,8 +55,7 @@ export default async function TicketDetail({
       <BookingPanel title="Escolha seus ingressos">
           <TicketBooking
             action={addToCartAction.bind(null, slug)}
-            supplier={supplier}
-            productId={productId}
+            productRef={productRef(supplier, productId)}
             options={options}
             childLabel={childRule?.label ?? "Criança"}
             defaultDate={d.data}

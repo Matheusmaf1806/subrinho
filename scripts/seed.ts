@@ -44,7 +44,7 @@ if (already) {
 }
 
 // ───────── Configuração base ─────────
-await db.insert(suppliers).values(SUPPLIERS.map((s) => ({ ...s })));
+await db.insert(suppliers).values(SUPPLIERS.map(({ ref: _ref, ...s }) => s));
 await db.insert(settings).values(Object.entries(DEFAULT_SETTINGS).map(([key, value]) => ({ key, value: value as never })));
 await recordFxRate(db, { currency: "USD", rate: "4.93", source: "poolvo" });
 await recordFxRate(db, { currency: "EUR", rate: "5.38", source: "poolvo" });

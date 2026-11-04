@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/server/db";
+import { productRef } from "@/server/suppliers/refs";
 import { searchCatalog } from "@/server/catalog";
 import { adaptersFor } from "@/server/suppliers/registry";
 import { POPULAR_DESTINATIONS } from "@/server/suppliers/hotels/popular";
@@ -7,6 +8,8 @@ import { SupplierError } from "@/server/suppliers/types";
 import { Alert, ButtonLink } from "@/components/ui";
 import { date, paxSummary } from "@/lib/format";
 import { daysBetween } from "@/lib/tz";
+import { categoryAvailable } from "../_lib/categories";
+import { ComingSoon } from "../_components/coming-soon";
 import { getStore, getStorePricing } from "../_lib/store";
 import { LodgingSearch } from "../_components/search-forms";
 import { lodgingQuery, parseSearch, supplierParams } from "../_components/search-params";
@@ -55,6 +58,8 @@ function Chip({ href, active, children }: { href: string; active: boolean; child
 
 export default async function LodgingPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string>> }) {
   const store = await getStore((await params).slug);
+  // categoria sem fornecedor com API real: nada de catálogo de exemplo
+  if (!(await categoryAvailable("LODGING"))) return <ComingSoon title="Hospedagem" base={`/loja/${store.slug}`} />;
   const ctx = await getStorePricing(store.id);
   const raw = await searchParams;
   const { d, minDate } = parseSearch(raw);
@@ -170,7 +175,7 @@ export default async function LodgingPage({ params, searchParams }: { params: Pr
             ) : (
               <div className="grid gap-x-5 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {shown.map((p) => (
-                  <ProductCard key={`${p.supplierCode}-${p.productId}`} p={p} href={`${base}/${p.supplierCode}/${p.productId}?${q}`} note={`total · ${nights} noite${nights > 1 ? "s" : ""}`} nights={nights} />
+                  <ProductCard key={productRef(p.supplierCode, p.productId)} p={p} href={`${base}/${productRef(p.supplierCode, p.productId)}?${q}`} note={`total · ${nights} noite${nights > 1 ? "s" : ""}`} nights={nights} />
                 ))}
               </div>
             )}

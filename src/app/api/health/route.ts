@@ -7,6 +7,7 @@ import { sql } from "drizzle-orm";
 import { getDb, resolveDatabaseUrl } from "@/server/db";
 import { hotelIntegrations, testHotelIntegration } from "@/server/suppliers/hotels/admin";
 import { getCurrentFx } from "@/server/fx";
+import { currentSubrinhoUser } from "@/server/auth/session";
 
 type Check = { ok: boolean; detalhe: string; o_que_fazer?: string };
 
@@ -32,6 +33,11 @@ export const maxDuration = 60;
 export async function GET(request: Request) {
   const checks: Record<string, Check> = {};
   const testSuppliers = new URL(request.url).searchParams.has("fornecedores");
+  // Fornecedores e câmbio só para a equipe Subrinho (logada) ou o agendador (CRON_SECRET):
+  // a página é pública e o nome dos fornecedores nunca aparece para clientes e agências.
+  const secret = process.env.CRON_SECRET?.trim();
+  const bearer = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim();
+  const privileged = (!!secret && bearer === secret) || !!(await currentSubrinhoUser().catch(() => null));
   const resolved = resolveDatabaseUrl();
   checks.variavel_de_ambiente = resolved
     ? { ok: true, detalhe: `Usando ${resolved.source}` }
@@ -77,7 +83,7 @@ export async function GET(request: Request) {
   // Hotéis com API real (sem rede; ?fornecedores testa a conexão de cada um)
   let hoteis: Record<string, unknown> | undefined;
   let casas: Record<string, unknown> | undefined;
-  if (checks.tabelas?.ok) {
+  if (checks.tabelas?.ok && privileged) {
     try {
       const list = await hotelIntegrations();
       hoteis = {};
@@ -85,7 +91,7 @@ export async function GET(request: Request) {
       for (const h of list) {
         const test = testSuppliers && h.configured ? await testHotelIntegration(h.code) : null;
         (h.category === "HOUSES" ? casas : hoteis)[h.code] = {
-          modo: h.live ? "API real" : h.configured ? "credenciais ok, mas SUPPLIERS_MODE=mock" : "simulado (sem credenciais)",
+          modo: h.live ? "API real" : h.configured ? "credenciais ok, mas SUPPLIERS_MODE=mock" : "fora da loja (sem credenciais)",
           ambiente: h.environment,
           variaveis_faltando: h.missing.length ? h.missing : undefined,
           destinos: h.destinations ?? undefined,
@@ -101,7 +107,7 @@ export async function GET(request: Request) {
 
   // Câmbio usado nos preços (crítico com fornecedores reais em dólar/euro)
   let cambio: Record<string, unknown> | undefined;
-  if (checks.tabelas?.ok) {
+  if (checks.tabelas?.ok && privileged) {
     try {
       const fx = await getCurrentFx(getDb());
       const provider = process.env.FX_PROVIDER?.trim() || "manual";
@@ -123,7 +129,16 @@ export async function GET(request: Request) {
   }
 
   const ok = Object.values(checks).every((c) => c.ok);
-  return new Response(JSON.stringify({ status: ok ? "tudo certo" : "atenção", ambiente: process.env.VERCEL_ENV ?? "local", checks, cambio, hoteis, casas }, null, 2), {
+  return new Response(JSON.stringify(
+      {
+        status: ok ? "tudo certo" : "atenção",
+        ambiente: process.env.VERCEL_ENV ?? "local",
+        checks,
+        ...(privileged ? { cambio, hoteis, casas } : { fornecedores: "entre no Painel Subrinho (ou use Authorization: Bearer <CRON_SECRET>) para ver fornecedores e câmbio" }),
+      },
+      null,
+      2,
+    ), {
     status: ok ? 200 : 503,
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
   });

@@ -207,3 +207,21 @@ A visão do afiliado é montada por **lista branca** de campos (`getOrderForAffi
   **não é dinheiro real**: nenhuma reserva é emitida no fornecedor (o painel bloqueia e explica), o item não entra
   nos alertas de “reservas aguardando ação” e o pedido **não gera repasse** ao afiliado.
 - Pagamento real = gateway (webhook) ou confirmação manual pelo Painel Subrinho (Pix recebido fora do gateway).
+
+## 10. Fornecedores invisíveis para cliente e agência
+
+> `src/server/suppliers/refs.ts`, `src/server/media.ts`, `src/lib/supplier-names.ts` · testes: `tests/privacy.test.ts`
+
+- **Loja só com API real:** fora do modo de testes (`SUPPLIERS_MODE=mock`), a loja carrega apenas fornecedores com API
+  real configurada e ativa. Categoria sem fornecedor real some do menu e da home e aparece em “Em breve”; a página
+  dela mostra um aviso, nunca catálogo de exemplo.
+- **Sem nome de fornecedor em lugar nenhum da loja nem do Painel do Afiliado:**
+  - URLs e formulários usam referência neutra (`/hospedagem/h1-862326`, campo `ref`), nunca o código do fornecedor;
+  - fotos de fornecedor são servidas pelo domínio da loja em endereço cifrado (`/m/<token>`);
+  - frases de textos do fornecedor que citam o nome dele são removidas (observações, descrições, voucher);
+  - o voucher não traz link do voucher do fornecedor, “reservado e pagável por” nem telefone do fornecedor;
+  - a API pública de destinos não diz quais fornecedores atendem cada cidade;
+  - `/api/health` só mostra fornecedores e câmbio para a equipe Subrinho logada (ou `Authorization: Bearer <CRON_SECRET>`).
+- O nome fica apenas no banco e no Painel Subrinho (operação interna: emitir, cancelar, conferir custos).
+- **Exceção contratual:** a Hotelbeds exige no voucher a frase “Payable through <empresa>, acting as agent…”. Ela só
+  aparece em reservas da Hotelbeds e pode ser retirada se a Hotelbeds dispensar por escrito.

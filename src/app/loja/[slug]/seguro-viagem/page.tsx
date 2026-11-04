@@ -1,9 +1,12 @@
 import { ShieldCheck } from "lucide-react";
 import { db } from "@/server/db";
+import { productRef } from "@/server/suppliers/refs";
 import { searchCatalog } from "@/server/catalog";
 import { INSURANCE_REGIONS } from "@/server/suppliers/mock/single-page";
 import { date } from "@/lib/format";
 import { daysBetween } from "@/lib/tz";
+import { categoryAvailable } from "../_lib/categories";
+import { ComingSoon } from "../_components/coming-soon";
 import { getStore, getStorePricing } from "../_lib/store";
 import { InsuranceSearch } from "../_components/search-forms";
 import { parseSearch, supplierParams } from "../_components/search-params";
@@ -18,6 +21,8 @@ export const metadata = { title: "Seguro Viagem" };
 export default async function InsurancePage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string>> }) {
   const { slug } = await params;
   const store = await getStore(slug);
+  // categoria sem fornecedor com API real: nada de catálogo de exemplo
+  if (!(await categoryAvailable("INSURANCE"))) return <ComingSoon title="Seguro Viagem" base={`/loja/${store.slug}`} />;
   const ctx = await getStorePricing(store.id);
   const { d, minDate } = parseSearch(await searchParams);
   const travelers = d.adultos + d.seniores || 1;
@@ -39,7 +44,7 @@ export default async function InsurancePage({ params, searchParams }: { params: 
         ) : (
           <div className="space-y-3">
             {results.map((p, i) => (
-              <div key={`${p.supplierCode}-${p.productId}`} className={`grid gap-6 rounded-[2rem] p-6 sm:grid-cols-[1.3fr_1fr_auto] sm:items-center sm:p-8 ${i === 1 ? "bg-ink text-white" : "bg-surface"}`}>
+              <div key={productRef(p.supplierCode, p.productId)} className={`grid gap-6 rounded-[2rem] p-6 sm:grid-cols-[1.3fr_1fr_auto] sm:items-center sm:p-8 ${i === 1 ? "bg-ink text-white" : "bg-surface"}`}>
                 <div>
                   <div className="flex items-center gap-2">
                     <ShieldCheck className={`h-5 w-5 ${i === 1 ? "text-accent" : "text-accent-ink"}`} />
@@ -62,7 +67,7 @@ export default async function InsurancePage({ params, searchParams }: { params: 
                     action={add}
                     label="Contratar"
                     buttonClassName={i === 1 ? "w-full sm:w-auto" : "w-full sm:w-auto"}
-                    hidden={{ supplier: p.supplierCode, productId: p.productId, optionId: d.destino || "Europa", startDate: d.ida, endDate: d.volta, adults: params2.pax?.adults ?? 1, children: 0, seniors: d.seniores }}
+                    hidden={{ ref: productRef(p.supplierCode, p.productId), optionId: d.destino || "Europa", startDate: d.ida, endDate: d.volta, adults: params2.pax?.adults ?? 1, children: 0, seniors: d.seniores }}
                   />
                 </div>
               </div>

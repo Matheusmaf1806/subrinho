@@ -214,6 +214,12 @@ cobradas pela administradora aparecem como “Caução (reembolsável pela admin
 bloqueado em produção. **Master Vacation Home:** aguardando a documentação da API (o token sozinho não diz o endereço
 nem as rotas) — até lá fica fora da vitrine sempre que a MAPRO estiver ativa.
 
+## Fornecedores invisíveis na loja
+
+A loja (e o Painel do Afiliado) nunca mostra quem é o fornecedor: URLs com referência neutra (`/hospedagem/h1-862326`),
+fotos servidas pelo domínio da loja (`/m/<token cifrado>`), textos do fornecedor sem o nome dele e loja só com
+fornecedores de API real (categorias sem fornecedor aparecem como “Em breve”). Detalhes em `docs/regras-de-negocio.md` §10.
+
 ## Integrações — o que falta plugar
 
 - **Fornecedores:** GGT e Hotelbeds já usam as APIs reais (veja acima). Os demais usam catálogo simulado com a mesma

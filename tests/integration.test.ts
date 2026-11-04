@@ -140,7 +140,7 @@ describe.skipIf(!url)("fluxo completo (integração)", () => {
     await db.execute(sql`create schema public`);
     await migrate(db, { migrationsFolder: "./drizzle" });
 
-    await db.insert(schema.suppliers).values(SUPPLIERS.map((s) => ({ ...s })));
+    await db.insert(schema.suppliers).values(SUPPLIERS.map(({ ref: _ref, ...s }) => s));
     await recordFxRate(db, { currency: "USD", rate: "4.93", source: "test" });
     await recordFxRate(db, { currency: "EUR", rate: "5.40", source: "test" });
     const staff = await createSubrinhoUser(db, { name: "Staff", email: "staff@test.com", password: "12345678", role: "OWNER" });

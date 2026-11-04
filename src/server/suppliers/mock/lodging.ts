@@ -265,7 +265,6 @@ export function createHotelsMock(cfg: { code: string; name: string; currency: Cu
           { label: "Categoria", value: `${h.stars} estrelas` },
           { label: "Nota dos hóspedes", value: h.rating.toFixed(1) },
           { label: "Check-in / Check-out", value: "15h / 11h" },
-          { label: "Fornecedor", value: cfg.name },
         ],
       };
     },
@@ -477,7 +476,6 @@ export function createHousesMock(cfg: { code: string; name: string; currency: Cu
           { label: "Quartos", value: String(h.bedrooms) },
           { label: "Banheiros", value: String(h.bathrooms) },
           { label: "Capacidade", value: `${h.maxGuests} hóspedes` },
-          { label: "Fornecedor", value: cfg.name },
         ],
       };
     },

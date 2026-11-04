@@ -45,8 +45,8 @@ export default async function SubrinhoSuppliersPage() {
           </>
         ) : (
           <>
-            Fornecedor com credenciais no ambiente usa a <strong>API real</strong>; sem credenciais, o catálogo simulado. Numa categoria com API real, os simulados
-            saem da vitrine (nunca se mistura hotel fictício com real). Os valores das credenciais nunca são exibidos.
+            A loja mostra <strong>somente fornecedores com API real</strong> configurada. Fornecedor sem credenciais fica fora da loja e a categoria
+            dele aparece como “em breve”. Clientes e agências nunca veem o nome dos fornecedores. Os valores das credenciais nunca são exibidos.
           </>
         )}
       </Alert>
@@ -56,11 +56,11 @@ export default async function SubrinhoSuppliersPage() {
           <Card key={h.code}>
             <CardHeader
               title={h.name}
-              subtitle={h.live ? `API real · ambiente ${h.environment}` : h.configured ? "Credenciais configuradas — ative removendo SUPPLIERS_MODE=mock" : "Sem credenciais — usando catálogo simulado"}
+              subtitle={h.live ? `API real · ambiente ${h.environment}` : h.configured ? "Credenciais configuradas — ative removendo SUPPLIERS_MODE=mock" : "Sem credenciais — fora da loja"}
             />
             <CardBody className="space-y-3 text-sm">
               <div className="flex flex-wrap gap-2">
-                <Badge tone={h.live ? "success" : "neutral"}>{h.live ? "API real" : "Simulado"}</Badge>
+                <Badge tone={h.live ? "success" : "neutral"}>{h.live ? "API real" : h.configured ? "Simulado" : "Fora da loja"}</Badge>
                 {h.missing.length > 0 && <Badge tone="warning">Faltam: {h.missing.join(", ")}</Badge>}
                 {h.certificate &&
                   (h.certificate.ok ? (
@@ -147,7 +147,7 @@ export default async function SubrinhoSuppliersPage() {
                     {s.registered ? <ActiveBadge active={s.active} /> : <Badge tone="warning">Não cadastrado</Badge>}
                     {modes.get(s.code) === "live" && <Badge tone="success">API real</Badge>}
                     {modes.get(s.code) === "mock" && <Badge tone="neutral">Simulado</Badge>}
-                    {modes.get(s.code) === "hidden" && <Badge tone="neutral">Fora da vitrine (simulado)</Badge>}
+                    {modes.get(s.code) === "hidden" && <Badge tone="neutral">Fora da loja (sem API real)</Badge>}
                   </div>
                 </Td>
                 {canEdit && (

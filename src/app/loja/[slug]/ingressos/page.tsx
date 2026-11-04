@@ -1,6 +1,9 @@
 import { db } from "@/server/db";
+import { productRef } from "@/server/suppliers/refs";
 import { searchCatalog } from "@/server/catalog";
 import { adaptersFor } from "@/server/suppliers/registry";
+import { categoryAvailable } from "../_lib/categories";
+import { ComingSoon } from "../_components/coming-soon";
 import { getStore, getStorePricing } from "../_lib/store";
 import { TicketsSearch } from "../_components/search-forms";
 import { parseSearch, supplierParams, toQuery } from "../_components/search-params";
@@ -12,6 +15,8 @@ export const metadata = { title: "Ingressos e Experiências" };
 
 export default async function TicketsPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string>> }) {
   const store = await getStore((await params).slug);
+  // categoria sem fornecedor com API real: nada de catálogo de exemplo
+  if (!(await categoryAvailable("TICKETS"))) return <ComingSoon title="Ingressos" base={`/loja/${store.slug}`} />;
   const ctx = await getStorePricing(store.id);
   const { d, minDate } = parseSearch(await searchParams);
   const results = await searchCatalog(db, ctx, "TICKETS", supplierParams(d, "tickets"));
@@ -32,7 +37,7 @@ export default async function TicketsPage({ params, searchParams }: { params: Pr
         ) : (
           <div className="grid gap-x-5 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {results.map((p) => (
-              <ProductCard key={`${p.supplierCode}-${p.productId}`} p={p} href={`${base}/${p.supplierCode}/${p.productId}?${q}`} note="por adulto" />
+              <ProductCard key={productRef(p.supplierCode, p.productId)} p={p} href={`${base}/${productRef(p.supplierCode, p.productId)}?${q}`} note="por adulto" />
             ))}
           </div>
         )}

@@ -12,6 +12,7 @@ import { bookingReference } from "@/server/bookings/service";
 import { date, orderNumber } from "@/lib/format";
 import { getStore, viewerFor } from "../../../../_lib/store";
 import { StoreMark } from "../../../../_components/store-mark";
+import { stripSupplierMentions, stripSupplierMentionsList } from "@/lib/supplier-names";
 import { PrintButton } from "./print-button";
 
 export const metadata = { title: "Voucher" };
@@ -93,7 +94,9 @@ export default async function VoucherPage({ params }: { params: Promise<{ slug: 
   const holder = rooms[0]?.adults[0] ?? order.customerData.name;
   const phone = d.hotelPhone ?? p.voucher?.phone ?? null;
   const address = d.address ?? p.voucher?.address ?? null;
-  const remarks = [d.remarks, p.voucher?.remarks].filter((x): x is string => !!x?.trim()).join("\n\n");
+  // nada que identifique o fornecedor para o cliente (frases com o nome dele saem)
+  const remarks = [d.remarks, p.voucher?.remarks].map(stripSupplierMentions).filter(Boolean).join("\n\n");
+  const notes = stripSupplierMentionsList(d.notes);
   const access = p.voucher?.access;
   const accessRows = access
     ? ([
@@ -111,11 +114,6 @@ export default async function VoucherPage({ params }: { params: Promise<{ slug: 
           ← Voltar ao pedido
         </a>
         <div className="flex gap-2">
-          {p.voucher?.voucherUrl && (
-            <a href={p.voucher.voucherUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center rounded-full bg-surface px-5 text-[14px] font-semibold text-ink hover:bg-surface-2">
-              Voucher oficial (PDF)
-            </a>
-          )}
           <PrintButton />
         </div>
       </div>
@@ -217,11 +215,11 @@ export default async function VoucherPage({ params }: { params: Promise<{ slug: 
           </section>
         )}
 
-        {(remarks || (d.notes?.length ?? 0) > 0 || d.cancellation) && (
+        {(remarks || notes.length > 0 || d.cancellation) && (
           <section className="mt-6">
             <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">{house ? "Observações" : "Observações da tarifa"}</h2>
             {d.cancellation && <p className="text-[14px] text-ink">{/^cancelamento/i.test(d.cancellation) ? d.cancellation : `Cancelamento: ${d.cancellation}`}</p>}
-            {d.notes?.map((n) => (
+            {notes.map((n) => (
               <p key={n} className="mt-1 text-[14px] text-ink">
                 {n}
               </p>
@@ -237,8 +235,6 @@ export default async function VoucherPage({ params }: { params: Promise<{ slug: 
               {item.supplierBookingRef}
             </p>
           )}
-          {p.voucher?.bookedAndPayableBy && <p>{house ? "Administradora" : "Reservado e pagável por"}: {p.voucher.bookedAndPayableBy}</p>}
-          {p.voucher?.emergencyPhone && <p>Telefone de emergência: {p.voucher.emergencyPhone}</p>}
           <p>
             {house
               ? "Guarde este voucher e tenha um documento com foto na chegada. Siga as instruções de acesso da administradora."

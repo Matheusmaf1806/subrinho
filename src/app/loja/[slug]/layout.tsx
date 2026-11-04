@@ -5,7 +5,7 @@ import { cartBadgeCount, currentCartToken, getStore, storeBrand, viewerFor } fro
 import { themeStyle } from "@/lib/theme";
 import { StoreMark } from "./_components/store-mark";
 import { StoreHeader } from "./_components/store-header";
-import { STORE_CATEGORIES } from "./_components/category";
+import { storeCategories } from "./_lib/categories";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const store = await getStore((await params).slug);
@@ -26,12 +26,12 @@ export async function generateViewport({ params }: { params: Promise<{ slug: str
 export default async function StoreLayout({ children, params }: { children: React.ReactNode; params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const store = await getStore(slug);
-  const [viewer, count, token] = await Promise.all([viewerFor(store), cartBadgeCount(store), currentCartToken(store)]);
+  const [viewer, count, token, cats] = await Promise.all([viewerFor(store), cartBadgeCount(store), currentCartToken(store), storeCategories()]);
   const base = `/loja/${store.slug}`;
   const brand = storeBrand(store);
   return (
     <div style={themeStyle(store)} className="flex min-h-screen flex-col bg-white font-sans text-ink">
-      <StoreHeader store={store} viewer={viewer} cartCount={count} cartHref={token ? `${base}/carrinho/${token}` : `${base}/carrinho`} />
+      <StoreHeader store={store} viewer={viewer} cartCount={count} cartHref={token ? `${base}/carrinho/${token}` : `${base}/carrinho`} categories={cats.live} />
       <div className="flex-1">{children}</div>
       <footer className="mt-24 px-3 pb-3 sm:px-4 sm:pb-4">
         <div className="overflow-hidden rounded-[2rem] bg-ink text-white sm:rounded-[2.5rem]">
@@ -48,7 +48,7 @@ export default async function StoreLayout({ children, params }: { children: Reac
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">Produtos</p>
               <ul className="mt-4 space-y-2 text-[15px]">
-                {STORE_CATEGORIES.map((c) => (
+                {cats.live.map((c) => (
                   <li key={c.slug}>
                     <Link className="text-white/75 hover:text-white" href={`${base}/${c.slug}`}>
                       {c.short}

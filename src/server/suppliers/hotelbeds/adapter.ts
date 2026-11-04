@@ -631,7 +631,6 @@ export function createHotelbedsAdapter(cfg: HotelbedsConfig, opts: { transport?:
           { label: "Estadia", value: `${nights} noite${nights > 1 ? "s" : ""}` },
           { label: "Hóspedes", value: occupancyLabel(pax) },
           ...(info?.phone ? [{ label: "Telefone do hotel", value: info.phone }] : []),
-          { label: "Fornecedor", value: HB_NAME },
         ],
       };
     },

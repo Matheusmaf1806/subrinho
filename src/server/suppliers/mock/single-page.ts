@@ -100,7 +100,7 @@ export function createInsuranceMock(cfg: { code: string; name: string; currency:
         highlights: [`Despesas médicas ${p.medical}`, `Extravio de bagagem ${p.luggage}`, "Assistência 24h em português"],
         options: [option],
         paxRules: INSURANCE_PAX,
-        info: [{ label: "Fornecedor", value: cfg.name }],
+        info: [],
       };
     },
     async quote(req) {
@@ -188,7 +188,7 @@ export function createEsimMock(cfg: { code: string; name: string; currency: Curr
         highlights: ["QR Code por e-mail", "Compatível com iPhone XS+ e Android com eSIM"],
         options: [{ optionId: p.id, title: `${p.data} · ${p.days} dias`, currency: cfg.currency, lines: lines(p, 1), available: true }],
         paxRules: CHIP_PAX,
-        info: [{ label: "Fornecedor", value: cfg.name }],
+        info: [],
       };
     },
     async quote(req) {

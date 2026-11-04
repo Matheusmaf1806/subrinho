@@ -3,6 +3,8 @@ import { eq } from "drizzle-orm";
 import type { Tx } from "@/server/db";
 import { suppliers, type Category } from "@/server/db/schema";
 import { quoteDisplayPrice, type PricingContext } from "@/server/pricing/cart-pricing";
+import { mediaUrl, mediaUrls } from "@/server/media";
+import { stripSupplierMentions, stripSupplierMentionsList } from "@/lib/supplier-names";
 import { adaptersFor, getAdapter } from "@/server/suppliers/registry";
 import { SupplierError, type OfferOption, type ProductDetail, type ProductSummary, type SearchParams } from "@/server/suppliers/types";
 import type { Decimal } from "@/server/pricing/money";
@@ -61,7 +63,8 @@ export async function searchCatalog(
       grouped.set(key, { ...best, offers: cur.offers + 1 });
     }
   }
-  return [...grouped.values()].sort((a, b) => a.price.pix.comparedTo(b.price.pix));
+  // fotos pelo domínio da loja (o endereço original revela o fornecedor)
+  return [...grouped.values()].sort((a, b) => a.price.pix.comparedTo(b.price.pix)).map((p) => ({ ...p, imageUrl: mediaUrl(p.imageUrl) }));
 }
 
 export async function getProductDetail(
@@ -109,5 +112,12 @@ export async function getProductDetail(
   // hospedagem/casa sem disponibilidade nas datas: a página aparece com o motivo (sem preço)
   const unavailable = options.length === 0 || options.every((o) => !o.available);
   if (!price && !((detail.category === "LODGING" || detail.category === "HOUSES") && unavailable)) return null;
-  return { ...detail, price, options };
+  return {
+    ...detail,
+    description: stripSupplierMentions(detail.description),
+    imageUrl: mediaUrl(detail.imageUrl),
+    gallery: detail.gallery ? mediaUrls(detail.gallery) : undefined,
+    price,
+    options: options.map((o) => ({ ...o, notes: o.notes ? stripSupplierMentionsList(o.notes) : o.notes })),
+  };
 }

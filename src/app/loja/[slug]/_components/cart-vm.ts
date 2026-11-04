@@ -2,6 +2,8 @@ import type { loadCartView } from "@/server/cart/service";
 import type { PaxConfig } from "@/server/db/schema";
 import type { PaxRule } from "@/server/suppliers/types";
 import { money } from "@/server/pricing/money";
+import { mediaUrl } from "@/server/media";
+import { stripSupplierMentions, stripSupplierMentionsList } from "@/lib/supplier-names";
 
 type View = NonNullable<Awaited<ReturnType<typeof loadCartView>>>;
 
@@ -17,7 +19,7 @@ export function toItemVMs(view: View, opts: { adminMode: boolean }) {
       title: i.title,
       subtitle: i.subtitle,
       location: i.location,
-      imageUrl: i.imageUrl,
+      imageUrl: mediaUrl(i.imageUrl),
       serviceDate: i.serviceDate,
       serviceEndDate: i.serviceEndDate,
       pax: i.pax as PaxConfig,
@@ -50,7 +52,7 @@ export type ItemVM = ReturnType<typeof toItemVMs>[number];
 /** Informações do hotel que o cliente precisa ver antes de pagar (sem dados internos do fornecedor). */
 function hotelInfo(d: Record<string, unknown>) {
   const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
-  const notes = Array.isArray(d.notes) ? d.notes.filter((n): n is string => typeof n === "string" && !!n.trim()) : [];
+  const notes = stripSupplierMentionsList(Array.isArray(d.notes) ? d.notes.filter((n): n is string => typeof n === "string" && !!n.trim()) : []);
   if (!str(d.cancellation) && !str(d.board) && !notes.length) return null;
   return {
     board: str(d.board),
@@ -58,7 +60,7 @@ function hotelInfo(d: Record<string, unknown>) {
     freeCancellation: !!str(d.freeCancellationUntil),
     nonRefundable: d.nonRefundable === true,
     notes,
-    remarks: str(d.remarks)?.slice(0, 2500) ?? null,
+    remarks: str(stripSupplierMentions(str(d.remarks)))?.slice(0, 2500) ?? null,
   };
 }
 

@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import { cn } from "@/components/ui";
 
 export function SearchTabs({ tabs, tone = "dark" }: { tabs: { key: string; label: string; icon: ReactNode; content: ReactNode }[]; tone?: "dark" | "light" }) {
-  const [active, setActive] = useState(tabs[0].key);
+  const [active, setActive] = useState(tabs[0]?.key ?? "");
   return (
     <div>
       <div className={cn("no-scrollbar mb-3 inline-flex max-w-full gap-1 overflow-x-auto rounded-full p-1", tone === "dark" ? "bg-accent-fg/10 backdrop-blur" : "bg-surface")} role="tablist">

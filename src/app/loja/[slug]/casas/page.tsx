@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { db } from "@/server/db";
+import { productRef } from "@/server/suppliers/refs";
 import { searchCatalog } from "@/server/catalog";
 import { adaptersFor } from "@/server/suppliers/registry";
 import { SupplierError } from "@/server/suppliers/types";
 import { Alert, ButtonLink } from "@/components/ui";
 import { date } from "@/lib/format";
 import { addDays, daysBetween } from "@/lib/tz";
+import { categoryAvailable } from "../_lib/categories";
+import { ComingSoon } from "../_components/coming-soon";
 import { getStore, getStorePricing } from "../_lib/store";
 import { LodgingSearch } from "../_components/search-forms";
 import { parseSearch, supplierParams, toQuery } from "../_components/search-params";
@@ -43,6 +46,8 @@ function Chip({ href, active, children }: { href: string; active: boolean; child
 
 export default async function HousesPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string>> }) {
   const store = await getStore((await params).slug);
+  // categoria sem fornecedor com API real: nada de catálogo de exemplo
+  if (!(await categoryAvailable("HOUSES"))) return <ComingSoon title="Casas" base={`/loja/${store.slug}`} />;
   const ctx = await getStorePricing(store.id);
   const raw = await searchParams;
   const parsed = parseSearch(raw);
@@ -154,7 +159,7 @@ export default async function HousesPage({ params, searchParams }: { params: Pro
         ) : (
           <div className="grid gap-x-5 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {shown.map((p) => (
-              <ProductCard key={`${p.supplierCode}-${p.productId}`} p={p} href={`${base}/${p.supplierCode}/${p.productId}?${q}`} note="taxas inclusas" nights={nights} />
+              <ProductCard key={productRef(p.supplierCode, p.productId)} p={p} href={`${base}/${productRef(p.supplierCode, p.productId)}?${q}`} note="taxas inclusas" nights={nights} />
             ))}
           </div>
         )}

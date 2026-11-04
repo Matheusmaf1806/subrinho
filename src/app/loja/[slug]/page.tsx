@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/server/db";
+import { productRef } from "@/server/suppliers/refs";
 import { searchCatalog } from "@/server/catalog";
 import { adaptersFor } from "@/server/suppliers/registry";
 import { INSURANCE_REGIONS } from "@/server/suppliers/mock/single-page";
@@ -7,7 +8,8 @@ import { FlightPath } from "@/components/brand";
 import { ArrowChip, ButtonLink, cn } from "@/components/ui";
 import { photo, type PhotoKey } from "@/lib/images";
 import { getStore, getStorePricing, storeBrand } from "./_lib/store";
-import { COMING_SOON, STORE_CATEGORIES } from "./_components/category";
+import { COMING_SOON } from "./_components/category";
+import { storeCategories } from "./_lib/categories";
 import { ChipSearch, InsuranceSearch, LodgingSearch, TicketsSearch } from "./_components/search-forms";
 import { SearchTabs } from "./_components/search-tabs";
 import { parseSearch, supplierParams, toQuery } from "./_components/search-params";
@@ -52,12 +54,14 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
   const { d, minDate } = parseSearch({});
   const dest = (cat: Parameters<typeof adaptersFor>[0]) => [...new Set(adaptersFor(cat).flatMap((a) => a.destinations().map((x) => x.name)))];
 
+  const cats = await storeCategories();
+  const live = new Set(cats.live.map((c) => c.category));
   const [tickets, hotels] = await Promise.all([
-    searchCatalog(db, ctx, "TICKETS", supplierParams(d, "tickets")),
-    searchCatalog(db, ctx, "LODGING", supplierParams(d, "lodging")),
+    live.has("TICKETS") ? searchCatalog(db, ctx, "TICKETS", supplierParams(d, "tickets")) : Promise.resolve([]),
+    live.has("LODGING") ? searchCatalog(db, ctx, "LODGING", supplierParams(d, "lodging")) : Promise.resolve([]),
   ]);
 
-  const tabs = STORE_CATEGORIES.map((c) => {
+  const tabs = cats.live.map((c) => {
     const Icon = c.icon;
     const action = `${base}/${c.slug}`;
     const content =
@@ -117,30 +121,30 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
             </div>
           </div>
         </div>
-        <div className="relative mx-auto -mt-36 max-w-[1440px] px-3 sm:px-8">
-          <SearchTabs tabs={tabs} />
-        </div>
+        {tabs.length > 0 && (
+          <div className="relative mx-auto -mt-36 max-w-[1440px] px-3 sm:px-8">
+            <SearchTabs tabs={tabs} />
+          </div>
+        )}
       </section>
 
       {/* ───────── Categorias (bento) ───────── */}
       <section className="mx-auto mt-24 max-w-[1440px] px-4 sm:px-8">
         <SectionTitle title="Tudo para a viagem, em um só carrinho." />
-        <div className="grid auto-rows-[220px] grid-cols-2 gap-3 lg:auto-rows-[260px] lg:grid-cols-4">
-          {STORE_CATEGORIES.map((c, i) => {
+        <div className={cn("grid auto-rows-[220px] grid-cols-2 gap-3 lg:auto-rows-[260px]", cats.live.length >= 3 ? "lg:grid-cols-4" : "lg:grid-cols-2")}>
+          {cats.live.map((c, i) => {
             const t = CATEGORY_TILE[c.slug];
+            // poucas categorias: blocos largos; 3+: o primeiro grande (bento)
+            const span = cats.live.length === 1 ? "col-span-2 lg:col-span-2" : cats.live.length === 2 ? "col-span-2 sm:col-span-1" : i === 0 ? "col-span-2 row-span-2" : "";
             return (
-              <Link
-                key={c.slug}
-                href={`${base}/${c.slug}`}
-                className={cn("group relative overflow-hidden rounded-[2rem] bg-ink text-white", i === 0 && "col-span-2 row-span-2")}
-              >
+              <Link key={c.slug} href={`${base}/${c.slug}`} className={cn("group relative overflow-hidden rounded-[2rem] bg-ink text-white", span)}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={photo(t.image, i === 0 ? 1400 : 800)} alt="" className="absolute inset-0 h-full w-full object-cover opacity-90 transition duration-700 group-hover:scale-105" />
+                <img src={photo(t.image, i === 0 || cats.live.length < 3 ? 1400 : 800)} alt="" className="absolute inset-0 h-full w-full object-cover opacity-90 transition duration-700 group-hover:scale-105" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
                 <ArrowChip tone="light" className="absolute right-4 top-4 transition group-hover:bg-accent group-hover:text-accent-fg" />
                 <div className="absolute inset-x-0 bottom-0 p-5 sm:p-7">
-                  <p className={cn("font-semibold leading-none tracking-[-0.04em]", i === 0 ? "text-[clamp(2.25rem,4vw,3.75rem)]" : "text-2xl sm:text-[1.75rem]")}>{c.short}</p>
-                  <p className={cn("mt-2 text-white/80", i === 0 ? "text-base" : "hidden text-sm sm:block")}>{t.line}</p>
+                  <p className={cn("font-semibold leading-none tracking-[-0.04em]", i === 0 || cats.live.length < 3 ? "text-[clamp(2.25rem,4vw,3.75rem)]" : "text-2xl sm:text-[1.75rem]")}>{c.short}</p>
+                  <p className={cn("mt-2 text-white/80", i === 0 || cats.live.length < 3 ? "text-base" : "hidden text-sm sm:block")}>{t.line}</p>
                 </div>
               </Link>
             );
@@ -148,7 +152,7 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
         </div>
         <div className="mt-5 flex flex-wrap items-center gap-2">
           <span className="mr-1 text-[13px] font-semibold text-muted">Em breve</span>
-          {COMING_SOON.map((c) => (
+          {[...cats.soon.map((c) => ({ label: c.short, icon: c.icon })), ...COMING_SOON].map((c) => (
             <span key={c.label} className="inline-flex items-center gap-1.5 rounded-full bg-surface px-3.5 py-2 text-[13px] font-medium text-ink/70">
               <c.icon className="h-3.5 w-3.5" /> {c.label}
             </span>
@@ -157,14 +161,16 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
       </section>
 
       {/* ───────── Ingressos ───────── */}
-      <section className="mx-auto mt-28 max-w-[1440px] px-4 sm:px-8">
-        <SectionTitle title="Ingressos e experiências" href={`${base}/ingressos`} />
-        <div className="grid gap-x-5 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
-          {tickets.slice(0, 4).map((p) => (
-            <ProductCard key={`${p.supplierCode}-${p.productId}`} p={p} href={`${base}/ingressos/${p.supplierCode}/${p.productId}`} note="adulto" />
-          ))}
-        </div>
-      </section>
+      {tickets.length > 0 && (
+        <section className="mx-auto mt-28 max-w-[1440px] px-4 sm:px-8">
+          <SectionTitle title="Ingressos e experiências" href={`${base}/ingressos`} />
+          <div className="grid gap-x-5 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
+            {tickets.slice(0, 4).map((p) => (
+              <ProductCard key={productRef(p.supplierCode, p.productId)} p={p} href={`${base}/ingressos/${productRef(p.supplierCode, p.productId)}`} note="adulto" />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ───────── Promo ───────── */}
       <section className="mx-auto mt-28 grid max-w-[1440px] gap-3 px-3 sm:px-4 lg:grid-cols-3">
@@ -200,7 +206,7 @@ export default async function StoreHome({ params }: { params: Promise<{ slug: st
         <SectionTitle title="Hotéis em destaque" href={`${base}/hospedagem`} />
         <div className="grid gap-x-5 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
           {hotels.slice(0, 4).map((p) => (
-            <ProductCard key={`${p.supplierCode}-${p.productId}`} p={p} href={`${base}/hospedagem/${p.supplierCode}/${p.productId}`} note="5 noites" />
+            <ProductCard key={productRef(p.supplierCode, p.productId)} p={p} href={`${base}/hospedagem/${productRef(p.supplierCode, p.productId)}`} note="5 noites" />
           ))}
         </div>
       </section>

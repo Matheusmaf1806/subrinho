@@ -1,7 +1,10 @@
 import { Smartphone, Wifi } from "lucide-react";
 import { db } from "@/server/db";
+import { productRef } from "@/server/suppliers/refs";
 import { searchCatalog } from "@/server/catalog";
 import { adaptersFor } from "@/server/suppliers/registry";
+import { categoryAvailable } from "../_lib/categories";
+import { ComingSoon } from "../_components/coming-soon";
 import { getStore, getStorePricing } from "../_lib/store";
 import { ChipSearch } from "../_components/search-forms";
 import { parseSearch, supplierParams } from "../_components/search-params";
@@ -17,6 +20,8 @@ export const metadata = { title: "Chip internacional" };
 export default async function ChipPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string>> }) {
   const { slug } = await params;
   const store = await getStore(slug);
+  // categoria sem fornecedor com API real: nada de catálogo de exemplo
+  if (!(await categoryAvailable("CHIP"))) return <ComingSoon title="Chip" base={`/loja/${store.slug}`} />;
   const ctx = await getStorePricing(store.id);
   const { d } = parseSearch(await searchParams);
   const results = await searchCatalog(db, ctx, "CHIP", supplierParams(d, "chip"));
@@ -45,7 +50,7 @@ export default async function ChipPage({ params, searchParams }: { params: Promi
                 <div className="mt-6">
                   <PriceTag pix={p.price.pix} plan={p.price.plan} size="sm" note="por chip" />
                 </div>
-                <AddToCartForm action={add} hidden={{ supplier: p.supplierCode, productId: p.productId, optionId: p.productId }} className="mt-auto pt-5">
+                <AddToCartForm action={add} hidden={{ ref: productRef(p.supplierCode, p.productId), optionId: p.productId }} className="mt-auto pt-5">
                   <div className="rounded-2xl bg-white px-4 py-1">
                     <PaxStepper name="units" label="Quantidade" min={1} max={20} defaultValue={d.qtd} />
                   </div>

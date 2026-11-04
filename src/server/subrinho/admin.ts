@@ -128,5 +128,6 @@ export async function setSupplierActive(tx: Tx, code: string, active: boolean) {
   }
   const meta = SUPPLIERS.find((s) => s.code === code);
   if (!meta) throw new SubrinhoAdminError("Fornecedor desconhecido");
-  await tx.insert(suppliers).values({ ...meta, active });
+  const { ref: _ref, ...fields } = meta;
+  await tx.insert(suppliers).values({ ...fields, active });
 }

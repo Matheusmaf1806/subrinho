@@ -271,7 +271,6 @@ export function createTicketsMock(cfg: { code: string; name: string; currency: C
         paxRules: paxRulesFor(p),
         info: [
           { label: "Duração", value: p.duration },
-          { label: "Fornecedor", value: cfg.name },
         ],
       };
     },

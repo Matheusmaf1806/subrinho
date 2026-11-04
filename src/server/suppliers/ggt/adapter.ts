@@ -614,7 +614,6 @@ export function createGgtAdapter(cfg: GgtConfig, opts: { fetch?: typeof fetch } 
           ...(stars ? [{ label: "Categoria", value: `${stars.toLocaleString("pt-BR")} estrela${stars > 1 ? "s" : ""}` }] : []),
           { label: "Estadia", value: `${nights} noite${nights > 1 ? "s" : ""}` },
           { label: "Hóspedes", value: occupancyLabel(pax) },
-          { label: "Fornecedor", value: GGT_NAME },
         ],
       };
     },
