@@ -303,6 +303,12 @@ inteiro pela conta normal (câmbio → margens → parcelado).
 **Saldo:** sem saldo a emissão falha com “Saldo insuficiente” (o item fica para emitir de novo no painel depois de
 recarregar). O saldo aparece em Painel Subrinho › Fornecedores, com aviso quando está baixo.
 
+**Cloudflare da eSIMX:** a API fica atrás do Cloudflare da eSIMX, que hoje desafia os servidores da Vercel
+(desafio anti-robô, que um servidor não resolve). Quando a busca falha, a tela de erro da loja mostra um
+“Código para o suporte” sem citar o fornecedor (`src/server/suppliers/failure-code.ts`): `F403c Ray <id>` é esse
+desafio, com o Ray ID que a eSIMX usa para achar o evento e liberar a Wholesale API (`/api/api/v1/*`) para servidores.
+Outros códigos: `K401` chave recusada, `T` sem resposta, `N-…` conexão, `H…` resposta inesperada.
+
 ## Endereço de cada loja (subdomínio ou domínio próprio, sem /loja/<slug>)
 
 Cada loja abre no próprio endereço e todos os links dela saem sem prefixo (`/hospedagem`, `/carrinho/<token>`):
