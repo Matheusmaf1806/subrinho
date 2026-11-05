@@ -1,6 +1,7 @@
 {
   "crons": [
     { "path": "/api/cron/fortnight-close", "schedule": "0 6 1,16 * *" },
-    { "path": "/api/cron/fx-refresh", "schedule": "0 10 * * *" }
+    { "path": "/api/cron/fx-refresh", "schedule": "0 10 * * *" },
+    { "path": "/api/cron/daily", "schedule": "7 13 * * *" }
   ]
 }

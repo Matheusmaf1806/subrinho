@@ -16,6 +16,7 @@ export async function listSubrinhoUsers(tx: Tx) {
       email: subrinhoUsers.email,
       role: subrinhoUsers.role,
       active: subrinhoUsers.active,
+      totpEnabledAt: subrinhoUsers.totpEnabledAt,
       createdAt: subrinhoUsers.createdAt,
     })
     .from(subrinhoUsers)

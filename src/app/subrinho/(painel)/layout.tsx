@@ -1,14 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
+  Activity,
   ArrowLeftRight,
   Banknote,
   FileChartColumn,
+  History,
   LayoutDashboard,
   LogOut,
   Percent,
   Plug,
+  Receipt,
   Settings,
+  ShieldCheck,
   ShoppingBag,
   Store,
   TicketPercent,
@@ -32,9 +36,13 @@ const NAV: NavItem[] = [
   { href: "/subrinho/cupons", label: "Cupons", icon: <TicketPercent /> },
   { href: "/subrinho/cambio", label: "Câmbio", icon: <ArrowLeftRight /> },
   { href: "/subrinho/repasses", label: "Repasses", icon: <Banknote /> },
+  { href: "/subrinho/notas", label: "Notas fiscais", icon: <Receipt /> },
   { href: "/subrinho/relatorios", label: "Relatórios", icon: <FileChartColumn /> },
   { href: "/subrinho/fornecedores", label: "Fornecedores", icon: <Plug /> },
+  { href: "/subrinho/monitoramento", label: "Monitoramento", icon: <Activity /> },
+  { href: "/subrinho/historico", label: "Histórico", icon: <History /> },
   { href: "/subrinho/configuracoes", label: "Configurações", icon: <Settings /> },
+  { href: "/subrinho/seguranca", label: "Segurança", icon: <ShieldCheck /> },
 ];
 
 export default async function SubrinhoPanelLayout({ children }: { children: React.ReactNode }) {

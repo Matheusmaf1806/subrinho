@@ -8,7 +8,7 @@ import { cn, Input } from "@/components/ui";
 const lab = "mb-2 block text-[13px] font-medium text-muted";
 type A = (prev: ActionState, fd: FormData) => Promise<ActionState>;
 
-export function CustomerAuth({ login, register, agency, next, initial = "login" }: { login: A; register: A; agency?: A; next: string; initial?: "login" | "register" | "agency" }) {
+export function CustomerAuth({ login, register, agency, next, initial = "login", forgotHref }: { login: A; register: A; agency?: A; next: string; initial?: "login" | "register" | "agency"; forgotHref?: string }) {
   const [tab, setTab] = useState(initial);
   const tabs = [
     { k: "login" as const, l: "Já tenho conta" },
@@ -38,6 +38,13 @@ export function CustomerAuth({ login, register, agency, next, initial = "login" 
           <SubmitButton variant="accent" size="lg" className="w-full" pendingText="Entrando…">
             Entrar
           </SubmitButton>
+          {forgotHref && (
+            <p className="text-center text-[13px]">
+              <a href={forgotHref} className="font-medium text-muted underline-offset-4 hover:text-ink hover:underline">
+                Esqueci minha senha
+              </a>
+            </p>
+          )}
         </ActionForm>
       )}
       {tab === "register" && (

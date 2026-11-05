@@ -1,15 +1,17 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AuthSplit } from "@/components/auth-split";
-import { Field, Input } from "@/components/ui";
+import Link from "next/link";
+import { Alert, Field, Input } from "@/components/ui";
 import { ActionForm, SubmitButton } from "@/components/ui-client";
 import { currentSubrinhoUser } from "@/server/auth/session";
 import { loginSubrinho } from "./actions";
 
 export const metadata: Metadata = { title: { absolute: "Entrar · Painel Subrinho" }, robots: { index: false, follow: false } };
 
-export default async function SubrinhoLoginPage() {
+export default async function SubrinhoLoginPage({ searchParams }: { searchParams: Promise<{ senha?: string }> }) {
   if (await currentSubrinhoUser()) redirect("/subrinho");
+  const { senha } = await searchParams;
 
   return (
     <AuthSplit
@@ -28,6 +30,11 @@ export default async function SubrinhoLoginPage() {
       }
       footnote="Acesso restrito à equipe Subrinho."
     >
+      {senha === "nova" && (
+        <Alert tone="success" className="mb-4">
+          Senha nova salva. Entre com ela.
+        </Alert>
+      )}
       <ActionForm action={loginSubrinho} className="space-y-4">
         <Field label="E-mail">
           <Input type="email" name="email" autoComplete="username" required placeholder="voce@subrinho.com.br" />
@@ -38,6 +45,11 @@ export default async function SubrinhoLoginPage() {
         <SubmitButton className="mt-2 w-full" size="lg" variant="dark" pendingText="Entrando…">
           Entrar no painel →
         </SubmitButton>
+        <p className="text-center text-[13px]">
+          <Link href="/subrinho/esqueci-senha" className="font-medium text-muted underline-offset-4 hover:text-ink hover:underline">
+            Esqueci minha senha
+          </Link>
+        </p>
       </ActionForm>
     </AuthSplit>
   );

@@ -3,6 +3,7 @@
  * do mercado). Mostra hotel, hóspedes por quarto, localizadores, datas, quarto, regime, observações
  * da tarifa e, na Hotelbeds, o texto "Payable through…". Sem preço (recomendação do fornecedor).
  */
+import { validOrderAccessKey } from "@/server/order-access";
 import { and, eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/server/db";
@@ -79,20 +80,24 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-export default async function VoucherPage({ params }: { params: Promise<{ slug: string; id: string; itemId: string }> }) {
+export default async function VoucherPage({ params, searchParams }: { params: Promise<{ slug: string; id: string; itemId: string }>; searchParams: Promise<{ k?: string }> }) {
   const { slug, id, itemId } = await params;
+  const { k } = await searchParams;
   if (!/^[0-9a-f-]{36}$/i.test(id) || !/^[0-9a-f-]{36}$/i.test(itemId)) notFound();
   const store = await getStore(slug);
   const sb = await storeBase(store);
   const viewer = await viewerFor(store);
-  if (!viewer) redirect(`${sb}/entrar?next=${encodeURIComponent(`${sb}/pedido/${id}/voucher/${itemId}`)}`);
+  // link do e-mail (?k=): abre os vouchers deste pedido sem login
+  const linkKey = validOrderAccessKey(id, k) ? k! : null;
+  if (!viewer && !linkKey) redirect(`${sb}/entrar?next=${encodeURIComponent(`${sb}/pedido/${id}/voucher/${itemId}`)}`);
   const [order] = await db.select().from(orders).where(and(eq(orders.id, id), eq(orders.affiliateId, store.id)));
-  if (!order || (viewer.kind === "CUSTOMER" && order.customerId !== viewer.customer.id)) notFound();
+  if (!order || (!linkKey && viewer?.kind === "CUSTOMER" && order.customerId !== viewer.customer.id)) notFound();
+  const keyQs = linkKey ? `?k=${encodeURIComponent(linkKey)}` : "";
   const all = await db.select({ id: orderItems.id }).from(orderItems).where(eq(orderItems.orderId, id)).orderBy(orderItems.id);
   const [item] = await db.select().from(orderItems).where(and(eq(orderItems.id, itemId), eq(orderItems.orderId, id)));
   if (!item || !["LODGING", "HOUSES", "TICKETS", "CHIP"].includes(item.category) || item.supplierStatus !== "CONFIRMED" || !item.supplierBookingRef) notFound();
-  if (item.category === "TICKETS") return <TicketVoucher slug={slug} order={order} item={item} store={store} />;
-  if (item.category === "CHIP") return <EsimVoucher slug={slug} order={order} item={item} store={store} />;
+  if (item.category === "TICKETS") return <TicketVoucher slug={slug} order={order} item={item} store={store} keyQs={keyQs} />;
+  if (item.category === "CHIP") return <EsimVoucher slug={slug} order={order} item={item} store={store} keyQs={keyQs} />;
   const house = item.category === "HOUSES";
 
   const d = (item.details ?? {}) as Details;
@@ -118,7 +123,7 @@ export default async function VoucherPage({ params }: { params: Promise<{ slug: 
   return (
     <main className="mx-auto max-w-[820px] px-4 py-10 sm:px-8 print:max-w-none print:p-0">
       <div className="mb-6 flex items-center justify-between gap-3 print:hidden">
-        <a href={`${sb}/pedido/${id}`} className="inline-flex h-9 items-center rounded-full bg-surface px-4 text-[13px] font-semibold text-ink hover:bg-surface-2">
+        <a href={`${sb}/pedido/${id}${keyQs}`} className="inline-flex h-9 items-center rounded-full bg-surface px-4 text-[13px] font-semibold text-ink hover:bg-surface-2">
           ← Voltar ao pedido
         </a>
         <div className="flex gap-2">
@@ -263,7 +268,7 @@ type TicketPayload = {
 };
 
 /** Voucher dos ingressos: um código (QR) por pessoa, data/horário e titular — sem marca do fornecedor. */
-async function TicketVoucher({ slug, order, item, store }: { slug: string; order: typeof orders.$inferSelect; item: typeof orderItems.$inferSelect; store: Store }) {
+async function TicketVoucher({ slug, order, item, store, keyQs }: { slug: string; order: typeof orders.$inferSelect; item: typeof orderItems.$inferSelect; store: Store; keyQs: string }) {
   const sb = await storeBase(store);
   const p = (item.supplierPayload ?? {}) as TicketPayload;
   const d = (item.details ?? {}) as { slotFrom?: string | null; startTime?: string | null; admissionType?: string | null; cancellation?: string; notes?: string[] };
@@ -278,7 +283,7 @@ async function TicketVoucher({ slug, order, item, store }: { slug: string; order
   return (
     <main className="mx-auto max-w-[820px] px-4 py-10 sm:px-8 print:max-w-none print:p-0">
       <div className="mb-6 flex items-center justify-between gap-3 print:hidden">
-        <a href={`${sb}/pedido/${order.id}`} className="inline-flex h-9 items-center rounded-full bg-surface px-4 text-[13px] font-semibold text-ink hover:bg-surface-2">
+        <a href={`${sb}/pedido/${order.id}${keyQs}`} className="inline-flex h-9 items-center rounded-full bg-surface px-4 text-[13px] font-semibold text-ink hover:bg-surface-2">
           ← Voltar ao pedido
         </a>
         <PrintButton />
@@ -368,7 +373,7 @@ const mbLabel = (mb: number) => (mb >= 1024 ? `${(mb / 1024).toFixed(mb % 1024 ?
  * um toque no iPhone, dados para instalar à mão no Android e o uso de dados atualizado. Sem marca
  * nem links do fornecedor.
  */
-async function EsimVoucher({ slug, order, item, store }: { slug: string; order: typeof orders.$inferSelect; item: typeof orderItems.$inferSelect; store: Store }) {
+async function EsimVoucher({ slug, order, item, store, keyQs }: { slug: string; order: typeof orders.$inferSelect; item: typeof orderItems.$inferSelect; store: Store; keyQs: string }) {
   const sb = await storeBase(store);
   const p = (item.supplierPayload ?? {}) as { esims?: DeliveredEsim[]; voucher?: { esims?: DeliveredEsim[] } };
   let esims: DeliveredEsim[] = p.voucher?.esims?.length ? p.voucher.esims : (p.esims ?? []);
@@ -387,7 +392,7 @@ async function EsimVoucher({ slug, order, item, store }: { slug: string; order: 
   return (
     <main className="mx-auto max-w-[860px] px-4 py-10 sm:px-8 print:max-w-none print:p-0">
       <div className="mb-6 flex items-center justify-between gap-3 print:hidden">
-        <a href={`${sb}/pedido/${order.id}`} className="inline-flex h-9 items-center rounded-full bg-surface px-4 text-[13px] font-semibold text-ink hover:bg-surface-2">
+        <a href={`${sb}/pedido/${order.id}${keyQs}`} className="inline-flex h-9 items-center rounded-full bg-surface px-4 text-[13px] font-semibold text-ink hover:bg-surface-2">
           ← Voltar ao pedido
         </a>
         <PrintButton />

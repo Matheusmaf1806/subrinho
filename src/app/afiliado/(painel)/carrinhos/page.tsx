@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { ExternalLink, ShoppingCart } from "lucide-react";
+import { ExternalLink, MessageCircle, ShoppingCart } from "lucide-react";
 import { Alert, Badge, Card, EmptyState, LinkTabs, PageHeader, Table, Td, Th, THead, Tr, buttonClass, statusTone } from "@/components/ui";
 import { CopyButton } from "@/components/ui-client";
 import { dateTime } from "@/lib/format";
 import { db } from "@/server/db";
 import { requireAffiliateUser } from "@/server/auth/session";
 import { listCartsForAffiliate } from "@/server/orders/queries";
+import { cartWhatsappText, whatsappLink } from "@/server/cart/reminders";
 import { cartShareLink, firstParam } from "../../_lib/helpers";
 
 export const metadata: Metadata = { title: "Carrinhos" };
@@ -39,7 +40,8 @@ export default async function AfiliadoCarrinhosPage({ searchParams }: { searchPa
 
       <Alert tone="info" className="mb-6">
         O carrinho <strong>nunca expira</strong>: o link pode ser enviado ao cliente a qualquer momento. Apenas itens cuja data já passou deixam de
-        poder ser comprados e são retirados automaticamente.
+        poder ser comprados e são retirados automaticamente. Quando o cliente é conhecido e o carrinho fica parado por um dia, ele recebe um
+        lembrete por e-mail (um por carrinho). Para carrinhos montados pela agência, use o botão de WhatsApp.
       </Alert>
 
       <Card>
@@ -104,7 +106,19 @@ export default async function AfiliadoCarrinhosPage({ searchParams }: { searchPa
                         >
                           <ExternalLink className="h-4 w-4" aria-hidden /> Abrir
                         </a>
+                        {c.status === "OPEN" && c.items > 0 && (
+                          <a
+                            href={whatsappLink(c.customerPhone, cartWhatsappText({ storeName: affiliate.name, customerName: c.customerName, link }))}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={buttonClass("outline", "sm")}
+                            title={c.customerPhone ? `Mensagem pronta para ${c.customerPhone}` : "Mensagem pronta (escolha o contato no WhatsApp)"}
+                          >
+                            <MessageCircle className="h-4 w-4" aria-hidden /> Lembrar no WhatsApp
+                          </a>
+                        )}
                       </div>
+                      {c.reminderSentAt && <p className="mt-1 text-xs text-muted">Lembrete por e-mail enviado em {dateTime(c.reminderSentAt)}</p>}
                     </Td>
                   </Tr>
                 );

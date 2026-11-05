@@ -1,4 +1,5 @@
 /** Busca e detalhe de produtos agregando fornecedores, já com o preço da loja do afiliado. */
+import { recordSupplierFailure } from "@/server/monitoring";
 import { eq } from "drizzle-orm";
 import type { Tx } from "@/server/db";
 import { suppliers, type Category } from "@/server/db/schema";
@@ -50,10 +51,11 @@ export async function searchCatalog(
   const active = await activeSupplierCodes(tx);
   const results = await Promise.all(
     adaptersFor(category, active).map((a) =>
-      a.search(params).catch((e) => {
+      a.search(params).catch(async (e) => {
         if (!(e instanceof SupplierError)) console.error(`[busca] ${a.code}:`, e);
         else if (e.message && !/^Informe|^Escolha|^Cada quarto|^O check|^Estadias/.test(e.message)) console.warn(`[busca] ${a.code}: ${e.message}`);
         opts.onError?.(a.code, e);
+        await recordSupplierFailure(tx, a.code, e, "busca");
         return [] as ProductSummary[];
       }),
     ),
@@ -92,7 +94,10 @@ export async function getProductDetail(
   const active = await activeSupplierCodes(tx);
   if (!active.has(supplierCode)) return null;
   const adapter = getAdapter(supplierCode);
-  const detail = await adapter.getProduct(productId, params);
+  const detail = await adapter.getProduct(productId, params).catch(async (e) => {
+    await recordSupplierFailure(tx, supplierCode, e, "produto");
+    throw e;
+  });
   if (!detail) return null;
 
   let options: PricedOption[] = detail.options.map((o) => ({

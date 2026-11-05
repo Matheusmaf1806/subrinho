@@ -290,7 +290,9 @@ export async function listCartsForAffiliate(tx: Tx, affiliateId: string, opts: {
       viewCount: carts.viewCount,
       lastViewedAt: carts.lastViewedAt,
       createdByType: carts.createdByType,
-      customerName: customers.name,
+      customerName: sql<string | null>`coalesce(${customers.name}, (select o.customer_data->>'name' from orders o where o.cart_id = ${carts.id} order by o.created_at desc limit 1))`,
+      customerPhone: sql<string | null>`coalesce(${customers.phone}, (select o.customer_data->>'phone' from orders o where o.cart_id = ${carts.id} order by o.created_at desc limit 1))`,
+      reminderSentAt: carts.reminderSentAt,
       agentName: affiliateUsers.name,
       items: sql<number>`(select count(*)::int from cart_items ci where ci.cart_id = ${carts.id} and ci.status = 'ACTIVE')`,
     })

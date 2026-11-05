@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -22,6 +22,9 @@ import {
   setAffiliateMarginOverride,
 } from "@/server/cart/service";
 import { CheckoutError, findOrCreateCustomer, markOrderPaid, placeOrder } from "@/server/checkout/service";
+import { validOrderAccessKey } from "@/server/order-access";
+import { loginBlocked, recordLogin } from "@/server/auth/limits";
+import { RESET_SENT_MESSAGE, requestPasswordReset, resetPassword, ResetError } from "@/server/auth/reset";
 import { autoIssueOrder } from "@/server/bookings/service";
 import { after } from "next/server";
 import { isMockPayments, paymentProvider } from "@/server/payments/provider";
@@ -283,7 +286,7 @@ export async function customerRegisterAction(slug: string, _prev: ActionState, f
   const parsed = registerSchema.safeParse(Object.fromEntries(fd));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const [exists] = await db.select({ id: customers.id }).from(customers).where(and(eq(customers.affiliateId, store.id), eq(customers.email, parsed.data.email)));
-  if (exists) return { error: "Já existe uma conta com este e-mail. Entre com sua senha." };
+  if (exists) return { error: "Já existe uma conta com este e-mail. Entre com sua senha ou use “Esqueci minha senha”." };
   const [c] = await db
     .insert(customers)
     .values({
@@ -304,8 +307,14 @@ export async function customerRegisterAction(slug: string, _prev: ActionState, f
 export async function customerLoginAction(slug: string, _prev: ActionState, fd: FormData): Promise<ActionState> {
   const store = await getStore(slug);
   const email = String(fd.get("email") ?? "").trim().toLowerCase();
-  const [c] = await db.select().from(customers).where(and(eq(customers.affiliateId, store.id), eq(customers.email, email)));
-  if (!c || !(await verifyPassword(String(fd.get("password") ?? ""), c.passwordHash))) return { error: "E-mail ou senha incorretos" };
+  const { ip } = await requestMeta();
+  const scope = `loja:${store.id}`;
+  const blocked = await loginBlocked(db, scope, email, ip);
+  if (blocked) return { error: blocked };
+  const [c] = await db.select().from(customers).where(and(eq(customers.affiliateId, store.id), eq(customers.email, email), isNull(customers.deletedAt)));
+  const ok = !!c && (await verifyPassword(String(fd.get("password") ?? ""), c.passwordHash));
+  await recordLogin(db, scope, email, ip, ok);
+  if (!c || !ok) return { error: "E-mail ou senha incorretos" };
   await endSession("loja");
   await startSession("loja", { userType: "CUSTOMER", userId: c.id, storeAffiliateId: store.id });
   redirect(await safeNext(store, str(fd.get("next"))));
@@ -315,12 +324,38 @@ export async function customerLoginAction(slug: string, _prev: ActionState, fd: 
 export async function agencyLoginAction(slug: string, _prev: ActionState, fd: FormData): Promise<ActionState> {
   const store = await getStore(slug);
   const email = String(fd.get("email") ?? "").trim().toLowerCase();
+  const { ip } = await requestMeta();
+  const blocked = await loginBlocked(db, "afiliado", email, ip);
+  if (blocked) return { error: blocked };
   const [u] = await db.select().from(affiliateUsers).where(and(eq(affiliateUsers.email, email), eq(affiliateUsers.active, true)));
-  if (!u || !(await verifyPassword(String(fd.get("password") ?? ""), u.passwordHash))) return { error: "E-mail ou senha incorretos" };
+  const ok = !!u && (await verifyPassword(String(fd.get("password") ?? ""), u.passwordHash));
+  await recordLogin(db, "afiliado", email, ip, ok);
+  if (!u || !ok) return { error: "E-mail ou senha incorretos" };
   if (u.affiliateId !== store.id) return { error: "Este usuário não pertence a esta loja" };
   await endSession("loja");
   await startSession("loja", { userType: "AFFILIATE", userId: u.id, storeAffiliateId: store.id, adminMode: u.role === "ADMIN" && fd.get("adminMode") === "on" });
   redirect(await safeNext(store, str(fd.get("next"))));
+}
+
+export async function requestCustomerResetAction(slug: string, _prev: ActionState, fd: FormData): Promise<ActionState> {
+  const store = await getStore(slug);
+  const { ip } = await requestMeta();
+  await requestPasswordReset(db, { realm: "loja", email: String(fd.get("email") ?? ""), ip, store });
+  return { ok: true, message: RESET_SENT_MESSAGE };
+}
+
+export async function resetCustomerPasswordAction(slug: string, _prev: ActionState, fd: FormData): Promise<ActionState> {
+  const store = await getStore(slug);
+  let userId: string;
+  try {
+    userId = await resetPassword(db, { realm: "loja", token: String(fd.get("t") ?? ""), password: String(fd.get("password") ?? ""), confirm: String(fd.get("confirm") ?? ""), storeId: store.id });
+  } catch (e) {
+    if (e instanceof ResetError) return { error: e.message };
+    throw e;
+  }
+  await endSession("loja");
+  await startSession("loja", { userType: "CUSTOMER", userId, storeAffiliateId: store.id });
+  redirect(await storePath(store, "/minha-conta"));
 }
 
 export async function logoutAction(slug: string) {
@@ -495,20 +530,22 @@ function hotelGuestsError(items: { category: string; pax: PaxConfig }[], travele
 // ───────────── PayPal (botões na página do pedido) ─────────────
 
 /** Pedido desta loja que quem está vendo pode pagar (cliente dono ou equipe da agência). */
-async function payableOrder(slug: string, orderId: string) {
+async function payableOrder(slug: string, orderId: string, accessKey?: string | null) {
   const store = await getStore(slug);
   if (!/^[0-9a-f-]{36}$/i.test(orderId)) throw new CheckoutError("Pedido não encontrado");
   const viewer = await viewerFor(store);
-  if (!viewer) throw new CheckoutError("Entre na sua conta para pagar");
+  // link do e-mail do pedido (?k=) também permite pagar este pedido
+  const byLink = validOrderAccessKey(orderId, accessKey);
+  if (!viewer && !byLink) throw new CheckoutError("Entre na sua conta para pagar");
   const [o] = await db.select().from(orders).where(and(eq(orders.id, orderId), eq(orders.affiliateId, store.id)));
-  if (!o || (viewer.kind === "CUSTOMER" && o.customerId !== viewer.customer.id)) throw new CheckoutError("Pedido não encontrado");
+  if (!o || (!byLink && viewer?.kind === "CUSTOMER" && o.customerId !== viewer.customer.id)) throw new CheckoutError("Pedido não encontrado");
   return { store, order: o };
 }
 
 /** Cria (ou reaproveita) o pedido no PayPal — o valor vem do nosso banco, nunca do navegador. */
-export async function startPaypalAction(slug: string, orderId: string): Promise<{ id?: string; error?: string }> {
+export async function startPaypalAction(slug: string, orderId: string, accessKey?: string | null): Promise<{ id?: string; error?: string }> {
   try {
-    const { store, order } = await payableOrder(slug, orderId);
+    const { store, order } = await payableOrder(slug, orderId, accessKey);
     return { id: await createPaypalCheckout(db, order, { brandName: store.name }) };
   } catch (e) {
     const msg = userError(e);
@@ -518,9 +555,9 @@ export async function startPaypalAction(slug: string, orderId: string): Promise<
 }
 
 /** Captura depois da aprovação no PayPal; `retry` = o PayPal deixa escolher outro meio na mesma janela. */
-export async function capturePaypalAction(slug: string, orderId: string, paypalOrderId: string): Promise<{ ok?: boolean; retry?: boolean; pending?: boolean; message?: string; error?: string }> {
+export async function capturePaypalAction(slug: string, orderId: string, paypalOrderId: string, accessKey?: string | null): Promise<{ ok?: boolean; retry?: boolean; pending?: boolean; message?: string; error?: string }> {
   try {
-    const { store, order } = await payableOrder(slug, orderId);
+    const { store, order } = await payableOrder(slug, orderId, accessKey);
     const r = await capturePaypalCheckout(db, order, String(paypalOrderId).slice(0, 64));
     revalidateStore(store, `/pedido/${orderId}`);
     if (r.state === "PAID") {

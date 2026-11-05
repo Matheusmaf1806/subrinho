@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthSplit } from "@/components/auth-split";
 import { currentAffiliateUser } from "@/server/auth/session";
@@ -24,7 +25,11 @@ export default async function AfiliadoLoginPage() {
       }
       footnote={
         <>
-          Esqueceu a senha? Peça ao administrador da sua agência ou fale com a equipe <span className="font-semibold text-ink">Subrinho</span>.
+          Esqueceu a senha?{" "}
+          <Link href="/afiliado/esqueci-senha" className="font-semibold text-ink underline underline-offset-4">
+            Crie uma nova pelo e-mail
+          </Link>
+          .
         </>
       }
     >

@@ -88,6 +88,15 @@ export default async function SubrinhoDashboardPage() {
         }
       />
 
+      {!user.totpEnabledAt && (
+        <Alert tone="info" className="mb-6" title="Proteja o seu acesso">
+          Ligue a verificação em duas etapas: além da senha, o login passa a pedir o código do app autenticador do seu celular.{" "}
+          <a href="/subrinho/seguranca" className="font-semibold underline">
+            Ligar agora
+          </a>
+        </Alert>
+      )}
+
       {!lastReport && (
         <Alert tone="warning" className="mb-6" title={`A quinzena ${periodLabel(lastClosed.start, lastClosed.end)} ainda não foi fechada`}>
           <p>O relatório e os repasses dessa quinzena ainda não foram gerados.</p>

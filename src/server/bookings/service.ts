@@ -11,6 +11,8 @@
  *    antes de reservar (se a resposta anterior se perdeu, recupera em vez de reservar de novo);
  *  - nunca reserva se o fornecedor pedir mais do que o custo vendido.
  */
+import { notifyBookingFailed, notifyItemCancelled, notifyItemReady, notifySafely } from "@/server/email/notify";
+import { recordSupplierFailure } from "@/server/monitoring";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { getDb, type DB } from "@/server/db";
 import { orderEvents, orderItems, orders } from "@/server/db/schema";
@@ -138,6 +140,7 @@ export async function registerManualBooking(
     type: "BOOKING_CONFIRMED",
     data: { itemId, reference, status: BOOKING_STATUS.CONFIRMED, bookingRef, message, manual: true, by: actor.id ?? null, byName: actor.name ?? null, ...(costAboveSold ? { costAboveSold } : {}) },
   });
+  await notifySafely(db, "reserva registrada", (t) => notifyItemReady(t, itemId));
   return { itemId, status: BOOKING_STATUS.CONFIRMED, bookingRef, message };
 }
 
@@ -247,6 +250,11 @@ export async function issueItemBooking(
     type: status === BOOKING_STATUS.CONFIRMED || status === BOOKING_STATUS.PENDING ? "BOOKING_CONFIRMED" : "BOOKING_FAILED",
     data: { itemId, reference, status, bookingRef, message },
   });
+  if (status === BOOKING_STATUS.CONFIRMED) await notifySafely(db, "reserva confirmada", (t) => notifyItemReady(t, itemId));
+  else if (status !== BOOKING_STATUS.PENDING) {
+    await notifySafely(db, "falha na emissão", (t) => notifyBookingFailed(t, itemId, message));
+    await recordSupplierFailure(db, item.supplierCode, new SupplierIntegrationError(message), "emissão");
+  }
   return { itemId, status, bookingRef, message };
 }
 
@@ -272,6 +280,7 @@ export async function refreshItemBooking(itemId: string, db: DB = getDb()): Prom
     if (!found) return { itemId, status: item.supplierStatus ?? "", bookingRef: null, message: "Nenhuma reserva encontrada no fornecedor com esta referência" };
     await db.update(orderItems).set({ supplierStatus: found.status, supplierBookingRef: found.bookingRef, supplierPayload: { ...prev, ...found.payload, recoveredAt: new Date().toISOString() } }).where(eq(orderItems.id, itemId));
     await db.insert(orderEvents).values({ orderId: item.orderId, type: "BOOKING_RECOVERED", data: { itemId, bookingRef: found.bookingRef, status: found.status } });
+    if (found.status === BOOKING_STATUS.CONFIRMED) await notifySafely(db, "reserva encontrada", (t) => notifyItemReady(t, itemId));
     return { itemId, status: found.status, bookingRef: found.bookingRef, message: `Reserva encontrada no fornecedor (${found.bookingRef})` };
   }
   if (!adapter.bookingStatus) throw new BookingIssueError("Este fornecedor não informa status");
@@ -282,7 +291,11 @@ export async function refreshItemBooking(itemId: string, db: DB = getDb()): Prom
     if (voucher) next.voucher = voucher;
   }
   await db.update(orderItems).set({ supplierStatus: r.status, supplierPayload: next }).where(eq(orderItems.id, itemId));
-  if (r.status !== item.supplierStatus) await db.insert(orderEvents).values({ orderId: item.orderId, type: "BOOKING_STATUS_CHANGED", data: { itemId, from: item.supplierStatus, to: r.status } });
+  if (r.status !== item.supplierStatus) {
+    await db.insert(orderEvents).values({ orderId: item.orderId, type: "BOOKING_STATUS_CHANGED", data: { itemId, from: item.supplierStatus, to: r.status } });
+    if (r.status === BOOKING_STATUS.CONFIRMED) await notifySafely(db, "reserva confirmada", (t) => notifyItemReady(t, itemId));
+    if (r.status === BOOKING_STATUS.CANCELLED) await notifySafely(db, "reserva cancelada", (t) => notifyItemCancelled(t, itemId));
+  }
   return { itemId, status: r.status, bookingRef: item.supplierBookingRef, message: `Status no fornecedor: ${BOOKING_STATUS_LABEL[r.status] ?? r.status}` };
 }
 
@@ -331,6 +344,7 @@ export async function cancelItemBooking(
     .set({ supplierStatus: status, supplierPayload: { ...prev, cancellation: { at: new Date().toISOString(), by: actor.name ?? null, penalty: r.penalty, reference: r.reference, ...r.payload } } })
     .where(eq(orderItems.id, itemId));
   await db.insert(orderEvents).values({ orderId: item.orderId, type: "BOOKING_CANCELLED", data: { itemId, status, penalty: r.penalty, reference: r.reference, by: actor.id ?? null, byName: actor.name ?? null } });
+  if (status === BOOKING_STATUS.CANCELLED) await notifySafely(db, "reserva cancelada", (t) => notifyItemCancelled(t, itemId));
   return {
     status,
     penalty: r.penalty,

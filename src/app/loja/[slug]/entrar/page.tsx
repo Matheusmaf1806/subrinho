@@ -12,7 +12,8 @@ export default async function LoginPage({ params, searchParams }: { params: Prom
   const viewer = await viewerFor(store);
   const next = await safeNext(store, sp.next);
   if (viewer) redirect(next);
-  const brand = storeBrand(store, await storeBase(store));
+  const sb = await storeBase(store);
+  const brand = storeBrand(store, sb);
   return (
     <main className="mx-auto grid max-w-[1440px] gap-3 px-3 pt-3 sm:px-4 lg:grid-cols-2">
       <div className="flex flex-col justify-center px-3 py-10 sm:px-10 lg:py-16">
@@ -25,6 +26,7 @@ export default async function LoginPage({ params, searchParams }: { params: Prom
             agency={agencyLoginAction.bind(null, slug)}
             next={next}
             initial={sp.modo === "agencia" ? "agency" : "login"}
+            forgotHref={`${sb}/esqueci-senha`}
           />
         </div>
       </div>

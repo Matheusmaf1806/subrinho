@@ -4,6 +4,7 @@
  * acessos, quem gerou), conta completa de cada item (custo, câmbio, margens, descontos, parcelado),
  * cupons, câmbio usado, pagamento e data de repasse.
  */
+import { notifyItemReady, notifyOrderPaid, notifyOrderPlaced, notifySafely } from "@/server/email/notify";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { Tx } from "@/server/db";
 import { carts, cartItems, coupons, customers, orderEvents, orderItems, orders, type PaymentMethod, type PersonData } from "@/server/db/schema";
@@ -280,6 +281,7 @@ export async function placeOrder(tx: Tx, input: PlaceOrderInput) {
     const pix = await provider.createPix({ orderNumber: order.number, amount: money(amountCharged), expiresInMinutes: s.pixExpirationMinutes });
     const [o] = await tx.update(orders).set({ paymentRef: pix.txid, paymentData: { pix } }).where(eq(orders.id, order.id)).returning();
     await tx.insert(orderEvents).values({ orderId: order.id, type: "PIX_CREATED", data: { txid: pix.txid, expiresAt: pix.expiresAt } });
+    await notifySafely(tx, "pedido com Pix", (t) => notifyOrderPlaced(t, order.id));
     return { order: o, approved: false as const };
   }
 
@@ -354,6 +356,12 @@ export async function markOrderPaid(tx: Tx, orderId: string, p: { paidAt: Date; 
       await tx.insert(orderEvents).values({ orderId, type: "BOOKING_FAILED", data: { itemId: it.id, error: String(e) } });
     }
   }
+  // e-mails: cliente (pagamento + vouchers já prontos), agência (nova venda) e equipe (emitir)
+  await notifySafely(tx, "pagamento confirmado", async (t) => {
+    await notifyOrderPaid(t, orderId, { paidAfterCancel: order.status === "CANCELLED" });
+    const ready = await t.select({ id: orderItems.id }).from(orderItems).where(and(eq(orderItems.orderId, orderId), eq(orderItems.supplierStatus, "CONFIRMED")));
+    for (const r of ready) await notifyItemReady(t, r.id);
+  });
   return updated;
 }
 

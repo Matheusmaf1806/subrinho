@@ -89,6 +89,9 @@ export const subrinhoUsers = pgTable("subrinho_users", {
   passwordHash: text("password_hash").notNull(),
   role: subrinhoRoleEnum("role").notNull().default("ADMIN"),
   active: boolean("active").notNull().default(true),
+  /** Verificação em duas etapas (app autenticador): segredo TOTP cifrado; ligado quando confirmado. */
+  totpSecret: text("totp_secret"),
+  totpEnabledAt: ts("totp_enabled_at"),
   createdAt: ts("created_at").notNull().defaultNow(),
 });
 
@@ -108,6 +111,15 @@ export const affiliates = pgTable("affiliates", {
   email: text("email"),
   phone: text("phone"),
   whatsapp: text("whatsapp"),
+  /** Endereço da agência (rodapé e páginas legais da loja). */
+  address: text("address"),
+  /** Registro no Cadastur (Ministério do Turismo), obrigatório para agências de turismo. */
+  cadastur: text("cadastur"),
+  /** Observações da agência na política de cancelamento (somam ao texto padrão). */
+  policyNotes: text("policy_notes"),
+  /** Rastreamento da própria agência (carregado só com o consentimento de cookies do cliente). */
+  metaPixelId: text("meta_pixel_id"),
+  ga4Id: text("ga4_id"),
   // ── White-label: identidade da loja (cada afiliado tem a sua) ──
   logoUrl: text("logo_url"), // logo para fundo claro
   logoOnDarkUrl: text("logo_on_dark_url"), // logo para fundo escuro (rodapé)
@@ -164,6 +176,8 @@ export const customers = pgTable(
     document: text("document"), // CPF
     birthDate: date("birth_date"),
     passwordHash: text("password_hash").notNull(),
+    /** Conta excluída a pedido do cliente (LGPD): dados pessoais apagados, pedidos mantidos por obrigação legal. */
+    deletedAt: ts("deleted_at"),
     createdAt: ts("created_at").notNull().defaultNow(),
   },
   (t) => [uniqueIndex("customers_affiliate_email_uq").on(t.affiliateId, t.email)],
@@ -316,6 +330,8 @@ export const carts = pgTable(
     lastViewedAt: ts("last_viewed_at"),
     convertedOrderId: uuid("converted_order_id"),
     convertedAt: ts("converted_at"),
+    /** Lembrete de carrinho abandonado já enviado (um por carrinho). */
+    reminderSentAt: ts("reminder_sent_at"),
   },
   (t) => [index("carts_affiliate_idx").on(t.affiliateId, t.createdAt)],
 );
@@ -680,6 +696,150 @@ export const payoutProofs = pgTable("payout_proofs", {
   uploadedById: uuid("uploaded_by_id"),
   createdAt: ts("created_at").notNull().defaultNow(),
 });
+
+// ───────────────────────────── E-mails, segurança, auditoria, monitoramento, notas ─────────────────────────────
+
+/**
+ * Fila de e-mails: todo e-mail nasce aqui (dentro da mesma transação do evento) e é enviado logo depois
+ * pelo provedor (Resend). Sem provedor configurado, fica "SKIPPED" e aparece no Painel Subrinho.
+ */
+export const emailOutbox = pgTable(
+  "email_outbox",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    kind: text("kind").notNull(),
+    affiliateId: uuid("affiliate_id").references(() => affiliates.id),
+    orderId: uuid("order_id"),
+    toEmail: text("to_email").notNull(),
+    toName: text("to_name"),
+    fromName: text("from_name"),
+    replyTo: text("reply_to"),
+    subject: text("subject").notNull(),
+    html: text("html").notNull(),
+    text: text("text").notNull(),
+    /** PENDING | SENDING | SENT | FAILED | SKIPPED */
+    status: text("status").notNull().default("PENDING"),
+    attempts: integer("attempts").notNull().default(0),
+    lastError: text("last_error"),
+    providerId: text("provider_id"),
+    /** Evita o mesmo e-mail duas vezes (ex.: order-paid:<pedido>:customer). */
+    dedupeKey: text("dedupe_key").unique(),
+    nextAttemptAt: ts("next_attempt_at").notNull().defaultNow(),
+    claimedAt: ts("claimed_at"),
+    sentAt: ts("sent_at"),
+    createdAt: ts("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("email_outbox_status_idx").on(t.status, t.nextAttemptAt), index("email_outbox_order_idx").on(t.orderId), index("email_outbox_created_idx").on(t.createdAt)],
+);
+
+/** Tokens de uso único: redefinição de senha (RESET) e segunda etapa do login (MFA). Aqui só o hash. */
+export const authTokens = pgTable(
+  "auth_tokens",
+  {
+    id: text("id").primaryKey(), // sha256(token)
+    purpose: text("purpose").notNull(), // RESET | MFA
+    userType: userTypeEnum("user_type").notNull(),
+    userId: uuid("user_id").notNull(),
+    storeAffiliateId: uuid("store_affiliate_id"),
+    attempts: integer("attempts").notNull().default(0),
+    expiresAt: ts("expires_at").notNull(),
+    usedAt: ts("used_at"),
+    createdAt: ts("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("auth_tokens_user_idx").on(t.userType, t.userId)],
+);
+
+/** Tentativas de login (e de pedidos de nova senha) para limitar ataques de força bruta. */
+export const loginAttempts = pgTable(
+  "login_attempts",
+  {
+    id: serial("id").primaryKey(),
+    scope: text("scope").notNull(), // subrinho | afiliado | loja:<affiliateId> | reset:<...> | mfa
+    identifier: text("identifier").notNull(), // e-mail (minúsculo)
+    ip: text("ip"),
+    success: boolean("success").notNull(),
+    createdAt: ts("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("login_attempts_id_idx").on(t.scope, t.identifier, t.createdAt), index("login_attempts_ip_idx").on(t.ip, t.createdAt)],
+);
+
+/** Histórico de alterações: quem mudou o quê (margens, cupons, preços, emissões, marca, usuários, repasses). */
+export const auditLog = pgTable(
+  "audit_log",
+  {
+    id: serial("id").primaryKey(),
+    actorType: text("actor_type").notNull(), // SUBRINHO | AFFILIATE | CUSTOMER | SYSTEM
+    actorId: uuid("actor_id"),
+    actorName: text("actor_name"),
+    /** Loja afetada (null = plataforma). */
+    affiliateId: uuid("affiliate_id"),
+    action: text("action").notNull(),
+    entity: text("entity"),
+    entityId: text("entity_id"),
+    summary: text("summary").notNull(),
+    data: jsonb("data").$type<Record<string, unknown>>().notNull().default({}),
+    ip: text("ip"),
+    createdAt: ts("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("audit_log_affiliate_idx").on(t.affiliateId, t.createdAt), index("audit_log_created_idx").on(t.createdAt), index("audit_log_entity_idx").on(t.entity, t.entityId)],
+);
+
+/** Erros da aplicação e falhas de fornecedor (monitoramento e alertas). */
+export const errorEvents = pgTable(
+  "error_events",
+  {
+    id: serial("id").primaryKey(),
+    source: text("source").notNull(), // request | supplier | email | cron
+    key: text("key").notNull(), // fornecedor, rota...
+    message: text("message").notNull(),
+    code: text("code"),
+    path: text("path"),
+    digest: text("digest"),
+    data: jsonb("data").$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: ts("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("error_events_key_idx").on(t.source, t.key, t.createdAt), index("error_events_created_idx").on(t.createdAt)],
+);
+
+/** Último alerta enviado por assunto (para não lotar a caixa da equipe). */
+export const alertState = pgTable("alert_state", {
+  key: text("key").primaryKey(),
+  lastSentAt: ts("last_sent_at").notNull(),
+  count: integer("count").notNull().default(1),
+});
+
+/**
+ * Notas fiscais registradas na plataforma:
+ *  - ORDER: nota do pedido para o cliente (o cliente baixa na página do pedido);
+ *  - PAYOUT: nota da agência para a Subrinho pela comissão do repasse.
+ */
+export const invoices = pgTable(
+  "invoices",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    kind: text("kind").notNull(), // ORDER | PAYOUT
+    affiliateId: uuid("affiliate_id")
+      .notNull()
+      .references(() => affiliates.id),
+    orderId: uuid("order_id").references(() => orders.id, { onDelete: "cascade" }),
+    payoutId: uuid("payout_id").references(() => payouts.id, { onDelete: "cascade" }),
+    issuer: text("issuer").notNull(), // SUBRINHO | AFFILIATE
+    number: text("number").notNull(),
+    series: text("series"),
+    issuedAt: date("issued_at").notNull(),
+    amount: money("amount").notNull(),
+    fileId: uuid("file_id").references(() => files.id),
+    xmlFileId: uuid("xml_file_id").references(() => files.id),
+    url: text("url"),
+    status: text("status").notNull().default("ISSUED"), // ISSUED | CANCELLED
+    notes: text("notes"),
+    createdByType: text("created_by_type"),
+    createdById: uuid("created_by_id"),
+    cancelledAt: ts("cancelled_at"),
+    createdAt: ts("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("invoices_order_idx").on(t.orderId), index("invoices_payout_idx").on(t.payoutId), index("invoices_affiliate_idx").on(t.affiliateId, t.createdAt)],
+);
 
 // ───────────────────────────── Relations ─────────────────────────────
 

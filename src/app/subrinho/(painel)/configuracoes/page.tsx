@@ -13,6 +13,7 @@ import { ActiveBadge, ReadOnlyNotice, SectionTitle } from "../../_components/bit
 import { InlineActionButton } from "../../_components/inline-action";
 import { canDo, PERMS, ROLE_LABEL } from "../../_lib/labels";
 import { addHolidayAction, createSubrinhoUserAction, deleteHolidayAction, toggleSubrinhoUserAction, updateSettingsAction } from "./actions";
+import { resetUserTotpAction } from "../seguranca/actions";
 
 export const metadata = { title: "Configurações" };
 
@@ -235,6 +236,7 @@ export default async function SubrinhoSettingsPage() {
                 </Td>
                 <Td>
                   <ActiveBadge active={u.active} />
+                  <span className="mt-1 block text-xs text-muted">{u.totpEnabledAt ? "Duas etapas: ligada" : "Duas etapas: desligada"}</span>
                 </Td>
                 <Td className="whitespace-nowrap text-xs">{dateTime(u.createdAt)}</Td>
                 {canEdit && (
@@ -247,6 +249,11 @@ export default async function SubrinhoSettingsPage() {
                         confirmMessage={u.active ? `Desativar o acesso de ${u.name}? As sessões abertas serão encerradas.` : undefined}
                       >
                         {u.active ? "Desativar" : "Reativar"}
+                      </InlineActionButton>
+                    )}
+                    {user.role === "OWNER" && u.id !== user.id && u.totpEnabledAt && (
+                      <InlineActionButton action={resetUserTotpAction} fields={{ id: u.id }} variant="ghost" confirmMessage={`Desligar a verificação em duas etapas de ${u.name}? Use quando a pessoa perdeu o celular.`}>
+                        Desligar duas etapas
                       </InlineActionButton>
                     )}
                   </Td>

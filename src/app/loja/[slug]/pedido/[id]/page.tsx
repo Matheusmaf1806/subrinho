@@ -1,3 +1,4 @@
+import { validOrderAccessKey } from "@/server/order-access";
 import { and, eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 import QRCode from "qrcode";
@@ -22,15 +23,19 @@ import { simulatePixPaymentAction } from "../../actions";
 
 export const metadata = { title: "Pedido" };
 
-export default async function OrderPage({ params }: { params: Promise<{ slug: string; id: string }> }) {
+export default async function OrderPage({ params, searchParams }: { params: Promise<{ slug: string; id: string }>; searchParams: Promise<{ k?: string }> }) {
   const { slug, id } = await params;
+  const { k } = await searchParams;
   const store = await getStore(slug);
   const sb = await storeBase(store);
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const viewer = await viewerFor(store);
-  if (!viewer) redirect(`${sb}/entrar?next=${encodeURIComponent(`${sb}/pedido/${id}`)}`);
+  // link do e-mail (?k=): abre este pedido sem login
+  const linkKey = validOrderAccessKey(id, k) ? k! : null;
+  if (!viewer && !linkKey) redirect(`${sb}/entrar?next=${encodeURIComponent(`${sb}/pedido/${id}`)}`);
   let [order] = await db.select().from(orders).where(and(eq(orders.id, id), eq(orders.affiliateId, store.id)));
-  if (!order || (viewer.kind === "CUSTOMER" && order.customerId !== viewer.customer.id)) notFound();
+  if (!order || (!linkKey && viewer?.kind === "CUSTOMER" && order.customerId !== viewer.customer.id)) notFound();
+  const keyQs = linkKey ? `?k=${encodeURIComponent(linkKey)}` : "";
   // PayPal: confere o pedido no PayPal (cliente aprovou e fechou a janela antes da confirmação)
   const paypalInfo = (order.paymentData as { paypal?: PaypalData } | null)?.paypal ?? null;
   let paypalNote: string | null = null;
@@ -98,7 +103,7 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
             {paypalNote && <Alert tone={paypalInfo?.status === "PENDING" ? "info" : "warning"}>{paypalNote}</Alert>}
             {paypalInfo?.status === "PENDING" ? null : paypalClientId ? (
               <div className="max-w-md">
-                <PaypalButtons clientId={paypalClientId} slug={slug} orderId={order.id} />
+                <PaypalButtons clientId={paypalClientId} slug={slug} orderId={order.id} accessKey={linkKey} />
               </div>
             ) : (
               <Alert tone="warning">Pagamento com cartão indisponível no momento. Tente novamente em instantes.</Alert>
@@ -164,7 +169,7 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
                   <p className="mt-1 flex flex-wrap items-center gap-2 text-xs font-semibold text-success">
                     Reserva confirmada · localizador {i.supplierBookingRef}
                     {(i.category === "LODGING" || i.category === "HOUSES" || i.category === "TICKETS" || i.category === "CHIP") && (
-                      <a href={`${sb}/pedido/${order.id}/voucher/${i.id}`} className="rounded-full bg-ink px-3 py-1 text-[11px] font-semibold text-white hover:bg-ink-2">
+                      <a href={`${sb}/pedido/${order.id}/voucher/${i.id}${keyQs}`} className="rounded-full bg-ink px-3 py-1 text-[11px] font-semibold text-white hover:bg-ink-2">
                         {i.category === "CHIP" ? "Ver QR Code do eSIM" : "Ver voucher"}
                       </a>
                     )}

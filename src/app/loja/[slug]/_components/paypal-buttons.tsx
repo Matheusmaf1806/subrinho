@@ -38,7 +38,7 @@ function loadSdk(clientId: string): Promise<PaypalNamespace> {
   return p;
 }
 
-export function PaypalButtons({ clientId, slug, orderId }: { clientId: string; slug: string; orderId: string }) {
+export function PaypalButtons({ clientId, slug, orderId, accessKey = null }: { clientId: string; slug: string; orderId: string; accessKey?: string | null }) {
   const router = useRouter();
   const box = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
@@ -57,7 +57,7 @@ export function PaypalButtons({ clientId, slug, orderId }: { clientId: string; s
           createOrder: async () => {
             setError(null);
             setInfo(null);
-            const r = await startPaypalAction(slug, orderId);
+            const r = await startPaypalAction(slug, orderId, accessKey);
             if (!r.id) {
               setError(r.error ?? "Não conseguimos abrir o PayPal agora.");
               throw new Error(r.error ?? "sem pedido");
@@ -67,7 +67,7 @@ export function PaypalButtons({ clientId, slug, orderId }: { clientId: string; s
           onApprove: async (data: { orderID: string }, actions: { restart: () => Promise<void> }) => {
             setBusy(true);
             try {
-              const r = await capturePaypalAction(slug, orderId, data.orderID);
+              const r = await capturePaypalAction(slug, orderId, data.orderID, accessKey);
               if (r.retry) {
                 setInfo(r.message ?? null);
                 return actions.restart();
@@ -94,7 +94,7 @@ export function PaypalButtons({ clientId, slug, orderId }: { clientId: string; s
       cancelled = true;
       buttons?.close?.().catch(() => undefined);
     };
-  }, [clientId, slug, orderId, router]);
+  }, [clientId, slug, orderId, accessKey, router]);
 
   return (
     <div className="space-y-3">
