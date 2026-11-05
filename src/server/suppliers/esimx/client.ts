@@ -50,12 +50,14 @@ export class EsimxApiError extends SupplierIntegrationError {
     message: string,
     readonly path: string,
     readonly data: unknown = null,
+    extra: Record<string, unknown> = {},
   ) {
-    super(`eSIMX ${path}: ${message} (code ${code}) [HTTP ${status}]`, { status, code, path });
+    super(`eSIMX ${path}: ${message} (code ${code}) [HTTP ${status}]`, { status, code, path, ...extra });
   }
 }
 
-export type HttpResponse = { status: number; body: string };
+/** `cfRay`/`cfMitigated`: cabeçalhos do Cloudflare, para a eSIMX achar o bloqueio nos registros dela. */
+export type HttpResponse = { status: number; body: string; cfRay?: string | null; cfMitigated?: string | null };
 export type Transport = (req: { url: string; method: string; headers: Record<string, string>; body?: string; timeoutMs: number }) => Promise<HttpResponse>;
 
 const fetchTransport: Transport = async (req) => {
@@ -63,7 +65,7 @@ const fetchTransport: Transport = async (req) => {
   const timer = setTimeout(() => ctrl.abort(), req.timeoutMs);
   try {
     const res = await fetch(req.url, { method: req.method, headers: req.headers, body: req.body, signal: ctrl.signal, cache: "no-store" });
-    return { status: res.status, body: await res.text() };
+    return { status: res.status, body: await res.text(), cfRay: res.headers.get("cf-ray"), cfMitigated: res.headers.get("cf-mitigated") };
   } finally {
     clearTimeout(timer);
   }
@@ -117,8 +119,18 @@ export class EsimxClient {
     }
     if (!env || typeof env.code !== "number") {
       // página de verificação do Cloudflare (o servidor da eSIMX barrou o nosso servidor antes da API)
-      if (/just a moment|cf-chl|challenge-platform|cloudflare/i.test(res.body))
-        throw new EsimxApiError(res.status, res.status, "bloqueado pelo Cloudflare da eSIMX antes de chegar na API; peça à eSIMX para liberar o acesso da Wholesale API para servidores (Vercel)", label);
+      if (res.cfMitigated || /just a moment|cf-chl|challenge-platform|cloudflare/i.test(res.body)) {
+        const ray = res.cfRay || res.body.match(/(?:Ray ID:?\s*(?:<[^>]*>\s*)*|cRay:\s*['"])([0-9a-f]{16})/i)?.[1] || null;
+        const mitigated = res.cfMitigated || (/just a moment|cf-chl|challenge-platform/i.test(res.body) ? "challenge" : "block");
+        throw new EsimxApiError(
+          res.status,
+          res.status,
+          `bloqueado pelo Cloudflare da eSIMX antes de chegar na API (${mitigated}${ray ? `, Ray ID ${ray}` : ""}); peça à eSIMX para liberar o acesso da Wholesale API para servidores (Vercel)`,
+          label,
+          null,
+          { cloudflare: mitigated, ray },
+        );
+      }
       throw new EsimxApiError(res.status, res.status, res.status >= 500 ? "serviço indisponível" : `resposta inválida (${res.body.slice(0, 120) || "vazia"})`, label);
     }
     if (env.code !== ESIMX_CODE.OK) throw new EsimxApiError(res.status, env.code, env.message || "erro sem descrição", label, env.data ?? null);

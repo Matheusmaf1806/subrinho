@@ -2,7 +2,8 @@
  * Código curto do motivo de uma falha de fornecedor, mostrado na tela de erro da loja ("Código para o
  * suporte"). Não revela o fornecedor nem detalhes da resposta, mas diz à equipe o que aconteceu sem
  * precisar abrir os logs da Vercel:
- *   F403  bloqueado pelo firewall (Cloudflare) do fornecedor, com o HTTP devolvido
+ *   F403  bloqueado pelo firewall (Cloudflare) do fornecedor, com o HTTP devolvido; "c" = desafio
+ *         anti-robô em vez de bloqueio, e o Ray ID que o fornecedor usa para achar o evento
  *   K401  chave/credencial recusada
  *   T     sem resposta no tempo limite
  *   N-…   falha de conexão (DNS, TLS, conexão recusada…), com o código do Node
@@ -18,7 +19,7 @@ export function failureCode(e: unknown): string {
     if (d.timeout) return "T";
     const status = typeof d.status === "number" ? d.status : null;
     if (status !== null) {
-      if (/cloudflare/i.test(e.message)) return `F${status}`;
+      if (d.cloudflare || /cloudflare/i.test(e.message)) return `F${status}${d.cloudflare === "challenge" ? "c" : ""}${typeof d.ray === "string" ? ` Ray ${d.ray}` : ""}`;
       if (status === 401 || d.code === 401) return "K401";
       return `H${status}${typeof d.code === "number" && d.code !== status ? `.${d.code}` : ""}`;
     }

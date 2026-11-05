@@ -118,6 +118,9 @@ describe("cliente", () => {
   it("código para o suporte diz o motivo da falha sem citar o fornecedor", async () => {
     const code = (p: Promise<unknown>) => p.then(() => "ok", failureCode);
     expect(await code(client("<html><title>Attention Required! | Cloudflare</title>", 403).get("/package/list"))).toBe("F403");
+    expect(await code(client("<!DOCTYPE html><title>Just a moment...</title><script>window._cf_chl_opt={cRay: '8f3a2b1c4d5e6f70'}</script>", 403).get("/x"))).toBe("F403c Ray 8f3a2b1c4d5e6f70");
+    const cf = new EsimxClient({ apiKey: "k", baseUrl: "https://x.test" }, async () => ({ status: 403, body: "<html>blocked</html>", cfRay: "8f3a2b1c4d5e6f70-IAD", cfMitigated: "block" }));
+    expect(await code(cf.get("/x"))).toBe("F403 Ray 8f3a2b1c4d5e6f70-IAD");
     expect(await code(client("", 401).get("/package/list"))).toBe("K401");
     expect(await code(client(JSON.stringify({ code: 50001, message: "Balance not enough" })).get("/x"))).toBe("H200.50001");
     expect(await code(client("", 502).get("/x"))).toBe("H502");
