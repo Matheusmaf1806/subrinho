@@ -130,3 +130,61 @@ describe("links", () => {
     expect(whatsappLink(null, "x")).toBe("https://wa.me/?text=x");
   });
 });
+
+describe("API de conversões da Meta", async () => {
+  const { buildPurchaseEvent, metaPhone, sendMetaEvents, testMetaConnection } = await import("@/server/conversions/meta");
+  const { createHash } = await import("node:crypto");
+  const { sealSecret } = await import("@/server/auth/totp");
+  const h = (v: string) => createHash("sha256").update(v).digest("hex");
+  const order = {
+    id: "o1",
+    number: 123,
+    customerId: "c1",
+    amountCharged: "2680.32",
+    paidAt: new Date("2026-11-05T15:00:00Z"),
+    ip: "200.1.2.3",
+    userAgent: "Mozilla/5.0",
+    tracking: { consent: true, fbp: "fb.1.1700000000000.123456", fbc: null },
+    customerData: { name: "  Carla de Souza Brandão ", email: " Carla@Cliente.COM ", phone: "(11) 98888-7777" },
+    payerData: { name: "Carla de Souza Brandão", address: { city: "São Paulo", state: "SP", zip: "01310-100" } },
+  } as never;
+  it("normaliza e faz hash dos dados como a Meta pede; event_id igual ao do Pixel", () => {
+    const e = buildPurchaseEvent(order, [{ productId: "h1-1", chargedAmount: "2680.32", category: "LODGING" }], "https://loja.test/pedido/o1");
+    expect(e.event_id).toBe("purchase-123");
+    expect(e.event_time).toBe(Math.floor(new Date("2026-11-05T15:00:00Z").getTime() / 1000));
+    expect(e.user_data).toMatchObject({
+      em: [h("carla@cliente.com")],
+      ph: [h("5511988887777")],
+      fn: [h("carla")],
+      ln: [h("brandao")],
+      ct: [h("saopaulo")],
+      st: [h("sp")],
+      zp: [h("01310100")],
+      country: [h("br")],
+      external_id: [h("c1")],
+      client_ip_address: "200.1.2.3",
+      fbp: "fb.1.1700000000000.123456",
+    });
+    expect(JSON.stringify(e)).not.toContain("carla@cliente.com");
+    expect(e.user_data).not.toHaveProperty("fbc");
+    expect(e.custom_data).toMatchObject({ currency: "BRL", value: 2680.32, order_id: "123", num_items: 1 });
+    expect(metaPhone("+55 11 98888-7777")).toBe("5511988887777");
+    expect(metaPhone("")).toBe("");
+  });
+  it("envio: URL do Pixel, token no corpo, erro de token não repete, erro 500 repete", async () => {
+    const store = { metaPixelId: "123456789012345", metaCapiToken: sealSecret("EAAGtokendeexemplo1234567890"), metaTestEventCode: "TEST999" };
+    let seen: { url: string; body: string } | null = null;
+    const ok = await sendMetaEvents(store, [{ event_name: "Purchase" }], async (r) => ((seen = r), { status: 200, body: JSON.stringify({ events_received: 1, fbtrace_id: "x" }) }));
+    expect(ok.ok).toBe(true);
+    expect(seen!.url).toMatch(/^https:\/\/graph\.facebook\.com\/v\d+\.\d+\/123456789012345\/events$/);
+    expect(JSON.parse(seen!.body)).toMatchObject({ access_token: "EAAGtokendeexemplo1234567890", data: [{ event_name: "Purchase" }] });
+    expect(JSON.parse(seen!.body)).not.toHaveProperty("test_event_code"); // compra real nunca vai como teste
+    await testMetaConnection(store, async (r) => ((seen = r), { status: 200, body: JSON.stringify({ events_received: 1 }) }));
+    expect(JSON.parse(seen!.body)).toMatchObject({ test_event_code: "TEST999" });
+    const bad = await sendMetaEvents(store, [{}], async () => ({ status: 400, body: JSON.stringify({ error: { message: "Invalid OAuth access token", code: 190 } }) }));
+    expect(bad).toMatchObject({ ok: false, retry: false });
+    const down = await sendMetaEvents(store, [{}], async () => ({ status: 503, body: "" }));
+    expect(down).toMatchObject({ ok: false, retry: true });
+    expect(await testMetaConnection({ ...store, metaTestEventCode: null })).toMatchObject({ ok: false, error: expect.stringContaining("código de teste") });
+  });
+});

@@ -8,6 +8,7 @@ import type { ActionState } from "@/components/ui-client";
 import { db } from "@/server/db";
 import { updateAffiliate } from "@/server/admin/affiliates";
 import { parseStoreLegal, StoreLegalError, updateStoreLegal } from "@/server/admin/store-legal";
+import { testMetaConnection } from "@/server/conversions/meta";
 import { requireAdminForAction, serviceErrorMessage, str } from "../../_lib/helpers";
 
 const optional = (max: number) => z.string().trim().max(max, `Use no máximo ${max} caracteres.`);
@@ -71,4 +72,11 @@ export async function updateStoreLegalAction(_prev: ActionState, fd: FormData): 
     if (e instanceof StoreLegalError) return { error: e.message };
     return { error: serviceErrorMessage(e, "Não foi possível salvar.") };
   }
+}
+
+export async function testMetaAction(): Promise<ActionState> {
+  const g = await requireAdminForAction();
+  if ("error" in g) return g;
+  const r = await testMetaConnection(g.session.affiliate);
+  return r.ok ? { ok: true, message: "Evento de teste enviado. Confira em Gerenciador de Eventos › Eventos de teste." } : { error: r.error };
 }

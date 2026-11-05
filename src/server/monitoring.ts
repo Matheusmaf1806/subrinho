@@ -7,10 +7,10 @@
  */
 import { and, count, desc, eq, gte, lt, sql } from "drizzle-orm";
 import type { DB, Tx } from "@/server/db";
-import { alertState, authTokens, emailOutbox, errorEvents, loginAttempts } from "@/server/db/schema";
+import { alertState, authTokens, conversionEvents, emailOutbox, errorEvents, loginAttempts } from "@/server/db/schema";
 import { appUrl } from "@/server/store-links";
 
-export type ErrorInput = { source: "request" | "supplier" | "email" | "cron"; key: string; message: string; code?: string | null; path?: string | null; digest?: string | null; data?: Record<string, unknown> };
+export type ErrorInput = { source: "request" | "supplier" | "email" | "cron" | "conversion"; key: string; message: string; code?: string | null; path?: string | null; digest?: string | null; data?: Record<string, unknown> };
 
 const SUPPLIER_WINDOW_MIN = 15;
 const SUPPLIER_THRESHOLD = 3;
@@ -143,4 +143,10 @@ export async function cleanupOldRecords(db: DB, now = new Date()) {
   await db.delete(errorEvents).where(lt(errorEvents.createdAt, new Date(now.getTime() - 30 * day)));
   await db.delete(loginAttempts).where(lt(loginAttempts.createdAt, new Date(now.getTime() - 7 * day)));
   await db.delete(authTokens).where(lt(authTokens.expiresAt, new Date(now.getTime() - day)));
+}
+
+export async function conversionStats(db: DB, hours = 24 * 7) {
+  const since = new Date(Date.now() - hours * 3600_000);
+  const rows = await db.select({ status: conversionEvents.status, n: count() }).from(conversionEvents).where(gte(conversionEvents.createdAt, since)).groupBy(conversionEvents.status);
+  return Object.fromEntries(rows.map((r) => [r.status, Number(r.n)])) as Record<string, number>;
 }

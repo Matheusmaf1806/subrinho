@@ -1,11 +1,13 @@
 import { db } from "@/server/db";
 import { flushEmails } from "@/server/email/outbox";
+import { flushConversions } from "@/server/conversions/meta";
 import { sendAbandonedCartReminders } from "@/server/cart/reminders";
 import { cleanupOldRecords, recordError } from "@/server/monitoring";
 import { cronAuthorized } from "../auth";
 
 /**
- * Rotina diária: lembretes de carrinho abandonado, reenvio dos e-mails que ficaram na fila e limpeza
+ * Rotina diária: lembretes de carrinho abandonado, reenvio dos e-mails e das compras para a Meta que
+ * ficaram na fila e limpeza
  * dos registros antigos (erros, tentativas de login, tokens vencidos). Agendada em vercel.json.
  */
 async function handle(req: Request) {
@@ -14,6 +16,7 @@ async function handle(req: Request) {
   for (const [name, job] of [
     ["carrinhos", () => sendAbandonedCartReminders(db)],
     ["emails", () => flushEmails(db, { limit: 200 })],
+    ["conversoes", () => flushConversions(db, { limit: 200 })],
     ["limpeza", () => cleanupOldRecords(db).then(() => "ok")],
   ] as const) {
     try {

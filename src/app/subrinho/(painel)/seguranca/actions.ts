@@ -1,12 +1,10 @@
 "use server";
 
-import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import type { ActionState } from "@/components/ui-client";
 import { db } from "@/server/db";
-import { sessions, subrinhoUsers } from "@/server/db/schema";
-import { requireSubrinhoUser } from "@/server/auth/session";
-import { newTotpSecret, openSecret, sealSecret, verifyTotp } from "@/server/auth/totp";
+import { requestMeta, requireSubrinhoUser } from "@/server/auth/session";
+import { confirmTotp, disableTotp, resetTotp, startTotp } from "@/server/auth/mfa";
 import { recordAudit } from "@/server/audit";
 import { actionError, text } from "../../_lib/form";
 
@@ -14,7 +12,7 @@ export async function startTotpAction(): Promise<ActionState> {
   try {
     const user = await requireSubrinhoUser();
     if (user.totpEnabledAt) return { error: "A verificação em duas etapas já está ligada" };
-    await db.update(subrinhoUsers).set({ totpSecret: sealSecret(newTotpSecret()) }).where(eq(subrinhoUsers.id, user.id));
+    await startTotp(db, "subrinho", user.id);
     revalidatePath("/subrinho/seguranca");
     return { ok: true };
   } catch (e) {
@@ -25,10 +23,8 @@ export async function startTotpAction(): Promise<ActionState> {
 export async function confirmTotpAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   try {
     const user = await requireSubrinhoUser();
-    const secret = openSecret(user.totpSecret);
-    if (!secret) return { error: "Gere o QR Code de novo" };
-    if (!verifyTotp(secret, text(fd, "code"))) return { error: "Código incorreto. Confira se o relógio do celular está certo e digite o código atual." };
-    await db.update(subrinhoUsers).set({ totpEnabledAt: new Date() }).where(eq(subrinhoUsers.id, user.id));
+    const err = await confirmTotp(db, "subrinho", user.id, text(fd, "code"), (await requestMeta()).ip);
+    if (err) return { error: err };
     await recordAudit(db, { actor: { type: "SUBRINHO", id: user.id, name: user.name }, action: "auth.2fa_on", entity: "subrinho_user", entityId: user.id, summary: "Ligou a verificação em duas etapas" });
     revalidatePath("/subrinho/seguranca");
     revalidatePath("/subrinho");
@@ -41,10 +37,8 @@ export async function confirmTotpAction(_prev: ActionState, fd: FormData): Promi
 export async function disableTotpAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   try {
     const user = await requireSubrinhoUser();
-    const secret = openSecret(user.totpSecret);
-    if (!user.totpEnabledAt || !secret) return { error: "A verificação em duas etapas não está ligada" };
-    if (!verifyTotp(secret, text(fd, "code"))) return { error: "Código incorreto" };
-    await db.update(subrinhoUsers).set({ totpEnabledAt: null, totpSecret: null }).where(eq(subrinhoUsers.id, user.id));
+    const err = await disableTotp(db, "subrinho", user.id, text(fd, "code"), (await requestMeta()).ip);
+    if (err) return { error: err };
     await recordAudit(db, { actor: { type: "SUBRINHO", id: user.id, name: user.name }, action: "auth.2fa_off", entity: "subrinho_user", entityId: user.id, summary: "Desligou a verificação em duas etapas" });
     revalidatePath("/subrinho/seguranca");
     return { ok: true, message: "Verificação em duas etapas desligada." };
@@ -58,13 +52,25 @@ export async function resetUserTotpAction(_prev: ActionState, fd: FormData): Pro
   try {
     const owner = await requireSubrinhoUser([]);
     if (owner.role !== "OWNER") return { error: "Somente Proprietários podem fazer isso" };
-    const id = text(fd, "id");
-    const [u] = await db.update(subrinhoUsers).set({ totpEnabledAt: null, totpSecret: null }).where(eq(subrinhoUsers.id, id)).returning({ id: subrinhoUsers.id, name: subrinhoUsers.name });
+    const u = await resetTotp(db, "subrinho", text(fd, "id"));
     if (!u) return { error: "Usuário não encontrado" };
-    await db.delete(sessions).where(eq(sessions.userId, u.id));
     await recordAudit(db, { actor: { type: "SUBRINHO", id: owner.id, name: owner.name }, action: "auth.2fa_reset", entity: "subrinho_user", entityId: u.id, summary: `Desligou a verificação em duas etapas de ${u.name}` });
     revalidatePath("/subrinho/configuracoes");
     return { ok: true, message: `Verificação de ${u.name} desligada. No próximo login, só e-mail e senha.` };
+  } catch (e) {
+    return actionError(e);
+  }
+}
+
+/** Equipe Subrinho desliga a verificação de um usuário de agência (celular perdido). */
+export async function resetAffiliateUserTotpAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  try {
+    const user = await requireSubrinhoUser(["ADMIN"]);
+    const u = await resetTotp(db, "afiliado", text(fd, "id"));
+    if (!u) return { error: "Usuário não encontrado" };
+    await recordAudit(db, { actor: { type: "SUBRINHO", id: user.id, name: user.name }, affiliateId: text(fd, "affiliateId") || null, action: "auth.2fa_reset", entity: "affiliate_user", entityId: u.id, summary: `Desligou a verificação em duas etapas de ${u.name}` });
+    revalidatePath("/subrinho/afiliados", "layout");
+    return { ok: true, message: `Verificação de ${u.name} desligada.` };
   } catch (e) {
     return actionError(e);
   }

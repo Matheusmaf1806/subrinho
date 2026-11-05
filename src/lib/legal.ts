@@ -14,6 +14,8 @@ export type LegalStore = {
   whatsapp?: string | null;
   policyNotes?: string | null;
   hasTracking?: boolean;
+  /** Compra enviada pelo servidor para a Meta (API de conversões). */
+  hasServerConversions?: boolean;
 };
 
 export type LegalCompany = { legalName: string; document: string; address: string; privacyEmail: string };
@@ -128,6 +130,9 @@ export function privacyPolicy(s: LegalStore, c: LegalCompany): LegalDoc {
           "o meio de pagamento (por exemplo, PayPal) e instituições financeiras, para processar a cobrança;",
           "provedores de tecnologia que operam a loja (hospedagem, banco de dados e envio de e-mails);",
           ...(s.hasTracking ? ["Meta (Facebook/Instagram) e Google, para medir anúncios e audiência, apenas com o seu consentimento;"] : []),
+          ...(s.hasServerConversions
+            ? ["Meta, quando uma compra é confirmada e você aceitou os cookies de marketing: valor da compra e dados de contato protegidos por criptografia irreversível (hash), para medir os anúncios;"]
+            : []),
           "autoridades públicas, quando a lei exigir.",
         ],
       },

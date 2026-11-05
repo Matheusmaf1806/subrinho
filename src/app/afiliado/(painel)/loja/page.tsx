@@ -4,7 +4,7 @@ import { Alert, Card, CardBody, CardHeader, DetailRow, PageHeader, buttonClass }
 import { CopyButton } from "@/components/ui-client";
 import { requireAffiliateUser } from "@/server/auth/session";
 import { appUrl, storeHref } from "../../_lib/helpers";
-import { updateStoreAction, updateStoreLegalAction } from "./actions";
+import { testMetaAction, updateStoreAction, updateStoreLegalAction } from "./actions";
 import { storePublicUrl } from "@/server/store-links";
 import { StoreForm } from "./store-form";
 import { StoreLegalCard } from "@/components/store-legal-card";
@@ -86,7 +86,7 @@ export default async function AfiliadoLojaPage() {
       />
 
       <h2 className="mb-5 mt-12 text-[1.75rem] font-semibold tracking-[-0.04em]">Dados legais e rastreamento</h2>
-      <StoreLegalCard store={affiliate} save={updateStoreLegalAction} readOnly={readOnly} policiesHref={storePublicUrl(affiliate, "/termos")} />
+      <StoreLegalCard store={affiliate} save={updateStoreLegalAction} testMeta={testMetaAction} readOnly={readOnly} policiesHref={storePublicUrl(affiliate, "/termos")} />
     </>
   );
 }

@@ -41,7 +41,7 @@ import { isManualIssue, isSimulatedPayment, needsControlledIssue } from "@/serve
 import { getAdapter } from "@/server/suppliers/registry";
 import { invoicesForOrder } from "@/server/invoices";
 import { desc, eq } from "drizzle-orm";
-import { emailOutbox } from "@/server/db/schema";
+import { conversionEvents, emailOutbox } from "@/server/db/schema";
 import { InvoiceForm } from "@/components/invoice-form";
 import { InvoiceList } from "@/components/invoice-list";
 import { todayLocal } from "@/lib/tz";
@@ -99,6 +99,7 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
   const extras = await orderDetailExtras(db, o, items, events);
   const orderInvoices = await invoicesForOrder(db, o.id);
   const orderEmails = await db.select().from(emailOutbox).where(eq(emailOutbox.orderId, o.id)).orderBy(desc(emailOutbox.createdAt)).limit(30);
+  const [metaConversion] = await db.select().from(conversionEvents).where(eq(conversionEvents.orderId, o.id)).limit(1);
   const canAct = canDo(user.role, PERMS.orders);
 
   const pd = o.paymentData as Record<string, unknown>;
@@ -287,6 +288,12 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
             }
           />
           <CardBody>
+            {metaConversion && (
+              <p className="mb-3 text-sm">
+                <span className="font-semibold">Meta (API de conversões):</span>{" "}
+                {metaConversion.status === "SENT" ? `compra enviada em ${dateTime(metaConversion.sentAt)}` : metaConversion.status === "FAILED" ? `falhou (${metaConversion.lastError ?? "erro"})` : metaConversion.status === "SKIPPED" ? "não enviada (loja sem token)" : "na fila"}
+              </p>
+            )}
             {orderEmails.length === 0 ? (
               <p className="text-sm text-muted">Nenhum e-mail registrado para este pedido.</p>
             ) : (

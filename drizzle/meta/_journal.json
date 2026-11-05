@@ -64,6 +64,13 @@
       "when": 1794000000000,
       "tag": "0008_platform_essentials",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794010000000,
+      "tag": "0009_agency_2fa_meta_capi",
+      "breakpoints": true
     }
   ]
 }

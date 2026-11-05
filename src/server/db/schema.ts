@@ -120,6 +120,9 @@ export const affiliates = pgTable("affiliates", {
   /** Rastreamento da própria agência (carregado só com o consentimento de cookies do cliente). */
   metaPixelId: text("meta_pixel_id"),
   ga4Id: text("ga4_id"),
+  /** API de conversões da Meta: token de acesso (cifrado, nunca volta para a tela) e código de teste opcional. */
+  metaCapiToken: text("meta_capi_token"),
+  metaTestEventCode: text("meta_test_event_code"),
   // ── White-label: identidade da loja (cada afiliado tem a sua) ──
   logoUrl: text("logo_url"), // logo para fundo claro
   logoOnDarkUrl: text("logo_on_dark_url"), // logo para fundo escuro (rodapé)
@@ -157,6 +160,9 @@ export const affiliateUsers = pgTable(
     passwordHash: text("password_hash").notNull(),
     role: affiliateRoleEnum("role").notNull().default("AGENT"),
     active: boolean("active").notNull().default(true),
+    /** Verificação em duas etapas (app autenticador): segredo TOTP cifrado; ligado quando confirmado. */
+    totpSecret: text("totp_secret"),
+    totpEnabledAt: ts("totp_enabled_at"),
     createdAt: ts("created_at").notNull().defaultNow(),
   },
   (t) => [index("affiliate_users_affiliate_idx").on(t.affiliateId)],
@@ -552,6 +558,8 @@ export const orders = pgTable(
 
     ip: text("ip"),
     userAgent: text("user_agent"),
+    /** Rastreamento no checkout: consentimento de cookies e identificadores da Meta (_fbp/_fbc). */
+    tracking: jsonb("tracking").$type<{ consent?: boolean; fbp?: string | null; fbc?: string | null; url?: string | null }>().notNull().default({}),
     createdAt: ts("created_at").notNull().defaultNow(),
   },
   (t) => [
@@ -799,6 +807,35 @@ export const errorEvents = pgTable(
     createdAt: ts("created_at").notNull().defaultNow(),
   },
   (t) => [index("error_events_key_idx").on(t.source, t.key, t.createdAt), index("error_events_created_idx").on(t.createdAt)],
+);
+
+/**
+ * Eventos para a API de conversões da Meta (compra enviada pelo servidor). Mesma ideia da fila de
+ * e-mails: nasce na transação do pagamento e é enviado logo depois, com novas tentativas.
+ */
+export const conversionEvents = pgTable(
+  "conversion_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    provider: text("provider").notNull(), // META
+    event: text("event").notNull(), // Purchase
+    affiliateId: uuid("affiliate_id")
+      .notNull()
+      .references(() => affiliates.id),
+    orderId: uuid("order_id").references(() => orders.id, { onDelete: "cascade" }),
+    /** event_id compartilhado com o Pixel do navegador (a Meta conta uma vez só). */
+    eventId: text("event_id").notNull(),
+    payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+    status: text("status").notNull().default("PENDING"), // PENDING | SENDING | SENT | FAILED | SKIPPED
+    attempts: integer("attempts").notNull().default(0),
+    lastError: text("last_error"),
+    response: jsonb("response").$type<Record<string, unknown>>(),
+    nextAttemptAt: ts("next_attempt_at").notNull().defaultNow(),
+    claimedAt: ts("claimed_at"),
+    sentAt: ts("sent_at"),
+    createdAt: ts("created_at").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("conversion_events_uq").on(t.provider, t.event, t.eventId, t.affiliateId), index("conversion_events_status_idx").on(t.status, t.nextAttemptAt)],
 );
 
 /** Último alerta enviado por assunto (para não lotar a caixa da equipe). */

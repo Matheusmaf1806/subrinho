@@ -2,6 +2,7 @@
 
 import { and, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/server/db";
@@ -26,6 +27,7 @@ import { validOrderAccessKey } from "@/server/order-access";
 import { deleteCustomerAccount } from "@/server/customer-data";
 import { recordAudit } from "@/server/audit";
 import { loginBlocked, recordLogin, registerBlocked } from "@/server/auth/limits";
+import { checkCode } from "@/server/auth/mfa";
 import { RESET_SENT_MESSAGE, requestPasswordReset, resetPassword, ResetError } from "@/server/auth/reset";
 import { autoIssueOrder } from "@/server/bookings/service";
 import { after } from "next/server";
@@ -346,6 +348,13 @@ export async function agencyLoginAction(slug: string, _prev: ActionState, fd: Fo
   await recordLogin(db, "afiliado", email, ip, ok);
   if (!u || !ok) return { error: "E-mail ou senha incorretos" };
   if (u.affiliateId !== store.id) return { error: "Este usuário não pertence a esta loja" };
+  // duas etapas ligadas: o código também é pedido aqui (o modo ADMIN mexe em margens e preços)
+  if (u.totpEnabledAt) {
+    const code = String(fd.get("code") ?? "").trim();
+    if (!code) return { error: "Digite o código do app autenticador (a sua verificação em duas etapas está ligada)." };
+    const err = await checkCode(db, "afiliado", u.id, u.totpSecret, code, ip);
+    if (err) return { error: err };
+  }
   await endSession("loja");
   await startSession("loja", { userType: "AFFILIATE", userId: u.id, storeAffiliateId: store.id, adminMode: u.role === "ADMIN" && fd.get("adminMode") === "on" });
   redirect(await safeNext(store, str(fd.get("next"))));
@@ -494,6 +503,7 @@ export async function placeOrderAction(slug: string, token: string, _prev: Actio
     if (card && (card.holder.length < 3 || card.number.length < 13 || !/^\d{2}\/\d{2}$/.test(card.expiry) || card.cvv.length < 3))
       return { error: "Confira os dados do cartão" };
 
+    const tracking = await checkoutTracking();
     const res = await db.transaction((tx) =>
       placeOrder(tx, {
         cart,
@@ -507,6 +517,7 @@ export async function placeOrderAction(slug: string, token: string, _prev: Actio
         specialRequests: str(fd.get("specialRequests")) ?? null,
         ip: meta.ip,
         userAgent: meta.userAgent,
+        tracking,
       }),
     );
     if ("declined" in res && res.declined) return { error: `${res.declined}. Tente outro cartão ou pague no Pix.` };
@@ -555,6 +566,15 @@ function hotelGuestsError(items: { category: string; pax: PaxConfig }[], travele
 // ───────────── PayPal (botões na página do pedido) ─────────────
 
 /** Pedido desta loja que quem está vendo pode pagar (cliente dono ou equipe da agência). */
+/** Consentimento de cookies e cookies da Meta (_fbp/_fbc) no momento da compra, para a API de conversões. */
+async function checkoutTracking() {
+  const jar = await cookies();
+  const consent = jar.get("sb_consent")?.value === "all";
+  const clean = (v?: string) => (v && /^fb\.\d\.\d+\.[\w.-]{1,200}$/.test(v) ? v : null);
+  const ref = (await headers()).get("referer");
+  return consent ? { consent, fbp: clean(jar.get("_fbp")?.value), fbc: clean(jar.get("_fbc")?.value), url: ref?.slice(0, 500) ?? null } : { consent: false };
+}
+
 async function payableOrder(slug: string, orderId: string, accessKey?: string | null) {
   const store = await getStore(slug);
   if (!/^[0-9a-f-]{36}$/i.test(orderId)) throw new CheckoutError("Pedido não encontrado");

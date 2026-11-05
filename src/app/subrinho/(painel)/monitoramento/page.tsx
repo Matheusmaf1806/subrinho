@@ -6,15 +6,15 @@ import { dateTime } from "@/lib/format";
 import { db } from "@/server/db";
 import { requireSubrinhoUser } from "@/server/auth/session";
 import { emailMissing } from "@/server/email/provider";
-import { emailStats, recentErrors, supplierHealth } from "@/server/monitoring";
+import { conversionStats, emailStats, recentErrors, supplierHealth } from "@/server/monitoring";
 
 export const metadata: Metadata = { title: "Monitoramento" };
 
-const SOURCE: Record<string, string> = { request: "Página/ação", supplier: "Fornecedor", email: "E-mail", cron: "Rotina" };
+const SOURCE: Record<string, string> = { request: "Página/ação", supplier: "Fornecedor", email: "E-mail", cron: "Rotina", conversion: "Meta (conversões)" };
 
 export default async function MonitoringPage() {
   await requireSubrinhoUser();
-  const [suppliers, errors, mail] = await Promise.all([supplierHealth(db, 24), recentErrors(db, { limit: 60 }), emailStats(db)]);
+  const [suppliers, errors, mail, conv] = await Promise.all([supplierHealth(db, 24), recentErrors(db, { limit: 60 }), emailStats(db), conversionStats(db)]);
   const platformErrors = errors.filter((e) => e.source !== "supplier");
   const missing = emailMissing();
 
@@ -41,6 +41,12 @@ export default async function MonitoringPage() {
         <Stat label="E-mails enviados (7 dias)" value={mail.SENT ?? 0} />
         <Stat label="E-mails com falha ou não enviados (7 dias)" value={(mail.FAILED ?? 0) + (mail.SKIPPED ?? 0)} />
       </div>
+      {(conv.SENT || conv.FAILED || conv.PENDING) && (
+        <p className="-mt-3 mb-6 text-[13px] text-muted">
+          Compras enviadas à Meta pelo servidor (7 dias): {conv.SENT ?? 0} enviadas{conv.FAILED ? `, ${conv.FAILED} com falha` : ""}
+          {conv.PENDING ? `, ${conv.PENDING} na fila` : ""}.
+        </p>
+      )}
 
       <Card className="mb-6">
         <CardHeader title="Fornecedores" subtitle="Falhas nas últimas 24 horas (busca, página do produto e emissão)" />

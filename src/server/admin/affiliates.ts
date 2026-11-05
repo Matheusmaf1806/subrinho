@@ -85,7 +85,7 @@ export async function createAffiliateUser(tx: Tx, affiliateId: string, u: { name
 
 export async function listAffiliateUsers(tx: Tx, affiliateId: string) {
   return tx
-    .select({ id: affiliateUsers.id, name: affiliateUsers.name, email: affiliateUsers.email, role: affiliateUsers.role, active: affiliateUsers.active, createdAt: affiliateUsers.createdAt })
+    .select({ id: affiliateUsers.id, name: affiliateUsers.name, email: affiliateUsers.email, role: affiliateUsers.role, active: affiliateUsers.active, totpEnabledAt: affiliateUsers.totpEnabledAt, createdAt: affiliateUsers.createdAt })
     .from(affiliateUsers)
     .where(eq(affiliateUsers.affiliateId, affiliateId))
     .orderBy(asc(affiliateUsers.name));

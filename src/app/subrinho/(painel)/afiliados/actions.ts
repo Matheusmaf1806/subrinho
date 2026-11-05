@@ -2,6 +2,9 @@
 
 import { audited, recordAudit } from "@/server/audit";
 import { parseStoreLegal, StoreLegalError, updateStoreLegal } from "@/server/admin/store-legal";
+import { testMetaConnection } from "@/server/conversions/meta";
+import { eq } from "drizzle-orm";
+import { affiliates } from "@/server/db/schema";
 import { revalidatePath } from "next/cache";
 import { revalidateStore, storePublicUrl } from "@/server/store-links";
 import { redirect } from "next/navigation";
@@ -153,6 +156,18 @@ export async function updateAffiliateLegalAction(_prev: ActionState, fd: FormDat
     return { ok: true, message: "Dados legais e rastreamento salvos." };
   } catch (e) {
     if (e instanceof StoreLegalError) return { error: e.message };
+    return actionError(e);
+  }
+}
+
+export async function testAffiliateMetaAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  try {
+    await requireSubrinhoUser(PERMS.affiliates);
+    const [a] = await db.select().from(affiliates).where(eq(affiliates.id, uuid(fd, "affiliateId")));
+    if (!a) return { error: "Loja não encontrada" };
+    const r = await testMetaConnection(a);
+    return r.ok ? { ok: true, message: "Evento de teste enviado. Confira em Gerenciador de Eventos › Eventos de teste." } : { error: r.error };
+  } catch (e) {
     return actionError(e);
   }
 }

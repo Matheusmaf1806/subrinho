@@ -91,6 +91,10 @@ export function CustomerAuth({ login, register, agency, next, initial = "login",
             <span className={lab}>Senha</span>
             <Input name="password" type="password" required />
           </label>
+          <label className="block">
+            <span className={lab}>Código do app autenticador (se a verificação em duas etapas estiver ligada)</span>
+            <Input name="code" inputMode="numeric" autoComplete="one-time-code" maxLength={7} placeholder="000000" />
+          </label>
           <label className="flex items-center gap-3 rounded-2xl bg-surface px-4 py-3.5 text-[15px] font-semibold text-ink">
             <input type="checkbox" name="adminMode" defaultChecked className="h-4 w-4 accent-brand" /> Entrar em modo ADMIN
           </label>

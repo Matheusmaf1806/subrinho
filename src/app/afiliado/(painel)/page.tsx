@@ -54,6 +54,15 @@ export default async function AfiliadoDashboardPage() {
         }
       />
 
+      {!user.totpEnabledAt && user.role === "ADMIN" && (
+        <Alert tone="info" className="mb-6" title="Proteja o acesso da agência">
+          Ligue a verificação em duas etapas: além da senha, o login passa a pedir o código do app autenticador do seu celular.{" "}
+          <a href="/afiliado/seguranca" className="font-semibold underline">
+            Ligar agora
+          </a>
+        </Alert>
+      )}
+
       <section aria-label="Indicadores" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         <Stat
           className="xl:col-span-2"

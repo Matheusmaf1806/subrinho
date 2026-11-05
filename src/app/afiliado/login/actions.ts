@@ -9,6 +9,7 @@ import { hashPassword, verifyPassword } from "@/server/auth/password";
 import { requestMeta, startSession } from "@/server/auth/session";
 import { loginBlocked, recordLogin } from "@/server/auth/limits";
 import { RESET_SENT_MESSAGE, requestPasswordReset, resetPassword, ResetError } from "@/server/auth/reset";
+import { beginMfa, finishMfa } from "@/server/auth/mfa";
 
 let dummyHash: Promise<string> | null = null;
 
@@ -26,6 +27,7 @@ export async function loginAction(_prev: ActionState, fd: FormData): Promise<Act
       passwordHash: affiliateUsers.passwordHash,
       active: affiliateUsers.active,
       affiliateActive: affiliates.active,
+      totpEnabledAt: affiliateUsers.totpEnabledAt,
     })
     .from(affiliateUsers)
     .innerJoin(affiliates, eq(affiliates.id, affiliateUsers.affiliateId))
@@ -38,7 +40,20 @@ export async function loginAction(_prev: ActionState, fd: FormData): Promise<Act
   if (!row.active) return { error: "Seu acesso está desativado. Fale com o administrador da sua agência." };
   if (!row.affiliateActive) return { error: "O acesso desta agência está suspenso. Fale com a equipe Subrinho." };
 
+  if (row.totpEnabledAt) {
+    await beginMfa(db, "afiliado", row.id);
+    redirect("/afiliado/login/codigo");
+  }
   await startSession("afiliado", { userType: "AFFILIATE", userId: row.id });
+  redirect("/afiliado");
+}
+
+/** Segunda etapa: código de 6 dígitos do app autenticador. */
+export async function verifyAfiliadoMfaAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  const { ip } = await requestMeta();
+  const r = await finishMfa(db, "afiliado", String(fd.get("code") ?? ""), ip);
+  if ("error" in r) return { error: r.error };
+  await startSession("afiliado", { userType: "AFFILIATE", userId: r.userId });
   redirect("/afiliado");
 }
 
@@ -56,6 +71,9 @@ export async function resetAfiliadoAction(_prev: ActionState, fd: FormData): Pro
     if (e instanceof ResetError) return { error: e.message };
     throw e;
   }
+  // com duas etapas ligadas, a nova senha não dispensa o código: entra pelo login
+  const [u] = await db.select({ totpEnabledAt: affiliateUsers.totpEnabledAt }).from(affiliateUsers).where(eq(affiliateUsers.id, userId));
+  if (u?.totpEnabledAt) redirect("/afiliado/login?senha=nova");
   await startSession("afiliado", { userType: "AFFILIATE", userId });
   redirect("/afiliado");
 }

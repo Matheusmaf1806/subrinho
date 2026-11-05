@@ -34,9 +34,11 @@ import { periodLabel } from "../../../_lib/dates";
 import { isUuid } from "../../../_lib/form";
 import { canDo, PERMS, SCOPE_LABEL } from "../../../_lib/labels";
 import { ruleTarget } from "../../../_lib/rules";
-import { addAffiliateUserAction, updateAffiliateAction, updateAffiliateBrandingAction, updateAffiliateDomainsAction, updateAffiliateLegalAction, verifyAffiliateDomainAction } from "../actions";
+import { addAffiliateUserAction, updateAffiliateAction, updateAffiliateBrandingAction, testAffiliateMetaAction, updateAffiliateDomainsAction, updateAffiliateLegalAction, verifyAffiliateDomainAction } from "../actions";
 import { StoreDomainCard } from "@/components/store-domain-card";
 import { StoreLegalCard } from "@/components/store-legal-card";
+import { resetAffiliateUserTotpAction } from "../../seguranca/actions";
+import { InlineActionButton } from "../../../_components/inline-action";
 import { BrandingEditor } from "@/components/branding-editor";
 import { brandingInitial, brandPresets } from "@/lib/branding-view";
 import { AffiliateFields } from "../affiliate-fields";
@@ -115,7 +117,7 @@ export default async function AffiliateDetailPage({
 
       <div className="mt-6">
         <StoreDomainCard store={a} save={updateAffiliateDomainsAction} verify={verifyAffiliateDomainAction} readOnly={!canEdit} hidden={{ affiliateId: a.id }} />
-        <StoreLegalCard store={a} save={updateAffiliateLegalAction} readOnly={!canEdit} hidden={{ affiliateId: a.id }} />
+        <StoreLegalCard store={a} save={updateAffiliateLegalAction} testMeta={testAffiliateMetaAction} readOnly={!canEdit} hidden={{ affiliateId: a.id }} />
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[3fr_2fr]">
@@ -210,6 +212,12 @@ export default async function AffiliateDetailPage({
                       </Td>
                       <Td>
                         <ActiveBadge active={u.active} />
+                        <span className="mt-1 block text-xs text-muted">{u.totpEnabledAt ? "Duas etapas: ligada" : "Duas etapas: desligada"}</span>
+                        {u.totpEnabledAt && canDo(user.role, ["ADMIN"]) && (
+                          <InlineActionButton action={resetAffiliateUserTotpAction} fields={{ id: u.id, affiliateId: a.id }} variant="ghost" confirmMessage={`Desligar a verificação em duas etapas de ${u.name}? Use quando a pessoa perdeu o celular.`}>
+                            Desligar duas etapas
+                          </InlineActionButton>
+                        )}
                       </Td>
                     </Tr>
                   ))}

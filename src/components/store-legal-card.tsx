@@ -6,18 +6,17 @@
 import { Card, CardBody, CardHeader, Field, Input, Textarea } from "@/components/ui";
 import { ActionForm, SubmitButton, type ActionState } from "@/components/ui-client";
 
-type Store = { address: string | null; cadastur: string | null; policyNotes: string | null; metaPixelId: string | null; ga4Id: string | null };
+type Store = { address: string | null; cadastur: string | null; policyNotes: string | null; metaPixelId: string | null; ga4Id: string | null; metaCapiToken: string | null; metaTestEventCode: string | null };
 type Action = (prev: ActionState, fd: FormData) => Promise<ActionState>;
 
-export function StoreLegalCard({ store, save, readOnly, hidden = {}, policiesHref }: { store: Store; save: Action; readOnly?: boolean; hidden?: Record<string, string>; policiesHref?: string }) {
+export function StoreLegalCard({ store, save, testMeta, readOnly, hidden = {}, policiesHref }: { store: Store; save: Action; testMeta?: Action; readOnly?: boolean; hidden?: Record<string, string>; policiesHref?: string }) {
+  const hiddenInputs = Object.entries(hidden).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />);
   return (
     <Card className="mb-6">
       <CardHeader title="Dados legais e rastreamento" subtitle="Rodapé da loja, Termos, Privacidade, Cancelamento, Pixel da Meta e Google Analytics" />
       <CardBody>
         <ActionForm action={save}>
-          {Object.entries(hidden).map(([k, v]) => (
-            <input key={k} type="hidden" name={k} value={v} />
-          ))}
+          {hiddenInputs}
           <fieldset disabled={readOnly} className="grid gap-5 md:grid-cols-2">
             <legend className="sr-only">Dados legais e rastreamento</legend>
             <Field label="Endereço da agência" hint="Aparece no rodapé e nas páginas legais">
@@ -35,6 +34,21 @@ export function StoreLegalCard({ store, save, readOnly, hidden = {}, policiesHre
             <Field label="ID do Google Analytics 4" hint="Administrador › Fluxos de dados (começa com G-)">
               <Input name="ga4Id" defaultValue={store.ga4Id ?? ""} maxLength={20} placeholder="G-XXXXXXXXXX" />
             </Field>
+            <Field label="Token da API de conversões da Meta" hint={store.metaCapiToken ? "Configurado. Deixe em branco para manter, ou cole um novo para trocar." : "Gerenciador de Eventos › Configurações › API de conversões › Gerar token de acesso"}>
+              <Input name="metaCapiToken" type="password" autoComplete="off" placeholder={store.metaCapiToken ? "•••••••• configurado" : "EAAG…"} maxLength={600} />
+            </Field>
+            <Field label="Código de teste da Meta (opcional)" hint="Eventos de teste › código TEST…: usado só no botão Testar (o teste não conta nas campanhas; as compras de verdade nunca vão como teste).">
+              <Input name="metaTestEventCode" defaultValue={store.metaTestEventCode ?? ""} maxLength={20} placeholder="TEST12345" />
+            </Field>
+            {store.metaCapiToken && (
+              <label className="flex items-center gap-2 text-[13px] text-muted md:col-span-2">
+                <input type="checkbox" name="removeMetaToken" className="h-4 w-4" /> Remover o token (a compra deixa de ser enviada pelo servidor)
+              </label>
+            )}
+            <p className="text-[12px] text-muted md:col-span-2">
+              Com o token, cada compra paga também vai do servidor direto para a Meta (mesmo se o cliente pagar o Pix e não voltar à loja), só para quem aceitou os cookies. A
+              Meta junta com o Pixel e conta a compra uma vez só.
+            </p>
             <p className="text-[12px] text-muted md:col-span-2">
               Com Pixel ou Analytics, a loja mostra o aviso de cookies e só carrega o rastreamento quando o cliente aceita (LGPD). Eventos enviados: visita, produto visto, item no
               carrinho, início do checkout e compra.{policiesHref ? " " : ""}
@@ -51,6 +65,15 @@ export function StoreLegalCard({ store, save, readOnly, hidden = {}, policiesHre
             )}
           </fieldset>
         </ActionForm>
+        {testMeta && !readOnly && store.metaPixelId && store.metaCapiToken && (
+          <ActionForm action={testMeta} className="mt-4 flex flex-wrap items-center gap-3 border-t border-line pt-4">
+            {hiddenInputs}
+            <SubmitButton variant="outline" pendingText="Enviando…">
+              Testar API de conversões
+            </SubmitButton>
+            <span className="text-[12px] text-muted">Envia um evento de teste (precisa do código de teste salvo) para conferir o Pixel e o token.</span>
+          </ActionForm>
+        )}
       </CardBody>
     </Card>
   );

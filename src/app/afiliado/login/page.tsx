@@ -2,14 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthSplit } from "@/components/auth-split";
+import { Alert } from "@/components/ui";
 import { currentAffiliateUser } from "@/server/auth/session";
 import { photo } from "@/lib/images";
 import { LoginForm } from "./login-form";
 
 export const metadata: Metadata = { title: "Entrar · Painel do Afiliado" };
 
-export default async function AfiliadoLoginPage() {
+export default async function AfiliadoLoginPage({ searchParams }: { searchParams: Promise<{ senha?: string }> }) {
   if (await currentAffiliateUser()) redirect("/afiliado");
+  const { senha } = await searchParams;
   return (
     <AuthSplit
       label="Painel do Afiliado"
@@ -33,6 +35,11 @@ export default async function AfiliadoLoginPage() {
         </>
       }
     >
+      {senha === "nova" && (
+        <Alert tone="success" className="mb-4">
+          Senha nova salva. Entre com ela e com o código do app.
+        </Alert>
+      )}
       <LoginForm />
     </AuthSplit>
   );

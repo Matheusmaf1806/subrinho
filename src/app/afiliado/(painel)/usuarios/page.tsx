@@ -7,6 +7,8 @@ import { requireAffiliateUser } from "@/server/auth/session";
 import { listAffiliateUsers } from "@/server/admin/affiliates";
 import { ROLE_LABEL } from "../../_lib/helpers";
 import { createUserAction, setUserActiveAction } from "./actions";
+import { resetAgencyUserTotpAction } from "../seguranca/actions";
+import { ActionForm, SubmitButton } from "@/components/ui-client";
 import { NewUserForm, ToggleUserForm } from "./user-forms";
 
 export const metadata: Metadata = { title: "Usuários" };
@@ -65,9 +67,26 @@ export default async function AfiliadoUsuariosPage() {
                     </Td>
                     <Td>
                       <Badge tone={u.active ? "success" : "danger"}>{u.active ? "Ativo" : "Desativado"}</Badge>
+                      <span className="mt-1 block text-xs text-muted">{u.totpEnabledAt ? "Duas etapas: ligada" : "Duas etapas: desligada"}</span>
                     </Td>
                     <Td className="whitespace-nowrap text-muted">{date(u.createdAt)}</Td>
-                    <Td>{u.id === user.id ? <span className="text-xs text-muted">-</span> : <ToggleUserForm action={setUserActiveAction} userId={u.id} active={u.active} />}</Td>
+                    <Td>
+                      {u.id === user.id ? (
+                        <span className="text-xs text-muted">-</span>
+                      ) : (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <ToggleUserForm action={setUserActiveAction} userId={u.id} active={u.active} />
+                          {u.totpEnabledAt && (
+                            <ActionForm action={resetAgencyUserTotpAction}>
+                              <input type="hidden" name="id" value={u.id} />
+                              <SubmitButton variant="ghost" size="sm" pendingText="…">
+                                Desligar duas etapas
+                              </SubmitButton>
+                            </ActionForm>
+                          )}
+                        </div>
+                      )}
+                    </Td>
                   </Tr>
                 ))}
               </tbody>

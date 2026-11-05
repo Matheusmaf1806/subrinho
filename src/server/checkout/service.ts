@@ -5,6 +5,7 @@
  * cupons, câmbio usado, pagamento e data de repasse.
  */
 import { notifyItemReady, notifyOrderPaid, notifyOrderPlaced, notifySafely } from "@/server/email/notify";
+import { queueMetaPurchase } from "@/server/conversions/meta";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { Tx } from "@/server/db";
 import { carts, cartItems, coupons, customers, orderEvents, orderItems, orders, type PaymentMethod, type PersonData } from "@/server/db/schema";
@@ -114,6 +115,8 @@ export type PlaceOrderInput = {
   userAgent?: string | null;
   /** Pedido especial ao hotel (ex.: chegada tarde) — vai na reserva. */
   specialRequests?: string | null;
+  /** Consentimento de cookies e identificadores da Meta no checkout (API de conversões). */
+  tracking?: { consent?: boolean; fbp?: string | null; fbc?: string | null; url?: string | null };
   /** Desligue para testes que não querem consultar o fornecedor. */
   revalidate?: boolean;
   /** Relógio (para seed/testes). */
@@ -213,6 +216,7 @@ export async function placeOrder(tx: Tx, input: PlaceOrderInput) {
       paymentProvider: provider.name,
       ip: input.ip ?? null,
       userAgent: input.userAgent ?? null,
+      tracking: input.tracking ?? {},
     })
     .returning();
 
@@ -356,6 +360,8 @@ export async function markOrderPaid(tx: Tx, orderId: string, p: { paidAt: Date; 
       await tx.insert(orderEvents).values({ orderId, type: "BOOKING_FAILED", data: { itemId: it.id, error: String(e) } });
     }
   }
+  // API de conversões da Meta: a compra vai pelo servidor (só com consentimento do cliente)
+  await notifySafely(tx, "conversão Meta", (t) => queueMetaPurchase(t, orderId));
   // e-mails: cliente (pagamento + vouchers já prontos), agência (nova venda) e equipe (emitir)
   await notifySafely(tx, "pagamento confirmado", async (t) => {
     await notifyOrderPaid(t, orderId, { paidAfterCancel: order.status === "CANCELLED" });

@@ -907,4 +907,58 @@ describe.skipIf(!url)("fluxo completo (integração)", () => {
     expect(await registerBlocked(db, "register:x", "9.9.9.9")).toBe(true);
     expect(await registerBlocked(db, "register:x", "8.8.8.8")).toBe(false);
   });
+
+  it("API de conversões da Meta: compra paga vai para a fila só com consentimento, uma vez, e é enviada", async () => {
+    const { sealSecret } = await import("@/server/auth/totp");
+    const { flushConversions } = await import("@/server/conversions/meta");
+    await db.update(schema.affiliates).set({ metaPixelId: "123456789012345", metaCapiToken: sealSecret("EAAGtokendeexemplo1234567890") }).where(eq(schema.affiliates.id, affiliateId));
+    const buy = async (email: string, consent: boolean) => {
+      const { customer } = await findOrCreateCustomer(db, affiliateId, { name: "Fábio Reis", email, phone: "11977776666", password: "12345678" });
+      const cart = await createCart(db, affiliateId, { type: "CUSTOMER", id: customer.id });
+      await addQuoteToCart(db, cart, specQuote());
+      const { order } = await placeOrder(db, { cart, customer, payer: { name: "Fábio Reis", email }, travelers: [{ name: "Fábio Reis" }], paymentMethod: "PIX", installments: 1, revalidate: false, tracking: { consent, fbp: consent ? "fb.1.1700000000000.42" : null } });
+      await markOrderPaid(db, order.id, { paidAt: new Date() });
+      await markOrderPaid(db, order.id, { paidAt: new Date() });
+      return order;
+    };
+    const yes = await buy("fabio@cliente.com", true);
+    const no = await buy("fabio2@cliente.com", false);
+    const rows = await db.select().from(schema.conversionEvents);
+    expect(rows.filter((r) => r.orderId === yes.id)).toHaveLength(1);
+    expect(rows.filter((r) => r.orderId === no.id)).toHaveLength(0);
+    const ev = rows.find((r) => r.orderId === yes.id)!;
+    expect(ev.eventId).toBe(`purchase-${yes.number}`);
+    expect(JSON.stringify(ev.payload)).not.toContain("fabio@cliente.com");
+    expect(JSON.stringify(ev.payload)).not.toContain("EAAG"); // o token nunca fica no evento
+    const sent: string[] = [];
+    const r = await flushConversions(db, { transport: async (req) => (sent.push(req.url), { status: 200, body: JSON.stringify({ events_received: 1 }) }) });
+    expect(r.sent).toBe(1);
+    expect(sent[0]).toContain("/123456789012345/events");
+    const [after] = await db.select().from(schema.conversionEvents).where(eq(schema.conversionEvents.id, ev.id));
+    expect(after.status).toBe("SENT");
+    await db.update(schema.affiliates).set({ metaPixelId: null, metaCapiToken: null }).where(eq(schema.affiliates.id, affiliateId));
+  });
+
+  it("duas etapas da agência: liga com código, o mesmo código não vale duas vezes, ADMIN/equipe desligam", async () => {
+    const { startTotp, confirmTotp, disableTotp, resetTotp, checkCode } = await import("@/server/auth/mfa");
+    const { openSecret, totpCode } = await import("@/server/auth/totp");
+    await startTotp(db, "afiliado", adminUser.id);
+    const [u1] = await db.select().from(schema.affiliateUsers).where(eq(schema.affiliateUsers.id, adminUser.id));
+    const secret = openSecret(u1.totpSecret)!;
+    expect(await confirmTotp(db, "afiliado", adminUser.id, "000000", "1.2.3.4")).toMatch(/Código incorreto/);
+    const now = totpCode(secret);
+    expect(await confirmTotp(db, "afiliado", adminUser.id, now, "1.2.3.4")).toBeNull();
+    const [u2] = await db.select().from(schema.affiliateUsers).where(eq(schema.affiliateUsers.id, adminUser.id));
+    expect(u2.totpEnabledAt).toBeTruthy();
+    expect(await checkCode(db, "afiliado", adminUser.id, u2.totpSecret, now, "1.2.3.4")).toMatch(/já foi usado/);
+    expect(await disableTotp(db, "afiliado", adminUser.id, totpCode(secret, Date.now() + 30_000), "1.2.3.4")).toBeNull();
+    await startTotp(db, "afiliado", adminUser.id);
+    const [u3] = await db.select().from(schema.affiliateUsers).where(eq(schema.affiliateUsers.id, adminUser.id));
+    expect(await confirmTotp(db, "afiliado", adminUser.id, totpCode(openSecret(u3.totpSecret)!), "1.2.3.4")).toBeNull();
+    await db.insert(schema.sessions).values({ id: "sess-2fa", userType: "AFFILIATE", userId: adminUser.id, expiresAt: new Date(Date.now() + 86400_000) });
+    expect((await resetTotp(db, "afiliado", adminUser.id))?.id).toBe(adminUser.id);
+    const [u4] = await db.select().from(schema.affiliateUsers).where(eq(schema.affiliateUsers.id, adminUser.id));
+    expect([u4.totpEnabledAt, u4.totpSecret]).toEqual([null, null]);
+    expect(await db.select().from(schema.sessions).where(eq(schema.sessions.id, "sess-2fa"))).toHaveLength(0);
+  });
 });

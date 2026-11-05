@@ -13,5 +13,6 @@ export function legalStore(a: typeof affiliates.$inferSelect): LegalStore {
     whatsapp: a.whatsapp,
     policyNotes: a.policyNotes,
     hasTracking: !!(a.metaPixelId || a.ga4Id),
+    hasServerConversions: !!(a.metaPixelId && a.metaCapiToken),
   };
 }
