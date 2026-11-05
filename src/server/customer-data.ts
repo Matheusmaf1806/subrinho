@@ -3,9 +3,9 @@
  * Na exclusão, os dados pessoais da conta são apagados e os pedidos ficam guardados com o mínimo
  * necessário, por obrigação fiscal e legal (5 anos), como explica a Política de privacidade.
  */
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import type { DB } from "@/server/db";
-import { carts, customers, orderItems, orders, sessions } from "@/server/db/schema";
+import { authTokens, carts, customers, orderItems, orders, sessions } from "@/server/db/schema";
 import { randomToken } from "@/lib/random";
 import { hashPassword } from "@/server/auth/password";
 import { recordAudit } from "@/server/audit";
@@ -49,6 +49,8 @@ export async function deleteCustomerAccount(db: DB, customerId: string) {
       .returning({ id: customers.id, affiliateId: customers.affiliateId });
     if (!c) throw new AccountDeletionError("Conta não encontrada");
     await tx.delete(sessions).where(and(eq(sessions.userType, "CUSTOMER"), eq(sessions.userId, customerId)));
+    // links de nova senha pedidos antes da exclusão deixam de valer
+    await tx.update(authTokens).set({ usedAt: new Date() }).where(and(eq(authTokens.userType, "CUSTOMER"), eq(authTokens.userId, customerId), isNull(authTokens.usedAt)));
     // carrinhos abertos deixam de apontar para a conta (não recebem mais lembrete)
     await tx.update(carts).set({ createdByCustomerId: null }).where(and(eq(carts.createdByCustomerId, customerId), eq(carts.status, "OPEN")));
     await recordAudit(tx, { actor: { type: "CUSTOMER", id: customerId, name: "Cliente" }, affiliateId: c.affiliateId, action: "customer.delete", entity: "customer", entityId: customerId, summary: "Cliente excluiu a própria conta (LGPD)" });

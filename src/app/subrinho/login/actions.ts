@@ -10,7 +10,7 @@ import { authTokens, subrinhoUsers } from "@/server/db/schema";
 import { hashPassword, verifyPassword } from "@/server/auth/password";
 import { requestMeta, startSession } from "@/server/auth/session";
 import { loginBlocked, recordLogin } from "@/server/auth/limits";
-import { openSecret, verifyTotp } from "@/server/auth/totp";
+import { matchTotp, openSecret } from "@/server/auth/totp";
 import { RESET_SENT_MESSAGE, requestPasswordReset, resetPassword, ResetError } from "@/server/auth/reset";
 import { randomToken, sha256 } from "@/lib/random";
 import { actionError } from "../_lib/form";
@@ -76,16 +76,29 @@ export async function verifyMfaAction(_prev: ActionState, fd: FormData): Promise
       .from(authTokens)
       .where(and(eq(authTokens.id, sha256(token)), eq(authTokens.purpose, "MFA"), isNull(authTokens.usedAt), gt(authTokens.expiresAt, new Date())));
     if (!t || t.attempts >= MFA_MAX_ATTEMPTS) return { error: "A etapa do código venceu. Entre com e-mail e senha de novo." };
+    // limite por pessoa (não só por tentativa de login): quem tem a senha não consegue chutar códigos sem parar
+    const { ip } = await requestMeta();
+    const blocked = await loginBlocked(db, "mfa", t.userId, ip);
+    if (blocked) return { error: "Muitos códigos errados seguidos. Espere 15 minutos e entre de novo com e-mail e senha." };
     const [user] = await db.select().from(subrinhoUsers).where(and(eq(subrinhoUsers.id, t.userId), eq(subrinhoUsers.active, true)));
     const secret = openSecret(user?.totpSecret);
-    const code = String(fd.get("code") ?? "");
-    if (!user || !secret || !verifyTotp(secret, code)) {
+    const step = user && secret ? matchTotp(secret, String(fd.get("code") ?? "")) : null;
+    if (!user || step === null) {
       await db.update(authTokens).set({ attempts: t.attempts + 1 }).where(eq(authTokens.id, t.id));
+      await recordLogin(db, "mfa", t.userId, ip, false);
       const left = MFA_MAX_ATTEMPTS - t.attempts - 1;
       return { error: left > 0 ? `Código incorreto. Confira o app autenticador (${left} tentativa${left > 1 ? "s" : ""}).` : "Código incorreto muitas vezes. Entre com e-mail e senha de novo." };
     }
+    // cada código vale uma vez só (quem viu o código por cima do ombro não entra com ele)
+    const [fresh] = await db
+      .insert(authTokens)
+      .values({ id: sha256(`totp:${user.id}:${step}`), purpose: "TOTP_USED", userType: "SUBRINHO", userId: user.id, expiresAt: new Date(Date.now() + 3 * 60_000) })
+      .onConflictDoNothing()
+      .returning({ id: authTokens.id });
+    if (!fresh) return { error: "Este código já foi usado. Espere o próximo código no app." };
     const [used] = await db.update(authTokens).set({ usedAt: new Date() }).where(and(eq(authTokens.id, t.id), isNull(authTokens.usedAt))).returning({ id: authTokens.id });
     if (!used) return { error: "Este código já foi usado. Entre com e-mail e senha de novo." };
+    await recordLogin(db, "mfa", t.userId, ip, true);
     jar.delete({ name: MFA_COOKIE, path: "/subrinho" });
     await startSession("subrinho", { userType: "SUBRINHO", userId: user.id });
   } catch (e) {

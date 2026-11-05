@@ -59,3 +59,13 @@ export async function resetBlocked(db: Tx, scope: string, identifier: string, ip
 export async function recordReset(db: Tx, scope: string, identifier: string, ip: string | null) {
   await db.insert(loginAttempts).values({ scope, identifier: norm(identifier), ip, success: true });
 }
+
+export const REGISTER_MAX_PER_IP = 10;
+
+/** Criação de contas na loja: no máximo 10 por hora vindas da mesma rede. */
+export async function registerBlocked(db: Tx, scope: string, ip: string | null, now = new Date()): Promise<boolean> {
+  if (!ip) return false;
+  const since = new Date(now.getTime() - RESET_WINDOW_MIN * 60_000);
+  const [r] = await db.select({ n: count() }).from(loginAttempts).where(and(eq(loginAttempts.scope, scope), eq(loginAttempts.ip, ip), gte(loginAttempts.createdAt, since)));
+  return Number(r?.n ?? 0) >= REGISTER_MAX_PER_IP;
+}

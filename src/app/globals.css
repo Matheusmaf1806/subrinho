@@ -356,6 +356,13 @@ dialog::backdrop {
 .glass-ui .ui-input:focus {
   background: #fff;
 }
+/* janelas (dialog) são brancas: o campo volta ao cinza para continuar visível */
+.glass-ui dialog .ui-input {
+  background: var(--color-surface);
+}
+.glass-ui dialog .ui-input:focus {
+  background: #fff;
+}
 @media (prefers-reduced-motion: reduce) {
   .glass-ui .ui-card,
   .glass-ui .ui-stat {

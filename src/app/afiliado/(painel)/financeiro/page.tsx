@@ -247,7 +247,7 @@ export default async function AfiliadoFinanceiroPage() {
                       {!issued && <span className="text-xs text-muted">Aguardando a nota da agência</span>}
                       {user.role === "ADMIN" && (
                         <div className="mt-2">
-                          <Modal trigger={<span className={buttonClass(issued ? "ghost" : "outline", "sm")}>{issued ? "Enviar outra nota" : "Enviar nota fiscal"}</span>} title={`Nota da comissão: ${fortnightLabel(p.periodStart, p.periodEnd)}`} size="lg">
+                          <Modal trigger={issued ? "Enviar outra nota" : "Enviar nota fiscal"} triggerClassName={buttonClass(issued ? "ghost" : "outline", "sm")} title={`Nota da comissão: ${fortnightLabel(p.periodStart, p.periodEnd)}`} size="lg">
                             <InvoiceForm action={sendPayoutInvoiceAction} hidden={{ payoutId: p.id }} amount={p.amount} today={todayLocal()} submitLabel="Enviar nota" />
                           </Modal>
                         </div>

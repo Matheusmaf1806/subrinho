@@ -1,6 +1,6 @@
 /** Peças puras do pacote: TOTP, e-mail (layout e Resend), textos legais, link do pedido e WhatsApp. */
 import { describe, expect, it } from "vitest";
-import { base32Decode, base32Encode, newTotpSecret, openSecret, otpauthUrl, sealSecret, totpCode, verifyTotp } from "@/server/auth/totp";
+import { base32Decode, base32Encode, matchTotp, newTotpSecret, openSecret, otpauthUrl, sealSecret, totpCode, totpStep, verifyTotp } from "@/server/auth/totp";
 import { esc, renderEmail } from "@/server/email/render";
 import { emailConfig, fromHeader, resendSender } from "@/server/email/provider";
 import { isEmail } from "@/server/email/outbox";
@@ -26,6 +26,12 @@ describe("verificação em duas etapas (TOTP)", () => {
     expect(verifyTotp(secret, "081 804", now + 30_000)).toBe(true);
     expect(verifyTotp(secret, "081804", now + 120_000)).toBe(false);
     expect(verifyTotp(secret, "12345", now)).toBe(false);
+  });
+  it("informa a janela do código (para não aceitar o mesmo código duas vezes)", () => {
+    const now = 1111111109_000;
+    expect(matchTotp(secret, "081804", now)).toBe(totpStep(now));
+    expect(matchTotp(secret, "081804", now + 30_000)).toBe(totpStep(now)); // código anterior, mesma janela
+    expect(matchTotp(secret, "000000", now)).toBeNull();
   });
   it("segredo cifrado no banco e link do app", () => {
     const s = newTotpSecret();

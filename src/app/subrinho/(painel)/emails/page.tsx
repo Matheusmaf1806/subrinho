@@ -123,7 +123,7 @@ export default async function SubrinhoEmailsPage({ searchParams }: { searchParam
                     </Td>
                     <Td className="text-right">
                       <div className="flex flex-wrap justify-end gap-2">
-                        <Modal trigger={<span className={buttonClass("ghost", "sm")}>Ver</span>} title={e.subject} size="lg">
+                        <Modal trigger={"Ver"} triggerClassName={buttonClass("ghost", "sm")} title={e.subject} size="lg">
                           <iframe title={`Prévia: ${e.subject}`} srcDoc={e.html} sandbox="" className="h-[70vh] w-full rounded-xl bg-white ring-1 ring-line" />
                         </Modal>
                         {canResend && (

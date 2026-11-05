@@ -5,6 +5,8 @@ import { ActionForm, SubmitButton, type ActionState } from "@/components/ui-clie
 
 type Action = (prev: ActionState, fd: FormData) => Promise<ActionState>;
 
+const FILE = "h-auto py-2.5 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-brand-700";
+
 export function InvoiceForm({ action, hidden, amount, today, submitLabel = "Registrar nota" }: { action: Action; hidden: Record<string, string>; amount: string; today: string; submitLabel?: string }) {
   return (
     <ActionForm action={action} className="grid gap-4 sm:grid-cols-2" resetOnSuccess>
@@ -23,11 +25,11 @@ export function InvoiceForm({ action, hidden, amount, today, submitLabel = "Regi
       <Field label="Valor da nota (R$)">
         <Input name="amount" inputMode="decimal" required defaultValue={amount.replace(".", ",")} />
       </Field>
-      <Field label="PDF da nota">
-        <Input type="file" name="pdf" accept="application/pdf,.pdf" />
+      <Field label="PDF da nota" hint="Até 8 MB">
+        <Input type="file" name="pdf" accept="application/pdf,.pdf" className={FILE} />
       </Field>
-      <Field label="XML (opcional)">
-        <Input type="file" name="xml" accept=".xml,application/xml,text/xml" />
+      <Field label="XML (opcional)" hint="Até 8 MB">
+        <Input type="file" name="xml" accept=".xml,application/xml,text/xml" className={FILE} />
       </Field>
       <Field label="Link de consulta (opcional)" hint="Se não anexar o PDF, informe o link da prefeitura" className="sm:col-span-2">
         <Input name="url" type="url" placeholder="https://" maxLength={500} />

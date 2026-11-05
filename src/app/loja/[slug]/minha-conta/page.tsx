@@ -70,13 +70,20 @@ export default async function AccountPage({ params }: { params: Promise<{ slug: 
           <a href={`${sb}/minha-conta/dados`} className={buttonClass("outline", "md")} download>
             Baixar meus dados
           </a>
-          <Modal trigger={<span className={buttonClass("ghost", "md")}>Excluir minha conta</span>} title="Excluir minha conta">
+          <Modal trigger={"Excluir minha conta"} triggerClassName={buttonClass("ghost", "md")} title="Excluir minha conta">
             <p className="text-[14px] text-muted">
               Os seus dados pessoais da conta são apagados e você sai da loja. Os pedidos já feitos ficam guardados pelo prazo exigido por lei (veja a{" "}
               <a href={`${sb}/privacidade`} className="underline">
                 Política de privacidade
               </a>
               ). Não dá para desfazer.
+            </p>
+            <p className="mt-2 text-[13px] text-muted">
+              Criou a conta no checkout e não tem senha?{" "}
+              <a href={`${sb}/esqueci-senha`} className="underline">
+                Crie uma em Esqueci minha senha
+              </a>
+              .
             </p>
             <ActionForm action={deleteAccountAction.bind(null, slug)} className="mt-4 space-y-3">
               <Field label="Sua senha">

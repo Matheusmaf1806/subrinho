@@ -40,6 +40,8 @@ import { ItemBreakdown } from "./item-breakdown";
 import { isManualIssue, isSimulatedPayment, needsControlledIssue } from "@/server/bookings/service";
 import { getAdapter } from "@/server/suppliers/registry";
 import { invoicesForOrder } from "@/server/invoices";
+import { desc, eq } from "drizzle-orm";
+import { emailOutbox } from "@/server/db/schema";
 import { InvoiceForm } from "@/components/invoice-form";
 import { InvoiceList } from "@/components/invoice-list";
 import { todayLocal } from "@/lib/tz";
@@ -96,6 +98,7 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
   const { order: o, affiliate, cart, items, events, views, creator } = data;
   const extras = await orderDetailExtras(db, o, items, events);
   const orderInvoices = await invoicesForOrder(db, o.id);
+  const orderEmails = await db.select().from(emailOutbox).where(eq(emailOutbox.orderId, o.id)).orderBy(desc(emailOutbox.createdAt)).limit(30);
   const canAct = canDo(user.role, PERMS.orders);
 
   const pd = o.paymentData as Record<string, unknown>;
@@ -261,7 +264,7 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
             />
             {o.status === "PAID" && canDo(user.role, PERMS.orders) ? (
               orderInvoices.some((i) => i.status === "ISSUED") ? (
-                <Modal trigger={<span className="text-sm font-semibold text-brand-ink hover:underline">Registrar outra nota</span>} title="Registrar nota fiscal" size="lg">
+                <Modal trigger={"Registrar outra nota"} triggerClassName={"text-sm font-semibold text-brand-ink hover:underline"} title="Registrar nota fiscal" size="lg">
                   <InvoiceForm action={registerOrderInvoiceAction} hidden={{ orderId: o.id }} amount={String(o.amountCharged)} today={todayLocal()} />
                 </Modal>
               ) : (
@@ -269,6 +272,37 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
               )
             ) : (
               !orderInvoices.length && <p className="text-sm text-muted">A nota é registrada depois do pagamento.</p>
+            )}
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="E-mails deste pedido"
+            subtitle="O que o cliente, a agência e a equipe receberam"
+            actions={
+              <Link href={`/subrinho/emails?q=${encodeURIComponent(o.customerData?.email ?? "")}`} className="text-sm font-semibold text-brand-ink hover:underline">
+                Ver todos
+              </Link>
+            }
+          />
+          <CardBody>
+            {orderEmails.length === 0 ? (
+              <p className="text-sm text-muted">Nenhum e-mail registrado para este pedido.</p>
+            ) : (
+              <ul className="space-y-2 text-sm">
+                {orderEmails.map((e) => (
+                  <li key={e.id} className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <Badge tone={e.status === "SENT" ? "success" : e.status === "FAILED" ? "danger" : e.status === "SKIPPED" ? "warning" : "info"}>
+                      {e.status === "SENT" ? "Enviado" : e.status === "FAILED" ? "Falhou" : e.status === "SKIPPED" ? "Não enviado" : "Na fila"}
+                    </Badge>
+                    <span className="font-medium">{e.subject}</span>
+                    <span className="text-xs text-muted">
+                      {e.toEmail} · {dateTime(e.createdAt)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             )}
           </CardBody>
         </Card>

@@ -52,14 +52,22 @@ export function totpCode(secret: string, at = Date.now(), step = 30, digits = 6)
   return String(bin % 10 ** digits).padStart(digits, "0");
 }
 
-/** Aceita o código atual e o vizinho (±30 s) para relógio um pouco fora. */
-export function verifyTotp(secret: string, code: string, at = Date.now()): boolean {
+/** Janela de 30 s em que o código vale (para impedir reusar o mesmo código). */
+export const totpStep = (at: number) => Math.floor(at / 1000 / 30);
+
+/** Passo (janela de 30 s) do código digitado, aceitando o vizinho (±30 s) para relógio um pouco fora; null se não bate. */
+export function matchTotp(secret: string, code: string, at = Date.now()): number | null {
   const c = code.replace(/\D/g, "");
-  if (c.length !== 6) return false;
-  return [-1, 0, 1].some((w) => {
+  if (c.length !== 6) return null;
+  for (const w of [0, -1, 1]) {
     const want = Buffer.from(totpCode(secret, at + w * 30_000));
-    return timingSafeEqual(want, Buffer.from(c));
-  });
+    if (timingSafeEqual(want, Buffer.from(c))) return totpStep(at + w * 30_000);
+  }
+  return null;
+}
+
+export function verifyTotp(secret: string, code: string, at = Date.now()): boolean {
+  return matchTotp(secret, code, at) !== null;
 }
 
 export function otpauthUrl(account: string, secret: string, issuer = "Subrinho") {

@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/server/db";
-import { affiliateUsers, cartItems, customers, orders, type PaxConfig, type PersonData } from "@/server/db/schema";
+import { affiliateUsers, cartItems, customers, loginAttempts, orders, type PaxConfig, type PersonData } from "@/server/db/schema";
 import { endSession, ensureVisitorId, requestMeta, setStoreAdminMode, startSession } from "@/server/auth/session";
 import { hashPassword, verifyPassword } from "@/server/auth/password";
 import {
@@ -25,7 +25,7 @@ import { CheckoutError, findOrCreateCustomer, markOrderPaid, placeOrder } from "
 import { validOrderAccessKey } from "@/server/order-access";
 import { deleteCustomerAccount } from "@/server/customer-data";
 import { recordAudit } from "@/server/audit";
-import { loginBlocked, recordLogin } from "@/server/auth/limits";
+import { loginBlocked, recordLogin, registerBlocked } from "@/server/auth/limits";
 import { RESET_SENT_MESSAGE, requestPasswordReset, resetPassword, ResetError } from "@/server/auth/reset";
 import { autoIssueOrder } from "@/server/bookings/service";
 import { after } from "next/server";
@@ -296,8 +296,11 @@ export async function customerRegisterAction(slug: string, _prev: ActionState, f
   const store = await getStore(slug);
   const parsed = registerSchema.safeParse(Object.fromEntries(fd));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const { ip } = await requestMeta();
+  if (await registerBlocked(db, `register:${store.id}`, ip)) return { error: "Muitas contas criadas desta rede na última hora. Tente de novo mais tarde." };
   const [exists] = await db.select({ id: customers.id }).from(customers).where(and(eq(customers.affiliateId, store.id), eq(customers.email, parsed.data.email)));
   if (exists) return { error: "Já existe uma conta com este e-mail. Entre com sua senha ou use “Esqueci minha senha”." };
+  await db.insert(loginAttempts).values({ scope: `register:${store.id}`, identifier: parsed.data.email, ip, success: true });
   const [c] = await db
     .insert(customers)
     .values({

@@ -94,7 +94,7 @@ export default async function InvoicesPage() {
                   <Td className="text-right tabular">{brl(p.amount)}</Td>
                   {canPayout && (
                     <Td className="text-right">
-                      <Modal trigger={<span className={buttonClass("outline", "sm")}>Registrar nota</span>} title={`Nota da comissão: ${p.store}`} size="lg">
+                      <Modal trigger={"Registrar nota"} triggerClassName={buttonClass("outline", "sm")} title={`Nota da comissão: ${p.store}`} size="lg">
                         <InvoiceForm action={registerPayoutInvoiceSubrinhoAction} hidden={{ payoutId: p.id }} amount={p.amount} today={today} />
                       </Modal>
                     </Td>

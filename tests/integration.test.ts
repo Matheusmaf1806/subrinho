@@ -885,4 +885,26 @@ describe.skipIf(!url)("fluxo completo (integração)", () => {
     const events = await db.select().from(schema.errorEvents).where(eq(schema.errorEvents.key, "TESTE_FORN"));
     expect(events.map((e) => e.code)).toContain("F403c Ray abc");
   });
+
+  it("conta excluída: dados apagados, links de nova senha antigos não reabrem a conta", async () => {
+    const { requestPasswordReset, resetPassword } = await import("@/server/auth/reset");
+    const { deleteCustomerAccount, exportCustomerData } = await import("@/server/customer-data");
+    const { registerBlocked } = await import("@/server/auth/limits");
+    const { customer } = await findOrCreateCustomer(db, affiliateId, { name: "Eva Prado", email: "eva@cliente.com", phone: "11988887777", document: "52998224725", password: "12345678" });
+    expect((await exportCustomerData(db, customer.id))!.conta.email).toBe("eva@cliente.com");
+    const [store] = await db.select().from(schema.affiliates).where(eq(schema.affiliates.id, affiliateId));
+    await requestPasswordReset(db, { realm: "loja", email: "eva@cliente.com", ip: "10.0.0.9", store });
+    const [mail] = (await outbox({ kind: "auth.reset" })).filter((m) => m.toEmail === "eva@cliente.com");
+    const token = decodeURIComponent(mail.text.match(/redefinir-senha\?t=([^\s]+)/)![1]);
+    await deleteCustomerAccount(db, customer.id);
+    const [after] = await db.select().from(schema.customers).where(eq(schema.customers.id, customer.id));
+    expect(after.name).toBe("Conta excluída");
+    expect(after.email).toMatch(/@contas\.invalid$/);
+    expect([after.phone, after.document]).toEqual([null, null]);
+    await expect(resetPassword(db, { realm: "loja", token, password: "invasor-123", confirm: "invasor-123", storeId: affiliateId })).rejects.toThrow(/venceu ou já foi usado/);
+    // limite de criação de contas por rede
+    for (let i = 0; i < 10; i++) await db.insert(schema.loginAttempts).values({ scope: "register:x", identifier: `n${i}@x.com`, ip: "9.9.9.9", success: true });
+    expect(await registerBlocked(db, "register:x", "9.9.9.9")).toBe(true);
+    expect(await registerBlocked(db, "register:x", "8.8.8.8")).toBe(false);
+  });
 });

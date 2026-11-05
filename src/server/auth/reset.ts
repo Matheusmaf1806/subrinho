@@ -92,9 +92,16 @@ export async function resetPassword(db: DB, p: { realm: ResetRealm; token: strin
       .where(and(eq(authTokens.id, sha256(p.token)), eq(authTokens.purpose, "RESET"), eq(authTokens.userType, USER_TYPE[p.realm]), isNull(authTokens.usedAt), gt(authTokens.expiresAt, new Date())))
       .returning();
     if (!t || (p.realm === "loja" && t.storeAffiliateId !== (p.storeId ?? null))) throw new ResetError("Este link venceu ou já foi usado. Peça um novo em “Esqueci minha senha”.");
+    // conta desativada ou excluída depois do pedido do link: não reabre
+    const alive =
+      p.realm === "subrinho"
+        ? and(eq(subrinhoUsers.id, t.userId), eq(subrinhoUsers.active, true))
+        : p.realm === "afiliado"
+          ? and(eq(affiliateUsers.id, t.userId), eq(affiliateUsers.active, true))
+          : and(eq(customers.id, t.userId), isNull(customers.deletedAt));
     const table = p.realm === "subrinho" ? subrinhoUsers : p.realm === "afiliado" ? affiliateUsers : customers;
-    const [u] = await tx.update(table).set({ passwordHash: hash }).where(eq(table.id, t.userId)).returning({ id: table.id, name: table.name });
-    if (!u) throw new ResetError("Conta não encontrada");
+    const [u] = await tx.update(table).set({ passwordHash: hash }).where(alive).returning({ id: table.id, name: table.name });
+    if (!u) throw new ResetError("Esta conta não está mais ativa. Fale com o atendimento.");
     await tx.delete(sessions).where(and(eq(sessions.userType, USER_TYPE[p.realm]), eq(sessions.userId, t.userId)));
     if (p.realm !== "loja")
       await recordAudit(tx, {
