@@ -1,12 +1,12 @@
 /** Reserva no fornecedor (hotéis com API real): status, localizador e emissão controlada. */
-import { Ban, Building2, RefreshCw, Send } from "lucide-react";
-import { Alert, Badge, buttonClass } from "@/components/ui";
+import { Ban, Building2, ClipboardCheck, RefreshCw, Send } from "lucide-react";
+import { Alert, Badge, buttonClass, Field, Input, Textarea } from "@/components/ui";
 import { ActionForm, Modal, SubmitButton } from "@/components/ui-client";
 import type { orderItems } from "@/server/db/schema";
 import { BOOKING_STATUS_LABEL } from "@/server/bookings/service";
 import { dateTime, money } from "@/lib/format";
 import { supplierName } from "../../../_lib/rules";
-import { cancelBookingAction, issueBookingAction, refreshBookingAction } from "./actions";
+import { cancelBookingAction, issueBookingAction, refreshBookingAction, registerManualBookingAction } from "./actions";
 
 type Item = typeof orderItems.$inferSelect;
 
@@ -26,6 +26,7 @@ export function SupplierBookingPanel({
   canAct,
   canSimulateCancel = false,
   simulatedPayment = false,
+  manualIssue = false,
 }: {
   item: Item;
   live: boolean;
@@ -33,13 +34,17 @@ export function SupplierBookingPanel({
   canAct: boolean;
   canSimulateCancel?: boolean;
   simulatedPayment?: boolean;
+  /** Fornecedor sem reserva pela API: a equipe reserva direto e registra o localizador aqui. */
+  manualIssue?: boolean;
 }) {
   const p = (i.supplierPayload ?? {}) as Record<string, unknown>;
   const s = i.supplierStatus;
   const str = (k: string) => (typeof p[k] === "string" && (p[k] as string).trim() ? (p[k] as string) : null);
-  const canIssue = live && orderPaid && canAct && CAN_ISSUE.has(s) && !simulatedPayment;
-  const canRefresh = live && canAct && (!!i.supplierBookingRef || (!!str("reference") && s !== "AWAITING_ISSUE"));
-  const canCancel = live && canAct && !!i.supplierBookingRef && (s === "CONFIRMED" || s === "PENDING");
+  const canIssue = live && orderPaid && canAct && CAN_ISSUE.has(s) && !simulatedPayment && !manualIssue;
+  const canRegister = live && orderPaid && canAct && CAN_ISSUE.has(s) && !simulatedPayment && manualIssue;
+  // sem API de reserva: não há o que consultar nem cancelar pelo sistema
+  const canRefresh = live && canAct && !manualIssue && (!!i.supplierBookingRef || (!!str("reference") && s !== "AWAITING_ISSUE"));
+  const canCancel = live && canAct && !manualIssue && !!i.supplierBookingRef && (s === "CONFIRMED" || s === "PENDING");
   const det = (i.details ?? {}) as { cancellation?: string; notes?: string[]; nonRefundable?: boolean };
   const voucher = p.voucher as { voucherUrl?: string | null; emergencyPhone?: string | null } | undefined;
   const cancellation = p.cancellation as { at?: string; by?: string | null; penalty?: { amount: string; currency: string } | null } | undefined;
@@ -82,15 +87,21 @@ export function SupplierBookingPanel({
               {cancellation.penalty ? ` · multa ${cancellation.penalty.currency} ${cancellation.penalty.amount}` : ""}
             </p>
           )}
+          {str("manualNote") && <p className="text-muted">Observação: {str("manualNote")}</p>}
+          {manualIssue && (
+            <p className="text-xs text-muted">
+              Sem reserva pela API: {i.supplierBookingRef ? "registrada pela equipe" : "reserve direto com o fornecedor e registre o localizador"}. Cancelamento e alterações direto com o fornecedor.
+            </p>
+          )}
           {str("issuedAt") && (
             <p className="text-xs text-muted">
-              Emitida em {dateTime(new Date(str("issuedAt")!))}
+              {p.manual === true ? "Registrada" : "Emitida"} em {dateTime(new Date(str("issuedAt")!))}
               {str("issuedBy") ? ` por ${str("issuedBy")}` : ""}
               {p.recoveredExisting || p.recoveredAfterTimeout || p.recoveredAfterError ? " · reserva existente recuperada (sem duplicar)" : ""}
             </p>
           )}
         </div>
-        {(canIssue || canRefresh || canCancel) && (
+        {(canIssue || canRegister || canRefresh || canCancel) && (
           <div className="flex flex-wrap gap-2">
             {canRefresh && (
               <ActionForm action={refreshBookingAction}>
@@ -143,6 +154,40 @@ export function SupplierBookingPanel({
                     </SubmitButton>
                   </ActionForm>
                 </div>
+              </Modal>
+            )}
+            {canRegister && (
+              <Modal
+                title="Registrar reserva feita no fornecedor"
+                triggerClassName={buttonClass("primary", "sm")}
+                trigger={
+                  <>
+                    <ClipboardCheck className="h-3.5 w-3.5" aria-hidden /> Registrar reserva
+                  </>
+                }
+              >
+                <ActionForm action={registerManualBookingAction} className="space-y-4">
+                  <input type="hidden" name="itemId" value={i.id} />
+                  <input type="hidden" name="orderId" value={i.orderId} />
+                  <Alert tone="info" title="Reserva direto com o fornecedor">
+                    A <strong>{supplierName(i.supplierCode)}</strong> não recebe reservas pela API. Reserve com ela {i.category === "HOUSES" ? "a casa" : "o serviço"}, as datas e os hóspedes deste pedido e registre aqui o localizador.
+                  </Alert>
+                  <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
+                    <li>Custo vendido: {money(i.costForeign, i.costCurrency)}. Não feche a reserva por mais do que isso.</li>
+                    <li>Confira os nomes dos hóspedes em “Viajantes” antes de reservar.</li>
+                    <li>Depois de registrado, o cliente vê o voucher com este localizador.</li>
+                  </ul>
+                  <Field label="Localizador do fornecedor">
+                    <Input name="bookingRef" required maxLength={60} autoComplete="off" />
+                  </Field>
+                  <Field label={`Custo confirmado (${i.costCurrency})`} hint="Opcional. Se passar do custo vendido, o item fica marcado para conferência.">
+                    <Input name="bookedCost" inputMode="decimal" maxLength={14} autoComplete="off" placeholder={String(i.costForeign)} />
+                  </Field>
+                  <Field label="Observação" hint="Opcional (ex.: quem confirmou na Master, e-mail da confirmação)">
+                    <Textarea name="note" rows={2} maxLength={500} />
+                  </Field>
+                  <SubmitButton pendingText="Registrando…">Registrar reserva</SubmitButton>
+                </ActionForm>
               </Modal>
             )}
             {canIssue && (

@@ -36,7 +36,7 @@ import { isUuid } from "../../../_lib/form";
 import { canDo, EVENT_LABEL, PAYMENT_METHOD_LABEL, PAYPAL_STATUS_LABEL, PERMS, USER_TYPE_LABEL, VIEW_PAGE_LABEL } from "../../../_lib/labels";
 import { cancelOrderAction, confirmPaymentAction } from "./actions";
 import { ItemBreakdown } from "./item-breakdown";
-import { isSimulatedPayment, needsControlledIssue } from "@/server/bookings/service";
+import { isManualIssue, isSimulatedPayment, needsControlledIssue } from "@/server/bookings/service";
 import { getAdapter } from "@/server/suppliers/registry";
 
 function cancelSimulation(code: string): boolean {
@@ -197,6 +197,7 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
               canAct,
               canSimulateCancel: cancelSimulation(it.supplierCode),
               simulatedPayment: isSimulatedPayment(o.paymentData),
+              manualIssue: isManualIssue(it.supplierCode),
             }}
           />
         ))}

@@ -72,6 +72,75 @@ export function isSimulatedPayment(paymentData: unknown): boolean {
 
 type IssueOutcome = { itemId: string; status: string; bookingRef: string | null; message: string };
 
+/** Fornecedor sem reserva pela API (só busca e cotação): a equipe reserva direto e registra o localizador. */
+export function isManualIssue(supplierCode: string): boolean {
+  try {
+    return getAdapter(supplierCode).manualIssue === true;
+  } catch {
+    return false;
+  }
+}
+
+const MANUAL_REF = /^[\p{L}\p{N}][\p{L}\p{N} ._/#-]{0,59}$/u;
+
+/**
+ * Registra a reserva feita direto com o fornecedor (fornecedores com `manualIssue`, ex.: Master
+ * Vacation Home). Mesmas travas da emissão: pedido pago com dinheiro real e item ainda sem reserva
+ * (a gravação só acontece se ninguém registrou/emitiu antes). O custo confirmado é opcional e, se
+ * passar do custo vendido, fica marcado para conferência.
+ */
+export async function registerManualBooking(
+  itemId: string,
+  actor: { id?: string | null; name?: string | null },
+  input: { bookingRef: string; bookedCost?: string | null; note?: string | null },
+  db: DB = getDb(),
+): Promise<IssueOutcome> {
+  const bookingRef = input.bookingRef.trim();
+  if (!MANUAL_REF.test(bookingRef)) throw new BookingIssueError("Informe o localizador da reserva (letras, números, espaço, . _ / # -; até 60 caracteres)");
+  const [row] = await db
+    .select({ item: orderItems, order: orders })
+    .from(orderItems)
+    .innerJoin(orders, eq(orders.id, orderItems.orderId))
+    .where(eq(orderItems.id, itemId));
+  if (!row) throw new BookingIssueError("Item não encontrado");
+  const { item, order } = row;
+  if (!isManualIssue(item.supplierCode)) throw new BookingIssueError("Este fornecedor recebe reservas pela API: use “Emitir reserva”");
+  if (order.status !== "PAID") throw new BookingIssueError("O pedido ainda não está pago. A reserva só é registrada depois do pagamento");
+  if (isSimulatedPayment(order.paymentData) && process.env.ALLOW_SIMULATED_ISSUE !== "1")
+    throw new BookingIssueError("Pagamento simulado (teste): não é dinheiro real, então nenhuma reserva deve ser feita no fornecedor. Confirme um pagamento real antes.");
+  const cost = input.bookedCost?.trim() ? input.bookedCost.trim().replace(",", ".") : null;
+  if (cost !== null && !/^\d{1,9}(\.\d{1,2})?$/.test(cost)) throw new BookingIssueError("Custo confirmado inválido (ex.: 2074.17)");
+
+  const siblings = await db.select({ id: orderItems.id }).from(orderItems).where(eq(orderItems.orderId, order.id)).orderBy(asc(orderItems.id));
+  const position = siblings.findIndex((s) => s.id === itemId) + 1;
+  const prev = (item.supplierPayload ?? {}) as Record<string, unknown>;
+  const reference = (prev.reference as string | undefined) ?? bookingReference(order.number, position);
+  const costAboveSold = cost !== null && Number(cost) > Number(item.costForeign) + 0.01;
+  const payload: Record<string, unknown> = {
+    ...prev,
+    reference,
+    manual: true,
+    issuedAt: new Date().toISOString(),
+    issuedBy: actor.name ?? "Equipe Subrinho",
+    ...(input.note?.trim() ? { manualNote: input.note.trim().slice(0, 500) } : {}),
+    ...(cost !== null ? { bookedPrice: Number(cost).toFixed(2), currency: item.costCurrency, costAboveSold } : {}),
+  };
+  delete payload.error;
+  const saved = await db
+    .update(orderItems)
+    .set({ supplierStatus: BOOKING_STATUS.CONFIRMED, supplierBookingRef: bookingRef, supplierPayload: payload })
+    .where(and(eq(orderItems.id, itemId), sql`(${orderItems.supplierStatus} is null or ${orderItems.supplierStatus} in (${sql.join([...RETRYABLE].map((s) => sql`${s}`), sql`, `)}))`))
+    .returning({ id: orderItems.id });
+  if (!saved.length) throw new BookingIssueError("Este item já tem reserva registrada. Atualize a página.");
+  const message = `Reserva registrada (${bookingRef})`;
+  await db.insert(orderEvents).values({
+    orderId: order.id,
+    type: "BOOKING_CONFIRMED",
+    data: { itemId, reference, status: BOOKING_STATUS.CONFIRMED, bookingRef, message, manual: true, by: actor.id ?? null, byName: actor.name ?? null, ...(costAboveSold ? { costAboveSold } : {}) },
+  });
+  return { itemId, status: BOOKING_STATUS.CONFIRMED, bookingRef, message };
+}
+
 /**
  * Emite a reserva de um item já pago. `actor` = quem pediu (para o histórico).
  * Pode ser chamada de novo após falha: é idempotente.
@@ -94,6 +163,9 @@ export async function issueItemBooking(
     throw new BookingIssueError("Pagamento simulado (teste): não é dinheiro real, então nenhuma reserva é emitida no fornecedor. Confirme um pagamento real antes.");
   if (item.supplierStatus === BOOKING_STATUS.CONFIRMED || item.supplierStatus === BOOKING_STATUS.PENDING)
     return { itemId, status: item.supplierStatus, bookingRef: item.supplierBookingRef, message: "Este item já tem reserva no fornecedor" };
+  // fornecedor sem reserva pela API: nada a chamar (nem na emissão automática), a equipe registra
+  if (isManualIssue(item.supplierCode))
+    throw new BookingIssueError("Este fornecedor não recebe reservas pela API: reserve direto com ele e use “Registrar reserva” com o localizador");
 
   // posição do item no pedido (estável) → referência
   const siblings = await db.select({ id: orderItems.id }).from(orderItems).where(eq(orderItems.orderId, order.id)).orderBy(asc(orderItems.id));

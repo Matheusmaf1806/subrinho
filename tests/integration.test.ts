@@ -10,6 +10,8 @@ import type { BookItem, BookContext, BookingResult } from "@/server/suppliers/ty
 const liveBook = vi.hoisted(() => ({ calls: [] as { item: unknown; ctx: unknown }[], impl: null as null | ((item: unknown) => Promise<unknown>) }));
 // MAPRO de verdade (adaptador real) com respostas no formato da API — sem rede.
 const mapro = vi.hoisted(() => ({ calls: [] as { method: string; path: string; body?: unknown }[], total: "2074.17", created: false, canceled: false }));
+// Master Vacation Home de verdade (adaptador real, reserva manual) com respostas no formato da API — sem rede.
+const mvh = vi.hoisted(() => ({ calls: [] as string[], total: "2595.30" }));
 vi.mock("@/server/suppliers/registry", async (orig) => {
   const real = await orig<typeof import("@/server/suppliers/registry")>();
   const { SupplierError } = await import("@/server/suppliers/types");
@@ -74,10 +76,26 @@ vi.mock("@/server/suppliers/registry", async (orig) => {
       },
     },
   );
+  const { createMvhAdapter } = await import("@/server/suppliers/mvh/adapter");
+  const mvhHouse = { PropertyID: 398103, WebsitePropertyName: "Audit Pool Home", Community: "Windsor Hills", PropertyType: "House", Bedrooms: 5, Bathrooms: 4, Sleeps: 10, MinimumNightsStay: 3, XCO: "28.33", YCO: "-81.59", HasPool: "True" };
+  const mvhAdapter = createMvhAdapter(
+    { uid: "vpo-test", baseUrl: "https://mvh.test/api/v2", icalUrl: "https://ical.test" },
+    {
+      transport: async (req) => {
+        const u = new URL(req.url);
+        mvh.calls.push(u.pathname);
+        const json = (v: unknown) => ({ status: 200, body: JSON.stringify(v) });
+        if (u.pathname === "/api/v2/getproperties") return json([mvhHouse]);
+        if (u.pathname === "/api/v2/quote/398103")
+          return json({ QuoteBaseRate: "2100.00", discount_amount: "100.00", cleaning: "250.00", service: "45.00", taxes: (Number(mvh.total) - 2295).toFixed(2), QuoteIncludingTax: mvh.total });
+        return { status: 404, body: "<html>404</html>" };
+      },
+    },
+  );
   return {
     ...real,
-    getAdapter: (code: string) => (code === "LIVE_TEST" ? fake : code === "MAPRO" ? maproAdapter : real.getAdapter(code)),
-    isLiveSupplier: (code: string) => code === "LIVE_TEST" || code === "MAPRO" || real.isLiveSupplier(code),
+    getAdapter: (code: string) => (code === "LIVE_TEST" ? fake : code === "MAPRO" ? maproAdapter : code === "MASTER_VACATION_HOME" ? mvhAdapter : real.getAdapter(code)),
+    isLiveSupplier: (code: string) => code === "LIVE_TEST" || code === "MAPRO" || code === "MASTER_VACATION_HOME" || real.isLiveSupplier(code),
   };
 });
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -92,7 +110,7 @@ import { createCoupon } from "@/server/admin/coupons";
 import { recordFxRate } from "@/server/fx";
 import { SUPPLIERS, getAdapter } from "@/server/suppliers/registry";
 import { SupplierError, type Quote } from "@/server/suppliers/types";
-import { autoIssueOrder, BookingIssueError, cancelItemBooking, issueItemBooking } from "@/server/bookings/service";
+import { autoIssueOrder, BookingIssueError, cancelItemBooking, issueItemBooking, registerManualBooking } from "@/server/bookings/service";
 import { applyDiscounts, priceItem } from "@/server/pricing/engine";
 import { addQuoteToCart, applyCouponToCart, changeItemPax, createCart, loadCartView, setAffiliateMarginOverride, CartError } from "@/server/cart/service";
 import { findOrCreateCustomer, markOrderPaid, placeOrder } from "@/server/checkout/service";
@@ -319,6 +337,47 @@ describe.skipIf(!url)("fluxo completo (integração)", () => {
     liveBook.impl = null;
     const r2 = await issueItemBooking(item.id, { type: "SUBRINHO", name: "Staff" }, db);
     expect(r2.status).toBe("CONFIRMED");
+  });
+
+  it("casa da Master (reserva manual): custo = total da Master com margens → pago → sem emissão pela API → equipe registra o localizador", async () => {
+    const { customer } = await findOrCreateCustomer(db, affiliateId, { name: "Ana Souza", email: "ana@mvh.com", phone: "(11) 97777-1111", password: "12345678" });
+    const checkIn = addDays(todayLocal(), 60);
+    const checkOut = addDays(todayLocal(), 67);
+    const q = await getAdapter("MASTER_VACATION_HOME").quote({ productId: "398103", checkIn, checkOut, pax: { adults: 4, children: 2 } });
+    expect(q.lines.reduce((t, l) => t + Number(l.unitCost) * l.quantity, 0).toFixed(2)).toBe("2595.30");
+    const cart = await createCart(db, affiliateId, { type: "CUSTOMER", id: customer.id });
+    await addQuoteToCart(db, cart, q);
+    const quotesBefore = mvh.calls.filter((c) => c === "/api/v2/quote/398103").length;
+    const { order } = await placeOrder(db, { cart, customer, payer: { name: "Ana Souza", email: "ana@mvh.com" }, travelers: [{ name: "Ana Souza" }], paymentMethod: "PIX", installments: 1 });
+    // o checkout cotou a casa de novo na Master
+    expect(mvh.calls.filter((c) => c === "/api/v2/quote/398103").length).toBeGreaterThan(quotesBefore);
+    await markOrderPaid(db, order.id, { paidAt: new Date(), ref: "PIX-MVH-1" });
+    const [oi] = await db.select().from(schema.orderItems).where(eq(schema.orderItems.orderId, order.id));
+
+    // custo = total da Master (limpeza, serviço e impostos inclusive) e o preço é a conta normal sobre ele
+    expect(oi.costCurrency).toBe("USD");
+    expect(Number(oi.costForeign)).toBe(2595.3);
+    const f = applyDiscounts(priceItem({ costCurrency: oi.costCurrency, lines: oi.lines, fxRate: oi.fxRate, subrinhoMarginPct: oi.subrinhoMarginPct, affiliateMarginPct: oi.affiliateMarginPct, installmentFeePct: oi.installmentFeePct }));
+    expect(f.finalPix.toFixed(2)).toBe(oi.finalPix);
+    expect(oi.supplierStatus).toBe("AWAITING_ISSUE");
+
+    // sem API de reserva: nem a emissão automática nem o botão "Emitir" chamam a Master, e o item não trava
+    await autoIssueOrder(order.id, db);
+    await expect(issueItemBooking(oi.id, { type: "SUBRINHO", name: "Staff" }, db)).rejects.toThrow(/Registrar reserva/);
+    const [still] = await db.select().from(schema.orderItems).where(eq(schema.orderItems.id, oi.id));
+    expect(still.supplierStatus).toBe("AWAITING_ISSUE");
+
+    await expect(registerManualBooking(oi.id, { name: "Staff" }, { bookingRef: "  " }, db)).rejects.toThrow(/localizador/);
+    await expect(registerManualBooking(oi.id, { name: "Staff" }, { bookingRef: "MVH-1", bookedCost: "abc" }, db)).rejects.toThrow(/Custo confirmado inválido/);
+    const r = await registerManualBooking(oi.id, { id: staffId, name: "Staff" }, { bookingRef: "MVH-88123", bookedCost: "2600,00", note: "Confirmado por e-mail" }, db);
+    expect(r).toMatchObject({ status: "CONFIRMED", bookingRef: "MVH-88123" });
+    const [done] = await db.select().from(schema.orderItems).where(eq(schema.orderItems.id, oi.id));
+    expect(done).toMatchObject({ supplierStatus: "CONFIRMED", supplierBookingRef: "MVH-88123" });
+    expect(done.supplierPayload).toMatchObject({ manual: true, reference: `SUB${order.number}-1`, bookedPrice: "2600.00", costAboveSold: true, manualNote: "Confirmado por e-mail", issuedBy: "Staff" });
+    // registrar de novo não sobrescreve
+    await expect(registerManualBooking(oi.id, { name: "Staff" }, { bookingRef: "OUTRO-1" }, db)).rejects.toThrow(/já tem reserva/);
+    const events = await db.select().from(schema.orderEvents).where(eq(schema.orderEvents.orderId, order.id));
+    expect(events.find((e) => e.type === "BOOKING_CONFIRMED")?.data).toMatchObject({ manual: true, bookingRef: "MVH-88123", costAboveSold: true });
   });
 
   /**

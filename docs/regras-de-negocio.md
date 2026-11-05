@@ -199,6 +199,26 @@ A visão do afiliado é montada por **lista branca** de campos (`getOrderForAffi
   fosse a casa — vale também para hotéis).
 - **Conta DEMO:** em produção (`VERCEL_ENV=production`) o token da conta DEMO da MAPRO é recusado.
 
+### Master Vacation Home
+
+> `src/server/suppliers/mvh/` · testes: `tests/mvh.test.ts`
+
+- **Preço único:** todo preço (card da busca, página da casa, carrinho, checkout) vem da cotação daquela casa
+  (`/quote/{id}` com datas e número de hóspedes). A listagem da Master só diz quais casas estão livres; o valor dela é
+  tabelado por tier e nunca é exibido nem cobrado. A busca e a página da casa leem a mesma cotação (tabela por
+  período + hóspedes, 15 min); a cotação do carrinho atualiza a tabela, então os três mostram o mesmo valor.
+- **Custo:** o total que a Master cobra (aluguel − desconto + limpeza + serviço + impostos), em USD. Entra inteiro
+  na conta de todo item (§1): margem e taxa do parcelado incidem sobre o total, não só sobre o aluguel. As linhas somam
+  exatamente o total da Master; se não somarem, vira uma linha só com o total dela.
+- **Disponibilidade:** casa sem cotação válida (erro da Master ou total zero) fica fora da busca; na página, o
+  calendário iCal mostra o motivo (data ocupada) ou a estadia mínima da casa. Capacidade = `Sleeps` (adultos + crianças).
+- **Busca demorada:** a Master leva alguns segundos por cotação. A busca cota em paralelo dentro de um orçamento de
+  tempo; o que não coube fica para a próxima busca (a tabela vai se completando). Nunca entra com preço tabelado.
+- **Cancelamento:** a API não informa. Vale `MASTER_VACATION_HOME_FREE_CANCEL_DAYS`; sem ela, “Não reembolsável”.
+- **Reserva manual:** a API não reserva (`manualIssue`). Depois do pagamento real, a equipe reserva com a Master e usa
+  “Registrar reserva” no pedido (localizador, custo confirmado opcional, observação). Custo confirmado acima do vendido
+  fica marcado. Nunca há emissão automática; cancelamento e alterações direto com a Master.
+
 ## 9. Pagamento simulado (ambiente sem gateway)
 
 > `isSimulatedPayment` em `src/server/bookings/service.ts`, `REAL_PAYMENT` em `src/server/payouts/service.ts`

@@ -240,6 +240,11 @@ export interface SupplierAdapter {
   defaultCurrency: Currency;
   /** true = API real do fornecedor (reservas de verdade). false/undefined = catálogo simulado. */
   live?: boolean;
+  /**
+   * A API não recebe reservas (só busca e cotação): a equipe Subrinho reserva direto com o fornecedor
+   * e registra o localizador no pedido (Painel Subrinho). Nunca há emissão automática.
+   */
+  manualIssue?: boolean;
   destinations(): { id: string; name: string }[];
   search(params: SearchParams): Promise<ProductSummary[]>;
   getProduct(productId: string, params: SearchParams): Promise<ProductDetail | null>;

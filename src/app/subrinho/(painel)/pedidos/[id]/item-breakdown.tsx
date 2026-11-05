@@ -63,7 +63,7 @@ export function ItemBreakdown({
   index: number;
   rules: Map<string, Rule>;
   paymentMethod: string;
-  booking?: { live: boolean; orderPaid: boolean; canAct: boolean; canSimulateCancel?: boolean; simulatedPayment?: boolean };
+  booking?: { live: boolean; orderPaid: boolean; canAct: boolean; canSimulateCancel?: boolean; simulatedPayment?: boolean; manualIssue?: boolean };
 }) {
   const cur = i.costCurrency;
   const check = verify(i);
@@ -259,7 +259,7 @@ export function ItemBreakdown({
           </div>
         </dl>
         {booking && (
-          <SupplierBookingPanel item={i} live={booking.live} orderPaid={booking.orderPaid} canAct={booking.canAct} canSimulateCancel={booking.canSimulateCancel} simulatedPayment={booking.simulatedPayment} />
+          <SupplierBookingPanel item={i} live={booking.live} orderPaid={booking.orderPaid} canAct={booking.canAct} canSimulateCancel={booking.canSimulateCancel} simulatedPayment={booking.simulatedPayment} manualIssue={booking.manualIssue} />
         )}
         <div className="grid gap-2 md:grid-cols-2">
           <JsonDetails label="Resposta do fornecedor (payload)" value={i.supplierPayload} />
