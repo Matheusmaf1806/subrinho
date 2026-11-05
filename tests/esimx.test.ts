@@ -8,6 +8,7 @@ import { createEsimxAdapter, appleInstallLink, customerOrderId, orderStatus } fr
 import { EsimxApiError, EsimxClient, esimxConfig, type Transport } from "@/server/suppliers/esimx/client";
 import { coverageLabel, curatePlans, dataLabel, planArea, resolveArea, sellablePlan, slimPackage, throttleNote, type EsimxPackage } from "@/server/suppliers/esimx/catalog";
 import { SupplierError } from "@/server/suppliers/types";
+import { failureCode } from "@/server/suppliers/failure-code";
 
 const AREAS = [
   { code: "IT", name: "Italy", type: "COUNTRY" },
@@ -112,6 +113,19 @@ describe("cliente", () => {
     await expect(client("", 401).get("/area/list")).rejects.toBeInstanceOf(EsimxApiError);
     await expect(client("<!DOCTYPE html><title>Just a moment...</title>", 403).get("/area/list")).rejects.toMatchObject({ status: 403 });
     await expect(client("<!DOCTYPE html><title>Just a moment...</title>", 403).get("/area/list")).rejects.toThrow(/Cloudflare/);
+  });
+
+  it("código para o suporte diz o motivo da falha sem citar o fornecedor", async () => {
+    const code = (p: Promise<unknown>) => p.then(() => "ok", failureCode);
+    expect(await code(client("<html><title>Attention Required! | Cloudflare</title>", 403).get("/package/list"))).toBe("F403");
+    expect(await code(client("", 401).get("/package/list"))).toBe("K401");
+    expect(await code(client(JSON.stringify({ code: 50001, message: "Balance not enough" })).get("/x"))).toBe("H200.50001");
+    expect(await code(client("", 502).get("/x"))).toBe("H502");
+    const failing = (err: Error) => new EsimxClient({ apiKey: "k", baseUrl: "https://x.test" }, async () => Promise.reject(err));
+    expect(await code(failing(Object.assign(new Error("aborted"), { name: "AbortError" })).get("/x"))).toBe("T");
+    expect(await code(failing(Object.assign(new Error("fetch failed"), { code: "ECONNRESET" })).get("/x"))).toBe("N-ECONNRESET");
+    expect(failureCode(new SupplierError("Informe o destino"))).toBe("S");
+    expect(failureCode(new TypeError("x"))).toBe("X-TypeError");
   });
 
   it("aceita a chave colada com aspas ou espaços", () => {

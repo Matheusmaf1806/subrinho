@@ -4,6 +4,7 @@ import { db } from "@/server/db";
 import { productRef } from "@/server/suppliers/refs";
 import { searchCatalog, type PricedSummary } from "@/server/catalog";
 import { adaptersFor } from "@/server/suppliers/registry";
+import { failureCode } from "@/server/suppliers/failure-code";
 import { cn } from "@/components/ui";
 import { categoryAvailable } from "../_lib/categories";
 import { ComingSoon } from "../_components/coming-soon";
@@ -52,9 +53,15 @@ export default async function ChipPage({ params, searchParams }: { params: Promi
   const { d } = parseSearch(raw);
   // falha do fornecedor ≠ destino sem cobertura: a mensagem para o cliente é outra
   let failed = false;
+  const codes = new Set<string>();
+  const fail = (e: unknown) => {
+    failed = true;
+    codes.add(failureCode(e));
+  };
   const results = d.destino
-    ? await searchCatalog(db, ctx, "CHIP", supplierParams(d, "chip"), { reveal, onError: () => (failed = true) }).catch(() => {
-        failed = true;
+    ? await searchCatalog(db, ctx, "CHIP", supplierParams(d, "chip"), { reveal, onError: (_, e) => fail(e) }).catch((e) => {
+        console.error("[chip] busca:", e);
+        fail(e);
         return [] as PricedSummary[];
       })
     : [];
@@ -100,6 +107,7 @@ export default async function ChipPage({ params, searchParams }: { params: Promi
             <Link href={`${base}?${toQuery({ destino: d.destino, dias: d.dias || undefined })}`} className="mt-6 inline-flex h-11 items-center rounded-full bg-ink px-5 text-[14px] font-semibold text-white transition hover:bg-ink-2">
               Tentar de novo
             </Link>
+            {codes.size > 0 && <p className="mt-4 text-[12px] text-muted">Código para o suporte: {[...codes].join(" ")}</p>}
           </section>
         ) : results.length === 0 ? (
           <section className="rounded-[2rem] bg-surface p-8 text-center sm:p-12">
