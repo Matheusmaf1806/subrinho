@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { FlightPath, SubrinhoLogo, SubrinhoSymbol } from "./brand";
 import { cn } from "./ui";
 import { MeshBackground } from "./mesh-background";
+import { dailyBackdrop } from "@/lib/images";
 
 /** Tela de login dos painéis: formulário à esquerda, bloco de marca (cor chapada + foto) à direita. */
 export function AuthSplit({
@@ -25,7 +26,7 @@ export function AuthSplit({
 }) {
   return (
     <div className="glass-ui relative grid min-h-screen gap-3 p-3 lg:grid-cols-[1fr_1.05fr]">
-      <MeshBackground />
+      <MeshBackground image={image ?? dailyBackdrop()} />
       <section className="glass glass-edge flex flex-col justify-between rounded-[2.5rem] px-6 py-6 sm:px-10 lg:px-16 lg:py-10">
         <SubrinhoLogo size="md" />
         <div className="my-14 w-full max-w-md" data-enter>

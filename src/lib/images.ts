@@ -100,3 +100,11 @@ export function galleryFor(category: string, destination?: string | null): [stri
   const keys = (destination && DESTINATION_GALLERY[destination]) || CATEGORY_GALLERY[category] || ["friends", "planeWing"];
   return [photo(keys[0], 900), photo(keys[1], 900)];
 }
+
+/** Fotos de viagem do fundo dos painéis (uma por dia, sempre a mesma no mesmo dia). */
+const BACKDROPS: PhotoKey[] = ["vernazza", "tropicalResort", "venice", "paris", "infinityPool", "lisbon", "palmPool", "floridaPalms", "florence", "villaPool"];
+
+export function dailyBackdrop(date = new Date()): string {
+  const day = Math.floor(date.getTime() / 86_400_000);
+  return photo(BACKDROPS[day % BACKDROPS.length], 640, 400);
+}

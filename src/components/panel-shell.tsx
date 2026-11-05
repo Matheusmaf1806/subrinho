@@ -21,7 +21,10 @@ export function PanelShell({
   user,
   children,
   footer,
+  backdrop,
 }: {
+  /** Foto do fundo (fica bem desfocada). */
+  backdrop?: string | null;
   brand: ReactNode;
   badge?: ReactNode;
   nav: NavItem[];
@@ -35,7 +38,7 @@ export function PanelShell({
   useEffect(() => setOpen(false), [pathname]);
 
   const navList = (
-    <nav className="flex flex-col gap-1">
+    <nav className="flex flex-col gap-0.5">
       {nav.map((i) => {
         const on = isActive(i);
         return (
@@ -45,7 +48,7 @@ export function PanelShell({
             onClick={() => setOpen(false)}
             aria-current={on ? "page" : undefined}
             className={cn(
-              "group relative flex h-11 items-center gap-3 rounded-2xl px-3.5 text-[14px] font-medium transition-all duration-200",
+              "group relative flex h-10 shrink-0 items-center gap-3 rounded-2xl px-3.5 text-[14px] font-medium transition-all duration-200 [@media(max-height:760px)]:h-9",
               on
                 ? "bg-white/90 font-semibold text-ink shadow-[0_8px_24px_-12px_rgba(20,20,40,0.35),inset_0_1px_0_rgba(255,255,255,1)]"
                 : "text-ink/60 hover:bg-white/45 hover:text-ink",
@@ -69,12 +72,12 @@ export function PanelShell({
 
   return (
     <div className="glass-ui relative min-h-screen text-ink lg:grid lg:grid-cols-[288px_1fr]">
-      <MeshBackground />
+      <MeshBackground image={backdrop} />
 
       {/* Menu lateral (desktop): vidro flutuante */}
       <aside className="glass glass-edge sticky top-3 z-20 m-3 hidden h-[calc(100vh-1.5rem)] flex-col rounded-[30px] px-3 py-5 lg:flex">
         <div className="mb-2 px-3">{brand}</div>
-        {badge && <div className="mb-6 px-3">{badge}</div>}
+        {badge && <div className="mb-5 px-3">{badge}</div>}
         <div className="no-scrollbar -mx-1 flex-1 overflow-y-auto px-1">{navList}</div>
         <div className="mt-4 rounded-[22px] bg-white/55 p-3.5 text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] ring-1 ring-white/60">{user}</div>
         {footer}

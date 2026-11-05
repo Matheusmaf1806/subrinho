@@ -15,6 +15,7 @@ import { SubrinhoLogo } from "@/components/brand";
 import { monogram, themeStyle } from "@/lib/theme";
 import { PanelShell, type NavItem } from "@/components/panel-shell";
 import { requireAffiliateUser } from "@/server/auth/session";
+import { dailyBackdrop } from "@/lib/images";
 import { ROLE_LABEL, storeHref } from "../_lib/helpers";
 import { logoutAction } from "./actions";
 
@@ -41,6 +42,8 @@ export default async function PainelAfiliadoLayout({ children }: { children: Rea
   return (
     <div style={themeStyle(affiliate)} className="font-sans">
     <PanelShell
+      // a foto de capa da própria loja; sem ela, uma foto de viagem do dia
+      backdrop={affiliate.heroImageUrl || dailyBackdrop()}
       brand={
         <Link href="/afiliado" aria-label={`${affiliate.name}, início`} className="flex min-w-0 items-center gap-3">
           {affiliate.logoUrl ? (

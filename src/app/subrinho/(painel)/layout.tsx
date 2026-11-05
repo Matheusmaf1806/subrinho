@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { SubrinhoLogo } from "@/components/brand";
 import { PanelShell, type NavItem } from "@/components/panel-shell";
+import { dailyBackdrop } from "@/lib/images";
 import { requireSubrinhoUser } from "@/server/auth/session";
 import { ROLE_LABEL } from "../_lib/labels";
 import { logoutSubrinho } from "./actions";
@@ -56,6 +57,7 @@ export default async function SubrinhoPanelLayout({ children }: { children: Reac
 
   return (
     <PanelShell
+      backdrop={dailyBackdrop()}
       brand={
         <Link href="/subrinho" aria-label="Painel Subrinho, início">
           <SubrinhoLogo tone="brand" size="sm" />

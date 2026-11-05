@@ -94,7 +94,7 @@ export function PageHeader({ title, subtitle, actions, back }: { title: ReactNod
           </Link>
         )}
         <h1 className="text-[2.1rem] font-semibold leading-[1.02] tracking-[-0.04em] text-ink sm:text-5xl">{title}</h1>
-        {subtitle && <p className="mt-2 max-w-2xl text-[15px] text-muted">{subtitle}</p>}
+        {subtitle && <p className="ui-page-subtitle mt-2 max-w-2xl text-[15px] text-muted">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
