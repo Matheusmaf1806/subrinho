@@ -11,7 +11,7 @@ import { fortnightOf } from "@/server/payouts/calendar";
 import { payoutDateForPeriod } from "@/server/payouts/service";
 import { sum } from "@/server/pricing/money";
 import { affiliatePayoutsOverview } from "@/server/afiliado/payouts";
-import { firstName, fortnightLabel, monthShort, paymentLabel, storePath } from "../_lib/helpers";
+import { firstName, fortnightLabel, monthShort, paymentLabel, storeHref } from "../_lib/helpers";
 
 export const metadata: Metadata = { title: "Início" };
 
@@ -44,7 +44,7 @@ export default async function AfiliadoDashboardPage() {
         subtitle={`Resumo da ${affiliate.name}.`}
         actions={
           <>
-            <a href={storePath(affiliate.slug)} target="_blank" rel="noopener noreferrer" className={buttonClass("primary")}>
+            <a href={storeHref(affiliate)} target="_blank" rel="noopener noreferrer" className={buttonClass("primary")}>
               <ExternalLink className="h-4 w-4" aria-hidden /> Abrir minha loja
             </a>
             <ButtonLink href="/afiliado/pedidos" variant="outline">

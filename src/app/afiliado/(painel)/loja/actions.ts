@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidateStore } from "@/server/store-links";
 import { z } from "zod";
 import type { ActionState } from "@/components/ui-client";
 import { db } from "@/server/db";
@@ -51,6 +52,6 @@ export async function updateStoreAction(_prev: ActionState, fd: FormData): Promi
     return { error: serviceErrorMessage(e, "Não foi possível salvar os dados da loja.") };
   }
   revalidatePath("/afiliado", "layout");
-  revalidatePath(`/loja/${affiliate.slug}`, "layout");
+  revalidateStore(affiliate, "", "layout");
   return { ok: true, message: "Dados da loja salvos." };
 }

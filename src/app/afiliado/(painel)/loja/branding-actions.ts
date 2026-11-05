@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidateStore } from "@/server/store-links";
 import type { ActionState } from "@/components/ui-client";
 import { db } from "@/server/db";
 import { BrandingError, brandingFromForm, updateBranding } from "@/server/admin/branding";
@@ -21,6 +22,6 @@ export async function updateBrandingAction(_prev: ActionState, fd: FormData): Pr
     throw e;
   }
   revalidatePath("/afiliado", "layout");
-  revalidatePath(`/loja/${affiliate.slug}`, "layout");
+  revalidateStore(affiliate, "", "layout");
   return { ok: true, message: "Identidade da loja salva. Abra a loja para conferir." };
 }

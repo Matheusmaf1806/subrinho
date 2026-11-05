@@ -7,7 +7,7 @@ import { adaptersFor } from "@/server/suppliers/registry";
 import { cn } from "@/components/ui";
 import { categoryAvailable } from "../_lib/categories";
 import { ComingSoon } from "../_components/coming-soon";
-import { getStore, getStorePricing } from "../_lib/store";
+import { getStore, getStorePricing, storeBase } from "../_lib/store";
 import { storeInsight } from "../_lib/insight";
 import { SupplierTag } from "../_components/reveal";
 import { ChipSearch } from "../_components/search-forms";
@@ -43,8 +43,9 @@ function recommend(list: PricedSummary[], days: number): PricedSummary | null {
 export default async function ChipPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string>> }) {
   const { slug } = await params;
   const store = await getStore(slug);
+  const sb = await storeBase(store);
   // categoria sem fornecedor com API real: nada de catálogo de exemplo
-  if (!(await categoryAvailable("CHIP"))) return <ComingSoon title="Chip" base={`/loja/${store.slug}`} />;
+  if (!(await categoryAvailable("CHIP"))) return <ComingSoon title="Chip" base={(sb || "/")} />;
   const ctx = await getStorePricing(store.id);
   const reveal = await storeInsight(store.id);
   const raw = await searchParams;
@@ -59,7 +60,7 @@ export default async function ChipPage({ params, searchParams }: { params: Promi
     : [];
   const destinations = [...new Set(adaptersFor("CHIP").flatMap((a) => a.destinations().map((x) => x.name)))];
   const add = addToCartAction.bind(null, slug);
-  const base = `/loja/${slug}/chip`;
+  const base = `${sb}/chip`;
   const daily = raw.tipo === "diario";
   const hasDaily = results.some((p) => p.chip?.daily);
   const shown = results.filter((p) => !!p.chip?.daily === (daily && hasDaily));

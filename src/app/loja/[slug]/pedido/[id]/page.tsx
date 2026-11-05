@@ -13,7 +13,7 @@ import { Alert, Badge, Button, Card, CardBody, CardHeader, statusTone } from "@/
 import { CopyButton } from "@/components/ui-client";
 import { brl, date, dateTime, ORDER_STATUS_LABEL, orderNumber, paxSummary } from "@/lib/format";
 import { formatDocument } from "@/lib/br";
-import { getStore, viewerFor } from "../../_lib/store";
+import { getStore, storeBase, viewerFor } from "../../_lib/store";
 import { AutoRefresh } from "../../_components/auto-refresh";
 import { categoryLabel } from "../../_components/category";
 import { PaypalButtons } from "../../_components/paypal-buttons";
@@ -25,9 +25,10 @@ export const metadata = { title: "Pedido" };
 export default async function OrderPage({ params }: { params: Promise<{ slug: string; id: string }> }) {
   const { slug, id } = await params;
   const store = await getStore(slug);
+  const sb = await storeBase(store);
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const viewer = await viewerFor(store);
-  if (!viewer) redirect(`/loja/${slug}/entrar?next=${encodeURIComponent(`/loja/${slug}/pedido/${id}`)}`);
+  if (!viewer) redirect(`${sb}/entrar?next=${encodeURIComponent(`${sb}/pedido/${id}`)}`);
   let [order] = await db.select().from(orders).where(and(eq(orders.id, id), eq(orders.affiliateId, store.id)));
   if (!order || (viewer.kind === "CUSTOMER" && order.customerId !== viewer.customer.id)) notFound();
   // PayPal: confere o pedido no PayPal (cliente aprovou e fechou a janela antes da confirmação)
@@ -113,7 +114,7 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
             {pixExpired ? (
               <Alert tone="warning" title="Este Pix expirou">
                 Volte ao checkout para gerar um novo código.{" "}
-                <a className="font-semibold underline" href={`/loja/${slug}/carrinho`}>
+                <a className="font-semibold underline" href={`${sb}/carrinho`}>
                   Ir para o carrinho
                 </a>
               </Alert>
@@ -163,7 +164,7 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
                   <p className="mt-1 flex flex-wrap items-center gap-2 text-xs font-semibold text-success">
                     Reserva confirmada · localizador {i.supplierBookingRef}
                     {(i.category === "LODGING" || i.category === "HOUSES" || i.category === "TICKETS" || i.category === "CHIP") && (
-                      <a href={`/loja/${slug}/pedido/${order.id}/voucher/${i.id}`} className="rounded-full bg-ink px-3 py-1 text-[11px] font-semibold text-white hover:bg-ink-2">
+                      <a href={`${sb}/pedido/${order.id}/voucher/${i.id}`} className="rounded-full bg-ink px-3 py-1 text-[11px] font-semibold text-white hover:bg-ink-2">
                         {i.category === "CHIP" ? "Ver QR Code do eSIM" : "Ver voucher"}
                       </a>
                     )}

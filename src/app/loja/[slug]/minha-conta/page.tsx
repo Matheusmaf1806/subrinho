@@ -6,15 +6,16 @@ import { db } from "@/server/db";
 import { orders } from "@/server/db/schema";
 import { Badge, Card, CardHeader, EmptyState, statusTone, Table, Td, Th, THead, Tr } from "@/components/ui";
 import { brl, dateTime, ORDER_STATUS_LABEL, orderNumber } from "@/lib/format";
-import { getStore, viewerFor } from "../_lib/store";
+import { getStore, storeBase, viewerFor } from "../_lib/store";
 
 export const metadata = { title: "Minha conta" };
 
 export default async function AccountPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const store = await getStore(slug);
+  const sb = await storeBase(store);
   const viewer = await viewerFor(store);
-  if (!viewer) redirect(`/loja/${slug}/entrar?next=/loja/${slug}/minha-conta`);
+  if (!viewer) redirect(`${sb}/entrar?next=${sb}/minha-conta`);
   if (viewer.kind !== "CUSTOMER") redirect("/afiliado");
   const list = await db
     .select()
@@ -45,7 +46,7 @@ export default async function AccountPage({ params }: { params: Promise<{ slug: 
               {list.map((o) => (
                 <Tr key={o.id}>
                   <Td>
-                    <Link href={`/loja/${slug}/pedido/${o.id}`} className="font-semibold text-accent-ink hover:underline">
+                    <Link href={`${sb}/pedido/${o.id}`} className="font-semibold text-accent-ink hover:underline">
                       {orderNumber(o.number)}
                     </Link>
                   </Td>

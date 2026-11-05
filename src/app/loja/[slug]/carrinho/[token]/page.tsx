@@ -7,7 +7,7 @@ import { getSettings } from "@/server/settings";
 import { Alert, Button, ButtonLink, buttonClass, EmptyState } from "@/components/ui";
 import { CopyButton } from "@/components/ui-client";
 import { date, dateTime, orderNumber } from "@/lib/format";
-import { appUrl, getStore, viewerFor } from "../../_lib/store";
+import { getStore, storeBase, storeUrl, viewerFor } from "../../_lib/store";
 import { CartItemCard } from "../../_components/cart-item";
 import { CartSummary } from "../../_components/cart-summary";
 import { toItemVMs, totalsVM } from "../../_components/cart-vm";
@@ -31,6 +31,7 @@ export default async function CartPage({ params, searchParams }: { params: Promi
   const { slug, token } = await params;
   const sp = await searchParams;
   const store = await getStore(slug);
+  const sb = await storeBase(store);
   const [view, viewer, settings] = await Promise.all([loadCartView(db, token, store.id), viewerFor(store), getSettings(db)]);
   if (!view) notFound();
   const adminMode = viewer?.kind === "AFFILIATE" && viewer.adminMode;
@@ -38,7 +39,7 @@ export default async function CartPage({ params, searchParams }: { params: Promi
   const items = toItemVMs(view, { adminMode, reveal });
   const t = totalsVM(view, reveal);
   const open = view.cart.status === "OPEN";
-  const shareUrl = `${appUrl()}/loja/${slug}/carrinho/${token}`;
+  const shareUrl = await storeUrl(store, `/carrinho/${token}`);
   const waText = encodeURIComponent(`Olha a viagem que montei na ${store.name}: ${shareUrl}`);
 
   let paidOrder: { id: string; number: number } | null = null;
@@ -84,7 +85,7 @@ export default async function CartPage({ params, searchParams }: { params: Promi
           <Alert tone="success" title="Este carrinho já foi pago">
             {paidOrder &&
               (viewer ? (
-                <a className="font-semibold underline" href={`/loja/${slug}/pedido/${paidOrder.id}`}>
+                <a className="font-semibold underline" href={`${sb}/pedido/${paidOrder.id}`}>
                   Ver pedido {orderNumber(paidOrder.number)}
                 </a>
               ) : (
@@ -101,7 +102,7 @@ export default async function CartPage({ params, searchParams }: { params: Promi
             icon={<ShoppingCart className="h-10 w-10" />}
             title="Nenhum item no carrinho"
             description="Adicione ingressos, hospedagem, casas, seguro viagem ou chip."
-            action={<ButtonLink href={`/loja/${slug}`} variant="dark" size="lg">Explorar a loja →</ButtonLink>}
+            action={<ButtonLink href={(sb || "/")} variant="dark" size="lg">Explorar a loja →</ButtonLink>}
           />
         </div>
       ) : (
@@ -123,14 +124,14 @@ export default async function CartPage({ params, searchParams }: { params: Promi
             {!open ? (
               <div className="rounded-[2rem] bg-surface p-6 text-[15px] text-muted">
                 Os valores pagos estão no pedido{paidOrder ? ` ${orderNumber(paidOrder.number)}` : ""}. Para uma nova viagem,{" "}
-                <a className="font-semibold text-ink underline" href={`/loja/${slug}`}>
+                <a className="font-semibold text-ink underline" href={(sb || "/")}>
                   monte um novo carrinho
                 </a>
                 .
               </div>
             ) : (
               <CartSummary t={t} couponAction={applyCouponAction.bind(null, slug, token)} removeCoupon={(layer) => removeCouponAction.bind(null, slug, token, layer)}>
-                <ButtonLink href={`/loja/${slug}/checkout/${token}`} variant="accent" size="lg" className="w-full">
+                <ButtonLink href={`${sb}/checkout/${token}`} variant="accent" size="lg" className="w-full">
                   Finalizar compra →
                 </ButtonLink>
               </CartSummary>

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getStore, safeNext, storeBrand, viewerFor } from "../_lib/store";
+import { getStore, safeNext, storeBase, storeBrand, viewerFor } from "../_lib/store";
 import { CustomerAuth } from "../_components/auth-forms";
 import { agencyLoginAction, customerLoginAction, customerRegisterAction } from "../actions";
 
@@ -10,9 +10,9 @@ export default async function LoginPage({ params, searchParams }: { params: Prom
   const sp = await searchParams;
   const store = await getStore(slug);
   const viewer = await viewerFor(store);
-  const next = safeNext(store, sp.next);
+  const next = await safeNext(store, sp.next);
   if (viewer) redirect(next);
-  const brand = storeBrand(store);
+  const brand = storeBrand(store, await storeBase(store));
   return (
     <main className="mx-auto grid max-w-[1440px] gap-3 px-3 pt-3 sm:px-4 lg:grid-cols-2">
       <div className="flex flex-col justify-center px-3 py-10 sm:px-10 lg:py-16">

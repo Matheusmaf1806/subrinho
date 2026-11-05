@@ -15,7 +15,7 @@ import type { Category } from "@/server/db/schema";
 import { productRef } from "@/server/suppliers/refs";
 import { date as fmtDate } from "@/lib/format";
 import { addDays } from "@/lib/tz";
-import { getStorePricing, type Store } from "./store";
+import { getStorePricing, storeBase, type Store } from "./store";
 import { storeInsight } from "./insight";
 import { storeCategories } from "./categories";
 import { openCartItems, quickDefaults, type OpenCartItem, type QuickDefaults } from "./quick-defaults";
@@ -135,7 +135,7 @@ export async function crossSellFor(store: Store): Promise<CrossSell | null> {
     }
   }
 
-  const b = `/loja/${store.slug}`;
+  const b = await storeBase(store);
   const inCartCats = new Set(items.map((i) => i.category));
   const extras = cats.live
     .filter((c) => (c.category === "INSURANCE" || c.category === "CHIP") && !inCartCats.has(c.category))

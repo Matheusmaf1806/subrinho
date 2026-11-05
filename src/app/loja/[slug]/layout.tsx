@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { SubrinhoLogo } from "@/components/brand";
-import { cartBadgeCount, currentCartToken, getStore, storeBrand, viewerFor } from "./_lib/store";
+import { cartBadgeCount, currentCartToken, getStore, storeBase, storeBrand, storePublicUrl, viewerFor } from "./_lib/store";
 import { themeStyle } from "@/lib/theme";
 import { StoreMark } from "./_components/store-mark";
 import { StoreHeader } from "./_components/store-header";
@@ -11,9 +11,11 @@ import { paymentProvider } from "@/server/payments/provider";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const store = await getStore((await params).slug);
-  const brand = storeBrand(store);
+  const brand = storeBrand(store, await storeBase(store));
   return {
     title: { default: store.name, template: `%s · ${store.name}` },
+    // endereço oficial da loja (domínio próprio verificado ou subdomínio), para buscadores e prévias de link
+    metadataBase: new URL(storePublicUrl(store)),
     description: `${store.name} · ${brand.tagline}`,
     icons: { icon: brand.favicon, apple: brand.favicon },
     openGraph: { title: store.name, description: brand.tagline, images: [brand.heroImage] },
@@ -29,11 +31,11 @@ export default async function StoreLayout({ children, params }: { children: Reac
   const { slug } = await params;
   const store = await getStore(slug);
   const [viewer, count, token, cats] = await Promise.all([viewerFor(store), cartBadgeCount(store), currentCartToken(store), storeCategories()]);
-  const base = `/loja/${store.slug}`;
-  const brand = storeBrand(store);
+  const base = await storeBase(store);
+  const brand = storeBrand(store, base);
   return (
     <div style={themeStyle(store)} className="flex min-h-screen flex-col bg-white font-sans text-ink">
-      <StoreHeader store={store} viewer={viewer} cartCount={count} cartHref={token ? `${base}/carrinho/${token}` : `${base}/carrinho`} categories={cats.live} pixAvailable={paymentProvider().pixAvailable} />
+      <StoreHeader store={store} base={base} viewer={viewer} cartCount={count} cartHref={token ? `${base}/carrinho/${token}` : `${base}/carrinho`} categories={cats.live} pixAvailable={paymentProvider().pixAvailable} />
       <div className="flex-1">{children}</div>
       <ScrollState />
       <footer className="mt-24 px-3 pb-3 sm:px-4 sm:pb-4">

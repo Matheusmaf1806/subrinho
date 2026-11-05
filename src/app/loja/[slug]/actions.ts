@@ -40,7 +40,7 @@ import { storeInsight } from "./_lib/insight";
 import { crossSellFor, type CrossSell } from "./_lib/cross-sell";
 import { toItemVMs, totalsVM } from "./_components/cart-vm";
 import { categoryLabel } from "./_components/category";
-import { actorOf, currentCartToken, getStore, getStorePricing, safeNext, setCurrentCartToken, storePath, viewerFor } from "./_lib/store";
+import { actorOf, currentCartToken, getStore, getStorePricing, revalidateStore, safeNext, setCurrentCartToken, storePath, viewerFor } from "./_lib/store";
 import { parseSearch, supplierParams } from "./_components/search-params";
 
 /** Mensagem para o cliente. Falha técnica de fornecedor (credencial, rede) nunca aparece crua. */
@@ -79,10 +79,11 @@ async function loadCart(slug: string, token: string) {
   return { store, cart };
 }
 
-function refreshCart(slug: string, token: string) {
-  revalidatePath(`/loja/${slug}/carrinho/${token}`);
-  revalidatePath(`/loja/${slug}/checkout/${token}`);
-  revalidatePath(`/loja/${slug}`, "layout");
+async function refreshCart(slug: string, token: string) {
+  const store = await getStore(slug);
+  revalidateStore(store, `/carrinho/${token}`);
+  revalidateStore(store, `/checkout/${token}`);
+  revalidateStore(store, "", "layout");
 }
 
 // ───────────── Carrinho ─────────────
@@ -117,7 +118,7 @@ export async function addToCartAction(slug: string, _prev: ActionState, fd: Form
     throw e;
   }
   // fica na página: o carrinho flutuante abre com o item (o selo do topo atualiza junto)
-  revalidatePath(`/loja/${slug}`, "layout");
+  revalidateStore(store, "", "layout");
   return { ok: true };
 }
 
@@ -180,20 +181,20 @@ export async function removeMiniCartItemAction(slug: string, itemId: string): Pr
   if (!token || !/^[0-9a-f-]{36}$/i.test(itemId)) return null;
   const { cart } = await loadCart(slug, token);
   await removeItem(db, cart, itemId);
-  refreshCart(slug, token);
+  await refreshCart(slug, token);
   return miniCartAction(slug);
 }
 
 export async function removeCartItemAction(slug: string, token: string, itemId: string) {
   const { cart } = await loadCart(slug, token);
   await removeItem(db, cart, itemId);
-  refreshCart(slug, token);
+  await refreshCart(slug, token);
 }
 
 export async function acknowledgeNoticesAction(slug: string, token: string) {
   const { cart } = await loadCart(slug, token);
   await acknowledgeNotices(db, cart.id);
-  refreshCart(slug, token);
+  await refreshCart(slug, token);
 }
 
 export async function changePaxAction(slug: string, token: string, _prev: ActionState, fd: FormData): Promise<ActionState> {
@@ -205,7 +206,7 @@ export async function changePaxAction(slug: string, token: string, _prev: Action
     if (msg) return { error: msg };
     throw e;
   }
-  refreshCart(slug, token);
+  await refreshCart(slug, token);
   return { ok: true, message: "Quantidades atualizadas com o preço do fornecedor" };
 }
 
@@ -213,7 +214,7 @@ export async function applyCouponAction(slug: string, token: string, _prev: Acti
   try {
     const { cart } = await loadCart(slug, token);
     const r = await db.transaction((tx) => applyCouponToCart(tx, cart, String(fd.get("code") ?? "")));
-    refreshCart(slug, token);
+    await refreshCart(slug, token);
     return { ok: true, message: `Cupom ${r.coupon.code} aplicado${r.limitedByMargin ? " (desconto limitado ao máximo permitido)" : ""}` };
   } catch (e) {
     const msg = userError(e);
@@ -225,7 +226,7 @@ export async function applyCouponAction(slug: string, token: string, _prev: Acti
 export async function removeCouponAction(slug: string, token: string, layer: "SUBRINHO" | "AFFILIATE") {
   const { cart } = await loadCart(slug, token);
   await removeCouponFromCart(db, cart, layer);
-  refreshCart(slug, token);
+  await refreshCart(slug, token);
 }
 
 /** Altera a margem do afiliado de UM item, somente neste carrinho (ADMIN da agência em modo ADMIN). */
@@ -239,7 +240,7 @@ export async function setMarginOverrideAction(slug: string, token: string, _prev
     if (!reset && (raw === "" || !Number.isFinite(Number(raw)))) return { error: "Informe a margem em %" };
     if (!reset && Number(raw) < 0) return { error: "A margem não pode ser menor que 0%" };
     await setAffiliateMarginOverride(db, cart, String(fd.get("itemId")), reset ? null : raw, viewer.user);
-    refreshCart(slug, token);
+    await refreshCart(slug, token);
     return { ok: true, message: reset ? "Margem padrão restaurada" : "Margem alterada neste carrinho" };
   } catch (e) {
     const msg = userError(e);
@@ -297,7 +298,7 @@ export async function customerRegisterAction(slug: string, _prev: ActionState, f
     .returning();
   await endSession("loja");
   await startSession("loja", { userType: "CUSTOMER", userId: c.id, storeAffiliateId: store.id });
-  redirect(safeNext(store, str(fd.get("next"))));
+  redirect(await safeNext(store, str(fd.get("next"))));
 }
 
 export async function customerLoginAction(slug: string, _prev: ActionState, fd: FormData): Promise<ActionState> {
@@ -307,7 +308,7 @@ export async function customerLoginAction(slug: string, _prev: ActionState, fd: 
   if (!c || !(await verifyPassword(String(fd.get("password") ?? ""), c.passwordHash))) return { error: "E-mail ou senha incorretos" };
   await endSession("loja");
   await startSession("loja", { userType: "CUSTOMER", userId: c.id, storeAffiliateId: store.id });
-  redirect(safeNext(store, str(fd.get("next"))));
+  redirect(await safeNext(store, str(fd.get("next"))));
 }
 
 /** Login da agência na própria loja. ADMIN pode entrar em "modo ADMIN" (alterar margem no checkout). */
@@ -319,13 +320,13 @@ export async function agencyLoginAction(slug: string, _prev: ActionState, fd: Fo
   if (u.affiliateId !== store.id) return { error: "Este usuário não pertence a esta loja" };
   await endSession("loja");
   await startSession("loja", { userType: "AFFILIATE", userId: u.id, storeAffiliateId: store.id, adminMode: u.role === "ADMIN" && fd.get("adminMode") === "on" });
-  redirect(safeNext(store, str(fd.get("next"))));
+  redirect(await safeNext(store, str(fd.get("next"))));
 }
 
 export async function logoutAction(slug: string) {
   const store = await getStore(slug);
   await endSession("loja");
-  redirect(storePath(store));
+  redirect(await storePath(store));
 }
 
 export async function toggleAdminModeAction(slug: string) {
@@ -333,7 +334,7 @@ export async function toggleAdminModeAction(slug: string) {
   const v = await viewerFor(store);
   if (!v || v.kind !== "AFFILIATE" || !v.canAdmin) return;
   await setStoreAdminMode(v.sessionId, !v.adminMode);
-  revalidatePath(`/loja/${slug}`, "layout");
+  revalidateStore(store, "", "layout");
 }
 
 // ───────────── Checkout ─────────────
@@ -463,13 +464,13 @@ export async function placeOrderAction(slug: string, token: string, _prev: Actio
   } catch (e) {
     const msg = userError(e);
     if (msg) {
-      refreshCart(slug, token);
+      await refreshCart(slug, token);
       return { error: msg };
     }
     throw e;
   }
-  refreshCart(slug, token);
-  redirect(storePath(store, `/pedido/${orderId}`));
+  await refreshCart(slug, token);
+  redirect(await storePath(store, `/pedido/${orderId}`));
 }
 
 /** Hotéis: nome e sobrenome de todos os hóspedes (adultos e crianças) de cada quarto. */
@@ -521,7 +522,7 @@ export async function capturePaypalAction(slug: string, orderId: string, paypalO
   try {
     const { store, order } = await payableOrder(slug, orderId);
     const r = await capturePaypalCheckout(db, order, String(paypalOrderId).slice(0, 64));
-    revalidatePath(storePath(store, `/pedido/${orderId}`));
+    revalidateStore(store, `/pedido/${orderId}`);
     if (r.state === "PAID") {
       after(() => autoIssueOrder(orderId));
       return { ok: true };
@@ -543,7 +544,7 @@ export async function simulatePixPaymentAction(slug: string, orderId: string) {
   const [o] = await db.select().from(orders).where(and(eq(orders.id, orderId), eq(orders.affiliateId, store.id)));
   if (!o || o.status !== "PENDING_PAYMENT") return;
   await db.transaction((tx) => markOrderPaid(tx, o.id, { paidAt: new Date(), ref: o.paymentRef, data: { simulated: true } }));
-  revalidatePath(storePath(store, `/pedido/${orderId}`));
+  revalidateStore(store, `/pedido/${orderId}`);
 }
 
 // ───────────── Adicionar rápido (cards da vitrine) ─────────────

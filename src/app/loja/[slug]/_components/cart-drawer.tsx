@@ -22,12 +22,15 @@ export { openCartDrawer };
 
 export function CartDrawer({
   slug,
+  base,
   count,
   cartHref,
   pixAvailable,
   categories,
 }: {
   slug: string;
+  /** Prefixo dos links da loja ("" no endereço próprio). */
+  base: string;
   count: number;
   cartHref: string;
   pixAvailable: boolean;
@@ -46,7 +49,6 @@ export function CartDrawer({
   const [, start] = useTransition();
   const closeRef = useRef<HTMLButtonElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
-  const base = `/loja/${slug}`;
   // a gaveta vai direto no <body>: o topo tem desfoque (backdrop-filter), que prenderia o "fixed" dentro dele
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);

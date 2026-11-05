@@ -8,7 +8,7 @@ import { INSURANCE_REGIONS } from "@/server/suppliers/mock/single-page";
 import { ArrowChip, cn } from "@/components/ui";
 import { photo, type PhotoKey } from "@/lib/images";
 import { noEmDash } from "@/lib/text";
-import { getStore, getStorePricing, storeBrand } from "./_lib/store";
+import { getStore, getStorePricing, storeBase, storeBrand } from "./_lib/store";
 import { quickContext } from "./_lib/quick";
 import { storeInsight } from "./_lib/insight";
 import { COMING_SOON } from "./_components/category";
@@ -71,9 +71,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function StoreHome({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const store = await getStore(slug);
+  const sb = await storeBase(store);
   const ctx = await getStorePricing(store.id);
   const reveal = await storeInsight(store.id);
-  const base = `/loja/${store.slug}`;
+  const base = (sb || "/");
   const brand = storeBrand(store);
   const { d, minDate } = parseSearch({});
   const quick = await quickContext(store, d, minDate);

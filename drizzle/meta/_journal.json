@@ -50,6 +50,13 @@
       "when": 1793910000000,
       "tag": "0006_esimx_supplier",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793990000000,
+      "tag": "0007_store_domains",
+      "breakpoints": true
     }
   ]
 }

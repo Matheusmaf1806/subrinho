@@ -9,7 +9,7 @@ import { EMPTY_HOTEL_CONTENT } from "@/server/suppliers/hotels/content";
 import { Badge, cn } from "@/components/ui";
 import { brl, date, paxSummary } from "@/lib/format";
 import { daysBetween } from "@/lib/tz";
-import { getStore, getStorePricing } from "../../_lib/store";
+import { getStore, getStorePricing, storeBase } from "../../_lib/store";
 import { storeInsight } from "../../_lib/insight";
 import { SupplierTag } from "../../_components/reveal";
 import { RelatedProducts } from "../../_components/related";
@@ -44,6 +44,7 @@ export default async function HotelDetail({
   if (!target) notFound();
   const { supplierCode: supplier, productId } = target;
   const store = await getStore(slug);
+  const sb = await storeBase(store);
   const ctx = await getStorePricing(store.id);
   const reveal = await storeInsight(store.id);
   const raw = await searchParams;
@@ -56,7 +57,7 @@ export default async function HotelDetail({
   const quick = await quickContext(store, d, minDate, explicitFrom(raw));
   const nights = daysBetween(d.checkin, d.checkout);
   const add = addToCartAction.bind(null, slug);
-  const base = `/loja/${slug}/hospedagem`;
+  const base = `${sb}/hospedagem`;
   const pax = paxSummary({ rooms: d.quartos, adults: d.adultos, children: d.criancas });
   const ages = d.criancas ? d.idades.slice(0, d.criancas) : [];
   const available = p.options.filter((o) => o.available && o.price);
@@ -329,7 +330,7 @@ export default async function HotelDetail({
       </div>
 
       <div className="mt-16">
-        <CompleteTrip slug={slug} from="stay" destination={p.destination || d.destino} d={d} minDate={minDate} ctx={ctx} reveal={reveal} quick={quick} />
+        <CompleteTrip base={sb} from="stay" destination={p.destination || d.destino} d={d} minDate={minDate} ctx={ctx} reveal={reveal} quick={quick} />
       </div>
       <div className="mt-16">
         <RelatedProducts

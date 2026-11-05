@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { storePublicUrl } from "@/server/store-links";
 import { notFound } from "next/navigation";
 import { ExternalLink, Paperclip, UserPlus } from "lucide-react";
 import {
@@ -33,7 +34,8 @@ import { periodLabel } from "../../../_lib/dates";
 import { isUuid } from "../../../_lib/form";
 import { canDo, PERMS, SCOPE_LABEL } from "../../../_lib/labels";
 import { ruleTarget } from "../../../_lib/rules";
-import { addAffiliateUserAction, updateAffiliateAction, updateAffiliateBrandingAction } from "../actions";
+import { addAffiliateUserAction, updateAffiliateAction, updateAffiliateBrandingAction, updateAffiliateDomainsAction, verifyAffiliateDomainAction } from "../actions";
+import { StoreDomainCard } from "@/components/store-domain-card";
 import { BrandingEditor } from "@/components/branding-editor";
 import { brandingInitial, brandPresets } from "@/lib/branding-view";
 import { AffiliateFields } from "../affiliate-fields";
@@ -77,7 +79,7 @@ export default async function AffiliateDetailPage({
             {a.legalName ?? "Razão social não informada"} {a.document && <>· {a.document}</>} · cadastrado em {date(a.createdAt)}
           </p>
         </div>
-        <ButtonLink href={`/loja/${a.slug}`} target="_blank" variant="outline">
+        <ButtonLink href={storePublicUrl(a)} target="_blank" variant="outline">
           /loja/{a.slug} <ExternalLink className="h-4 w-4" aria-hidden />
           <span className="sr-only">(abre em nova aba)</span>
         </ButtonLink>
@@ -109,6 +111,10 @@ export default async function AffiliateDetailPage({
           hidden={{ id: a.id }}
         />
       </section>
+
+      <div className="mt-6">
+        <StoreDomainCard store={a} save={updateAffiliateDomainsAction} verify={verifyAffiliateDomainAction} readOnly={!canEdit} hidden={{ affiliateId: a.id }} />
+      </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[3fr_2fr]">
         <Card>

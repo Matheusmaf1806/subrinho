@@ -4,7 +4,7 @@ import { parseProductRef, productRef } from "@/server/suppliers/refs";
 import { getProductDetail } from "@/server/catalog";
 import { quoteDisplayPrice } from "@/server/pricing/cart-pricing";
 import { getAdapter } from "@/server/suppliers/registry";
-import { getStore, getStorePricing } from "../../_lib/store";
+import { getStore, getStorePricing, storeBase } from "../../_lib/store";
 import { storeInsight } from "../../_lib/insight";
 import { parseSearch, supplierParams, toQuery } from "../../_components/search-params";
 import { BookingPanel, ProductHero } from "../../_components/product-hero";
@@ -29,6 +29,7 @@ export default async function TicketDetail({
   if (!target) notFound();
   const { supplierCode: supplier, productId } = target;
   const store = await getStore(slug);
+  const sb = await storeBase(store);
   const ctx = await getStorePricing(store.id);
   const reveal = await storeInsight(store.id);
   const raw = await searchParams;
@@ -69,7 +70,7 @@ export default async function TicketDetail({
   return (
     <main className="mx-auto max-w-[1440px] px-4 py-8 sm:px-8">
       <div className="grid gap-10 lg:grid-cols-[1fr_440px] xl:gap-16">
-      <ProductHero p={p} back={{ href: `/loja/${slug}/ingressos?${toQuery({ destino: d.destino, data: d.data, adultos: d.adultos, criancas: d.criancas })}`, label: "Voltar para ingressos" }} />
+      <ProductHero p={p} back={{ href: `${sb}/ingressos?${toQuery({ destino: d.destino, data: d.data, adultos: d.adultos, criancas: d.criancas })}`, label: "Voltar para ingressos" }} />
       <BookingPanel title="Escolha seus ingressos">
           <TicketBooking
             action={addToCartAction.bind(null, slug)}
@@ -92,14 +93,14 @@ export default async function TicketDetail({
           category="TICKETS"
           params={supplierParams({ ...d, destino: d.destino || p.destination }, "tickets")}
           current={{ supplierCode: supplier, productId, groupKey: p.groupKey, pix: p.price ? Number(p.price.pix.toString()) : null }}
-          hrefBase={`/loja/${slug}/ingressos`}
+          hrefBase={`${sb}/ingressos`}
           query={toQuery({ destino: d.destino || p.destination, data: d.data, adultos: d.adultos, criancas: d.criancas })}
           title={`Mais experiências em ${p.destination || "destino"}`}
           note="adulto"
         />
       </div>
       <div className="mt-16">
-        <CompleteTrip slug={slug} from="ticket" destination={p.destination || d.destino} d={d} minDate={minDate} ctx={ctx} reveal={reveal} quick={quick} />
+        <CompleteTrip base={sb} from="ticket" destination={p.destination || d.destino} d={d} minDate={minDate} ctx={ctx} reveal={reveal} quick={quick} />
       </div>
     </main>
   );

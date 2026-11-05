@@ -16,7 +16,7 @@ import type { QuickCtx } from "./quick-add";
 const STAY_NIGHTS = 3;
 
 export async function CompleteTrip({
-  slug,
+  base,
   from,
   destination,
   d,
@@ -25,7 +25,8 @@ export async function CompleteTrip({
   reveal,
   quick,
 }: {
-  slug: string;
+  /** Prefixo dos links da loja ("" no endereço próprio). */
+  base: string;
   /** Página atual: estadia (hotel/casa) ou ingresso. */
   from: "stay" | "ticket";
   destination: string;
@@ -37,7 +38,6 @@ export async function CompleteTrip({
 }) {
   const city = destination.split(",")[0].trim();
   if (!city) return null;
-  const base = `/loja/${slug}`;
 
   if (from === "stay") {
     if (!(await categoryAvailable("TICKETS"))) return null;

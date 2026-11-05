@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidateStore } from "@/server/store-links";
+import type { StoreAddress } from "@/lib/store-domains";
 import type { ActionState } from "@/components/ui-client";
 import { addDays, startOfLocalDay } from "@/lib/tz";
 import { db } from "@/server/db";
@@ -12,9 +14,9 @@ import { decimalField, isIsoDate, isUuid, moneyField, optStr, requireAdminForAct
 const TYPES: DiscountType[] = ["PERCENT", "FIXED", "CONDITIONAL"];
 const ALLOWED_CATEGORIES = new Set<string>([...ACTIVE_CATEGORIES, ...FUTURE_CATEGORIES]);
 
-function revalidate(slug: string) {
+function revalidate(store: Pick<StoreAddress, "slug" | "subdomain" | "customDomain">) {
   revalidatePath("/afiliado", "layout");
-  revalidatePath(`/loja/${slug}`, "layout");
+  revalidateStore(store, "", "layout");
 }
 
 function parseCoupon(fd: FormData): CouponInput | { error: string } {
@@ -65,7 +67,7 @@ export async function createCouponAction(_prev: ActionState, fd: FormData): Prom
   } catch (e) {
     return { error: serviceErrorMessage(e, "Não foi possível criar o cupom.") };
   }
-  revalidate(affiliate.slug);
+  revalidate(affiliate);
   return { ok: true, message: `Cupom ${code} criado.` };
 }
 
@@ -83,7 +85,7 @@ export async function updateCouponAction(_prev: ActionState, fd: FormData): Prom
   } catch (e) {
     return { error: serviceErrorMessage(e, "Não foi possível salvar o cupom.") };
   }
-  revalidate(affiliate.slug);
+  revalidate(affiliate);
   return { ok: true, message: "Cupom atualizado." };
 }
 
@@ -99,6 +101,6 @@ export async function setCouponActiveAction(_prev: ActionState, fd: FormData): P
   } catch (e) {
     return { error: serviceErrorMessage(e, "Não foi possível alterar o cupom.") };
   }
-  revalidate(affiliate.slug);
+  revalidate(affiliate);
   return { ok: true, message: active ? "Cupom ativado." : "Cupom desativado." };
 }

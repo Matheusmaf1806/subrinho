@@ -8,7 +8,7 @@ import { getSettings } from "@/server/settings";
 import { paymentProvider } from "@/server/payments/provider";
 import { Alert, Input } from "@/components/ui";
 import { ActionForm, SubmitButton } from "@/components/ui-client";
-import { getStore, viewerFor } from "../../_lib/store";
+import { getStore, storeBase, viewerFor } from "../../_lib/store";
 import { CartItemCard } from "../../_components/cart-item";
 import { CartSummary } from "../../_components/cart-summary";
 import { toItemVMs, totalsVM } from "../../_components/cart-vm";
@@ -51,16 +51,17 @@ function Step({ n, title, subtitle, children }: { n: number; title: string; subt
 export default async function CheckoutPage({ params }: { params: Promise<{ slug: string; token: string }> }) {
   const { slug, token } = await params;
   const store = await getStore(slug);
+  const sb = await storeBase(store);
   const [view, viewer, settings] = await Promise.all([loadCartView(db, token, store.id), viewerFor(store), getSettings(db)]);
   const provider = paymentProvider();
   if (!view) notFound();
-  if (view.cart.status !== "OPEN" || view.items.length === 0 || view.removedNotices.length > 0) redirect(`/loja/${slug}/carrinho/${token}`);
+  if (view.cart.status !== "OPEN" || view.items.length === 0 || view.removedNotices.length > 0) redirect(`${sb}/carrinho/${token}`);
 
   const adminMode = viewer?.kind === "AFFILIATE" && viewer.adminMode;
   const reveal = await storeInsight(store.id);
   const items = toItemVMs(view, { adminMode, reveal });
   const t = totalsVM(view, reveal);
-  const next = `/loja/${slug}/checkout/${token}`;
+  const next = `${sb}/checkout/${token}`;
   // Viajantes: adultos e crianças (hotéis pedem nome de todos, com a idade das crianças).
   const hotelItems = view.items.filter((i) => i.category === "LODGING");
   const travelerAdults = Math.min(16, Math.max(1, ...view.items.map((i) => (i.pax.adults ?? 0) + (i.pax.seniors ?? 0) + (i.category === "LODGING" ? 0 : (i.pax.children ?? 0)))));

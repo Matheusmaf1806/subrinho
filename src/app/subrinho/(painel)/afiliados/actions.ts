@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidateStore, storePublicUrl } from "@/server/store-links";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { ActionState } from "@/components/ui-client";
@@ -8,6 +9,7 @@ import { db } from "@/server/db";
 import { requireSubrinhoUser } from "@/server/auth/session";
 import { createAffiliate, createAffiliateUser, updateAffiliate, type AffiliateInput } from "@/server/admin/affiliates";
 import { BrandingError, brandingFromForm, updateBranding } from "@/server/admin/branding";
+import { StoreDomainError, updateStoreDomains, verifyCustomDomain } from "@/server/admin/store-domains";
 import { actionError, checkbox, FormError, optText, text, uuid } from "../../_lib/form";
 import { PERMS } from "../../_lib/labels";
 
@@ -65,7 +67,7 @@ export async function updateAffiliateAction(_prev: ActionState, fd: FormData): P
     if (!a) throw new FormError("Afiliado não encontrado");
     revalidatePath("/subrinho/afiliados");
     revalidatePath(`/subrinho/afiliados/${id}`);
-    return { ok: true, message: `Dados de ${a.name} salvos. Loja: /loja/${a.slug}` };
+    return { ok: true, message: `Dados de ${a.name} salvos. Loja: ${storePublicUrl(a)}` };
   } catch (e) {
     return actionError(e);
   }
@@ -100,11 +102,39 @@ export async function updateAffiliateBrandingAction(_prev: ActionState, fd: Form
       return updateBranding(tx, id, input);
     });
     revalidatePath(`/subrinho/afiliados/${id}`);
-    revalidatePath(`/loja/${a.slug}`, "layout");
+    revalidateStore(a, "", "layout");
     revalidatePath("/afiliado", "layout");
     return { ok: true, message: `Identidade da loja ${a.name} salva.` };
   } catch (e) {
     if (e instanceof BrandingError) return { error: e.message };
+    return actionError(e);
+  }
+}
+
+/** Endereço da loja (subdomínio e domínio próprio), pela equipe Subrinho. */
+export async function updateAffiliateDomainsAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  try {
+    await requireSubrinhoUser(PERMS.affiliates);
+    const id = uuid(fd, "affiliateId");
+    const row = await updateStoreDomains(db, id, { subdomain: text(fd, "subdomain"), customDomain: optText(fd, "customDomain") ?? "" });
+    revalidatePath(`/subrinho/afiliados/${id}`);
+    if (row) revalidateStore(row, "", "layout");
+    return { ok: true, message: row?.customDomain && !row.customDomainVerifiedAt ? "Endereço salvo. Adicione o domínio ao projeto na Vercel e clique em Verificar domínio." : "Endereço salvo." };
+  } catch (e) {
+    if (e instanceof StoreDomainError) return { error: e.message };
+    return actionError(e);
+  }
+}
+
+export async function verifyAffiliateDomainAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  try {
+    await requireSubrinhoUser(PERMS.affiliates);
+    const id = uuid(fd, "affiliateId");
+    const r = await verifyCustomDomain(db, id);
+    revalidatePath(`/subrinho/afiliados/${id}`);
+    return r.ok ? { ok: true, message: r.message } : { error: r.message };
+  } catch (e) {
+    if (e instanceof StoreDomainError) return { error: e.message };
     return actionError(e);
   }
 }

@@ -3,19 +3,21 @@ import { ExternalLink, Lock } from "lucide-react";
 import { Alert, Card, CardBody, CardHeader, DetailRow, PageHeader, buttonClass } from "@/components/ui";
 import { CopyButton } from "@/components/ui-client";
 import { requireAffiliateUser } from "@/server/auth/session";
-import { appUrl, storePath } from "../../_lib/helpers";
+import { appUrl, storeHref } from "../../_lib/helpers";
 import { updateStoreAction } from "./actions";
 import { StoreForm } from "./store-form";
 import { BrandingEditor } from "@/components/branding-editor";
 import { brandingInitial, brandPresets } from "@/lib/branding-view";
 import { updateBrandingAction } from "./branding-actions";
+import { updateDomainsAction, verifyDomainAction } from "./domain-actions";
+import { StoreDomainCard } from "@/components/store-domain-card";
 
 export const metadata: Metadata = { title: "Minha loja" };
 
 export default async function AfiliadoLojaPage() {
   const { user, affiliate } = await requireAffiliateUser();
   const readOnly = user.role !== "ADMIN";
-  const storeUrl = `${appUrl()}${storePath(affiliate.slug)}`;
+  const storeUrl = storeHref(affiliate);
 
   return (
     <>
@@ -23,7 +25,7 @@ export default async function AfiliadoLojaPage() {
         title="Minha loja"
         subtitle="Personalize a sua loja e mantenha os dados de contato e de repasse atualizados."
         actions={
-          <a href={storePath(affiliate.slug)} target="_blank" rel="noopener noreferrer" className={buttonClass("primary")}>
+          <a href={storeHref(affiliate)} target="_blank" rel="noopener noreferrer" className={buttonClass("primary")}>
             <ExternalLink className="h-4 w-4" aria-hidden /> Abrir minha loja
           </a>
         }
@@ -37,14 +39,16 @@ export default async function AfiliadoLojaPage() {
         </Alert>
       )}
 
+      <StoreDomainCard store={affiliate} save={updateDomainsAction} verify={verifyDomainAction} readOnly={readOnly} />
+
       <Card className="mb-6">
-        <CardHeader title="Endereço e dados cadastrais" subtitle="Alterados somente pela equipe Subrinho" />
+        <CardHeader title="Dados cadastrais" subtitle="Alterados somente pela equipe Subrinho" />
         <CardBody className="grid gap-x-8 md:grid-cols-2">
           <dl>
             <DetailRow label="Endereço da loja">
               <span className="break-all">{storeUrl}</span>
             </DetailRow>
-            <DetailRow label="Identificador (slug)">{affiliate.slug}</DetailRow>
+            <DetailRow label="Identificador interno">{affiliate.slug}</DetailRow>
           </dl>
           <dl>
             <DetailRow label="Razão social">{affiliate.legalName || "-"}</DetailRow>

@@ -7,7 +7,7 @@ import { getProductDetail } from "@/server/catalog";
 import { Input } from "@/components/ui";
 import { brl, date } from "@/lib/format";
 import { addDays, daysBetween } from "@/lib/tz";
-import { getStore, getStorePricing } from "../../_lib/store";
+import { getStore, getStorePricing, storeBase } from "../../_lib/store";
 import { storeInsight } from "../../_lib/insight";
 import { SupplierTag } from "../../_components/reveal";
 import { parseSearch, supplierParams, toQuery } from "../../_components/search-params";
@@ -35,6 +35,7 @@ export default async function HouseDetail({
   if (!target) notFound();
   const { supplierCode: supplier, productId } = target;
   const store = await getStore(slug);
+  const sb = await storeBase(store);
   const ctx = await getStorePricing(store.id);
   const reveal = await storeInsight(store.id);
   const sp = await searchParams;
@@ -50,7 +51,7 @@ export default async function HouseDetail({
   const nights = daysBetween(d.checkin, d.checkout);
   const adultRule = p.paxRules.find((r) => r.type === "ADULT");
   const childRule = p.paxRules.find((r) => r.type === "CHILD");
-  const self = `/loja/${slug}/casas/${ref}`;
+  const self = `${sb}/casas/${ref}`;
   const cancel = o?.attributes?.find((a) => a.label === "Cancelamento");
   const capacity = adultRule?.max ?? 0;
   const guests = d.adultos + d.criancas;
@@ -63,7 +64,7 @@ export default async function HouseDetail({
       <div className="grid gap-10 lg:grid-cols-[1fr_440px] xl:gap-16">
       <ProductHero
         p={p}
-        back={{ href: `/loja/${slug}/casas?${toQuery({ destino: d.destino, checkin: d.checkin, checkout: d.checkout, adultos: d.adultos, criancas: d.criancas })}`, label: "Voltar para casas" }}
+        back={{ href: `${sb}/casas?${toQuery({ destino: d.destino, checkin: d.checkin, checkout: d.checkout, adultos: d.adultos, criancas: d.criancas })}`, label: "Voltar para casas" }}
         cta={{
           href: "#reservar",
           mobileOnly: true, // no computador o painel de reserva já fica ao lado
@@ -137,7 +138,7 @@ export default async function HouseDetail({
       </BookingPanel>
       </div>
       <div className="mt-16">
-        <CompleteTrip slug={slug} from="stay" destination={p.destination || d.destino} d={d} minDate={parsed.minDate} ctx={ctx} reveal={reveal} quick={quick} />
+        <CompleteTrip base={sb} from="stay" destination={p.destination || d.destino} d={d} minDate={parsed.minDate} ctx={ctx} reveal={reveal} quick={quick} />
       </div>
       <div className="mt-16">
         <RelatedProducts
@@ -147,7 +148,7 @@ export default async function HouseDetail({
           category="HOUSES"
           params={supplierParams({ ...d, destino: d.destino || p.destination }, "houses")}
           current={{ supplierCode: supplier, productId, groupKey: p.groupKey, pix: o?.price ? Number(o.price.pix.toString()) : null }}
-          hrefBase={`/loja/${slug}/casas`}
+          hrefBase={`${sb}/casas`}
           query={toQuery({ destino: d.destino || p.destination, checkin: d.checkin, checkout: d.checkout, adultos: d.adultos, criancas: d.criancas })}
           title={`Outras casas em ${p.destination || "destino"}`}
           nights={nights}

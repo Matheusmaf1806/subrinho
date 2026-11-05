@@ -6,7 +6,7 @@ import { SupplierError } from "@/server/suppliers/types";
 import { Alert, ButtonLink } from "@/components/ui";
 import { categoryAvailable } from "../_lib/categories";
 import { ComingSoon } from "../_components/coming-soon";
-import { getStore, getStorePricing } from "../_lib/store";
+import { getStore, getStorePricing, storeBase } from "../_lib/store";
 import { explicitFrom, quickContext } from "../_lib/quick";
 import { storeInsight } from "../_lib/insight";
 import { TicketsSearch } from "../_components/search-forms";
@@ -24,8 +24,9 @@ const PAGE_SIZE = 24;
 
 export default async function TicketsPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string>> }) {
   const store = await getStore((await params).slug);
+  const sb = await storeBase(store);
   // categoria sem fornecedor com API real: nada de catálogo de exemplo
-  if (!(await categoryAvailable("TICKETS"))) return <ComingSoon title="Ingressos" base={`/loja/${store.slug}`} />;
+  if (!(await categoryAvailable("TICKETS"))) return <ComingSoon title="Ingressos" base={(sb || "/")} />;
   const ctx = await getStorePricing(store.id);
   const reveal = await storeInsight(store.id);
   const raw = await searchParams;
@@ -36,7 +37,7 @@ export default async function TicketsPage({ params, searchParams }: { params: Pr
       reveal,
     onError: (_code, e) => failures.push({ message: e instanceof SupplierError && !("detail" in e) ? e.message : null }),
   });
-  const base = `/loja/${store.slug}/ingressos`;
+  const base = `${sb}/ingressos`;
   const q = toQuery({ destino: d.destino, data: d.data, adultos: d.adultos, criancas: d.criancas });
   const destinations = [...new Set(adaptersFor("TICKETS").flatMap((a) => a.destinations().map((x) => x.name)))];
   const searched = !!(raw.destino || raw.data);

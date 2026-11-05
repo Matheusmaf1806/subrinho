@@ -9,6 +9,7 @@ import { CartDrawer } from "./cart-drawer";
 
 export function StoreHeader({
   store,
+  base,
   viewer,
   cartCount,
   cartHref,
@@ -16,13 +17,14 @@ export function StoreHeader({
   pixAvailable,
 }: {
   store: Store;
+  /** Prefixo dos links: "" no endereço próprio da loja; "/loja/<slug>" na plataforma. */
+  base: string;
   viewer: StoreViewer | null;
   cartCount: number;
   cartHref: string;
   categories: StoreCategory[];
   pixAvailable: boolean;
 }) {
-  const base = `/loja/${store.slug}`;
   return (
     <header className="store-header sticky top-0 z-40 bg-white/90 backdrop-blur-xl backdrop-saturate-150">
       {viewer?.kind === "AFFILIATE" && (
@@ -48,7 +50,7 @@ export function StoreHeader({
         </div>
       )}
       <div className="mx-auto flex h-[72px] max-w-[1440px] items-center justify-between gap-6 px-4 sm:px-8">
-        <Link href={base} className="flex min-w-0 items-center gap-3">
+        <Link href={base || "/"} className="flex min-w-0 items-center gap-3">
           <StoreMark store={store} />
           {!store.logoUrl && (
             <span className="min-w-0 leading-none">
@@ -85,7 +87,7 @@ export function StoreHeader({
               <User className="h-4 w-4" /> <span className="hidden sm:inline">Entrar</span>
             </Link>
           )}
-          <CartDrawer slug={store.slug} count={cartCount} cartHref={cartHref} pixAvailable={pixAvailable} categories={categories.map((c) => ({ slug: c.slug, short: c.short }))} />
+          <CartDrawer slug={store.slug} base={base} count={cartCount} cartHref={cartHref} pixAvailable={pixAvailable} categories={categories.map((c) => ({ slug: c.slug, short: c.short }))} />
         </div>
       </div>
       <nav className="no-scrollbar flex gap-1.5 overflow-x-auto px-4 pb-3 lg:hidden">

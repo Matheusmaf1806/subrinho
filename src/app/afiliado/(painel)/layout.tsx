@@ -16,7 +16,7 @@ import { SubrinhoLogo } from "@/components/brand";
 import { monogram, themeStyle } from "@/lib/theme";
 import { PanelShell, type NavItem } from "@/components/panel-shell";
 import { requireAffiliateUser } from "@/server/auth/session";
-import { ROLE_LABEL, storePath } from "../_lib/helpers";
+import { ROLE_LABEL, storeHref } from "../_lib/helpers";
 import { logoutAction } from "./actions";
 
 export const metadata: Metadata = { title: { default: "Painel do Afiliado", template: "%s · Painel do Afiliado · Subrinho" } };
@@ -82,7 +82,7 @@ export default async function PainelAfiliadoLayout({ children }: { children: Rea
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <a
-              href={storePath(affiliate.slug)}
+              href={storeHref(affiliate)}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 rounded-xl bg-ink px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-ink-2"

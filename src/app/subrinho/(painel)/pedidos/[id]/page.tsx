@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { storePublicUrl } from "@/server/store-links";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { CircleCheck, CircleX } from "lucide-react";
@@ -438,8 +439,8 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
                 {
                   label: "Link do carrinho",
                   value: (
-                    <Link href={`/loja/${affiliate.slug}/carrinho/${cart.token}`} className="break-all font-mono text-xs text-brand-ink hover:underline" target="_blank">
-                      /loja/{affiliate.slug}/carrinho/{cart.token}
+                    <Link href={storePublicUrl(affiliate, `/carrinho/${cart.token}`)} className="break-all font-mono text-xs text-brand-ink hover:underline" target="_blank">
+                      {storePublicUrl(affiliate, `/carrinho/${cart.token}`).replace(/^https?:\/\//, "")}
                     </Link>
                   ),
                 },

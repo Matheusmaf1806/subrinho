@@ -5,19 +5,20 @@ import { MarginError } from "@/server/admin/margins";
 import { requireAffiliateUser, type AffiliateSession } from "@/server/auth/session";
 import { date as fmtDate } from "@/lib/format";
 import type { PersonData } from "@/server/db/schema";
+import type { StoreAddress } from "@/lib/store-domains";
+import { storePublicUrl } from "@/server/store-links";
 
 // ───────── Links ─────────
 
-export function appUrl() {
-  return (process.env.APP_URL ?? "http://localhost:3000").replace(/\/+$/, "");
+export { appUrl } from "@/server/store-links";
+
+/** Endereço oficial da loja (domínio próprio verificado, subdomínio ou /loja/<slug>). */
+export function storeHref(store: StoreAddress) {
+  return storePublicUrl(store);
 }
 
-export function storePath(slug: string) {
-  return `/loja/${slug}`;
-}
-
-export function cartShareLink(slug: string, token: string) {
-  return `${appUrl()}/loja/${slug}/carrinho/${token}`;
+export function cartShareLink(store: StoreAddress, token: string) {
+  return storePublicUrl(store, `/carrinho/${token}`);
 }
 
 export function reportHref(periodStart: string) {

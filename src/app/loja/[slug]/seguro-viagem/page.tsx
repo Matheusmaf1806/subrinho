@@ -7,7 +7,7 @@ import { date } from "@/lib/format";
 import { daysBetween } from "@/lib/tz";
 import { categoryAvailable } from "../_lib/categories";
 import { ComingSoon } from "../_components/coming-soon";
-import { getStore, getStorePricing } from "../_lib/store";
+import { getStore, getStorePricing, storeBase } from "../_lib/store";
 import { storeInsight } from "../_lib/insight";
 import { SupplierTag } from "../_components/reveal";
 import { InsuranceSearch } from "../_components/search-forms";
@@ -23,8 +23,9 @@ export const metadata = { title: "Seguro Viagem" };
 export default async function InsurancePage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string>> }) {
   const { slug } = await params;
   const store = await getStore(slug);
+  const sb = await storeBase(store);
   // categoria sem fornecedor com API real: nada de catálogo de exemplo
-  if (!(await categoryAvailable("INSURANCE"))) return <ComingSoon title="Seguro Viagem" base={`/loja/${store.slug}`} />;
+  if (!(await categoryAvailable("INSURANCE"))) return <ComingSoon title="Seguro Viagem" base={(sb || "/")} />;
   const ctx = await getStorePricing(store.id);
   const reveal = await storeInsight(store.id);
   const { d, minDate } = parseSearch(await searchParams);
@@ -36,7 +37,7 @@ export default async function InsurancePage({ params, searchParams }: { params: 
   return (
     <main>
       <ListingHeader eyebrow="Seguro viagem" image="planeTakeoff" title="Viaje protegido." subtitle="Compare os planos e contrate em minutos. Obrigatório para a Europa.">
-        <InsuranceSearch action={`/loja/${slug}/seguro-viagem`} d={d} regions={INSURANCE_REGIONS} minDate={minDate} />
+        <InsuranceSearch action={`${sb}/seguro-viagem`} d={d} regions={INSURANCE_REGIONS} minDate={minDate} />
       </ListingHeader>
       <div className="mx-auto max-w-[1100px] px-4 pb-8 pt-12 sm:px-8">
         <p className="mb-8 text-[15px] text-muted">

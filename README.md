@@ -303,6 +303,21 @@ inteiro pela conta normal (câmbio → margens → parcelado).
 **Saldo:** sem saldo a emissão falha com “Saldo insuficiente” (o item fica para emitir de novo no painel depois de
 recarregar). O saldo aparece em Painel Subrinho › Fornecedores, com aviso quando está baixo.
 
+## Endereço de cada loja (subdomínio ou domínio próprio, sem /loja/<slug>)
+
+Cada loja abre no próprio endereço e todos os links dela saem sem prefixo (`/hospedagem`, `/carrinho/<token>`):
+
+| Endereço | Exemplo | Como ligar |
+|---|---|---|
+| Subdomínio da plataforma | `viagensdaana.subrinho.com.br` | Uma vez só: na Vercel, adicione o domínio curinga `*.subrinho.com.br` ao projeto (exige o DNS de `subrinho.com.br` na Vercel) e defina `STORE_ROOT_DOMAIN=subrinho.com.br`. Cada loja escolhe o subdomínio em Minha loja › Endereço da loja |
+| Domínio próprio | `viagensdaana.com.br` ou `loja.viagensdaana.com.br` | A agência cadastra o domínio no painel e cria o DNS (apex: `A @ 76.76.21.21` e `CNAME www cname.vercel-dns.com`; subdomínio: `CNAME loja cname.vercel-dns.com`). A equipe Subrinho adiciona o domínio ao projeto na Vercel. Depois, “Verificar domínio” confirma que ele já abre a loja |
+
+Como funciona: `src/proxy.ts` reconhece o endereço e reescreve para a rota interna `/loja/<endereço>/…`
+(`src/lib/store-domains.ts`); as páginas montam os links com `storeBase()` (vazio no endereço próprio).
+Endereço oficial (painéis, link de carrinho): domínio próprio verificado > subdomínio > `/loja/<slug>`. Com
+`STORE_ROOT_DOMAIN` definido, quem abre `/loja/<slug>` no navegador é levado ao subdomínio. Os painéis
+(`/afiliado`, `/subrinho`) ficam no endereço da plataforma (`APP_URL`).
+
 ## Fornecedores invisíveis na loja
 
 A loja (e o Painel do Afiliado) nunca mostra quem é o fornecedor: URLs com referência neutra (`/hospedagem/h1-862326`),

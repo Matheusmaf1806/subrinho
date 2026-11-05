@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { storePublicUrl } from "@/server/store-links";
 import { ExternalLink, Plus, Store } from "lucide-react";
 import { ButtonLink, Card, EmptyState, PageHeader, Table, Td, Th, THead, Tr } from "@/components/ui";
 import { db } from "@/server/db";
@@ -62,8 +63,8 @@ export default async function SubrinhoAffiliatesPage() {
                     {a.legalName && <div className="text-xs text-muted">{a.legalName}</div>}
                   </Td>
                   <Td>
-                    <Link href={`/loja/${a.slug}`} target="_blank" className="inline-flex items-center gap-1 font-mono text-xs text-brand-ink hover:underline">
-                      /loja/{a.slug} <ExternalLink className="h-3 w-3" aria-hidden />
+                    <Link href={storePublicUrl(a)} target="_blank" className="inline-flex items-center gap-1 font-mono text-xs text-brand-ink hover:underline">
+                      {storePublicUrl(a).replace(/^https?:\/\//, "")} <ExternalLink className="h-3 w-3" aria-hidden />
                       <span className="sr-only">(abre em nova aba)</span>
                     </Link>
                   </Td>

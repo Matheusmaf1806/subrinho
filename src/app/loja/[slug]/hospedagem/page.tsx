@@ -10,7 +10,7 @@ import { date, paxSummary } from "@/lib/format";
 import { daysBetween } from "@/lib/tz";
 import { categoryAvailable } from "../_lib/categories";
 import { ComingSoon } from "../_components/coming-soon";
-import { getStore, getStorePricing } from "../_lib/store";
+import { getStore, getStorePricing, storeBase } from "../_lib/store";
 import { explicitFrom, quickContext } from "../_lib/quick";
 import { storeInsight } from "../_lib/insight";
 import { LodgingSearch } from "../_components/search-forms";
@@ -60,14 +60,15 @@ function Chip({ href, active, children }: { href: string; active: boolean; child
 
 export default async function LodgingPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string>> }) {
   const store = await getStore((await params).slug);
+  const sb = await storeBase(store);
   // categoria sem fornecedor com API real: nada de catálogo de exemplo
-  if (!(await categoryAvailable("LODGING"))) return <ComingSoon title="Hospedagem" base={`/loja/${store.slug}`} />;
+  if (!(await categoryAvailable("LODGING"))) return <ComingSoon title="Hospedagem" base={(sb || "/")} />;
   const ctx = await getStorePricing(store.id);
   const reveal = await storeInsight(store.id);
   const raw = await searchParams;
   const { d, minDate } = parseSearch(raw);
   const quick = await quickContext(store, d, minDate, explicitFrom(raw));
-  const base = `/loja/${store.slug}/hospedagem`;
+  const base = `${sb}/hospedagem`;
   const live = adaptersFor("LODGING").some((a) => a.live);
   const searched = !!(d.destino || d.dest);
   const failures: { code: string; message: string | null }[] = [];

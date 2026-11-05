@@ -9,7 +9,7 @@ import { date } from "@/lib/format";
 import { addDays, daysBetween } from "@/lib/tz";
 import { categoryAvailable } from "../_lib/categories";
 import { ComingSoon } from "../_components/coming-soon";
-import { getStore, getStorePricing } from "../_lib/store";
+import { getStore, getStorePricing, storeBase } from "../_lib/store";
 import { explicitFrom, quickContext } from "../_lib/quick";
 import { storeInsight } from "../_lib/insight";
 import { LodgingSearch } from "../_components/search-forms";
@@ -48,8 +48,9 @@ function Chip({ href, active, children }: { href: string; active: boolean; child
 
 export default async function HousesPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string>> }) {
   const store = await getStore((await params).slug);
+  const sb = await storeBase(store);
   // categoria sem fornecedor com API real: nada de catálogo de exemplo
-  if (!(await categoryAvailable("HOUSES"))) return <ComingSoon title="Casas" base={`/loja/${store.slug}`} />;
+  if (!(await categoryAvailable("HOUSES"))) return <ComingSoon title="Casas" base={(sb || "/")} />;
   const ctx = await getStorePricing(store.id);
   const reveal = await storeInsight(store.id);
   const raw = await searchParams;
@@ -62,7 +63,7 @@ export default async function HousesPage({ params, searchParams }: { params: Pro
       reveal,
     onError: (code, e) => failures.push({ code, message: e instanceof SupplierError && !("detail" in e) ? e.message : null }),
   });
-  const base = `/loja/${store.slug}/casas`;
+  const base = `${sb}/casas`;
   const nights = daysBetween(d.checkin, d.checkout);
   const guests = d.adultos + d.criancas;
   const q = toQuery({ destino: d.destino, checkin: d.checkin, checkout: d.checkout, adultos: d.adultos, criancas: d.criancas });

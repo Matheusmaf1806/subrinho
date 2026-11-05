@@ -98,7 +98,13 @@ export const affiliates = pgTable("affiliates", {
   name: text("name").notNull(), // nome fantasia exibido na loja
   legalName: text("legal_name"),
   document: text("document"), // CNPJ/CPF
-  slug: text("slug").notNull().unique(), // /loja/<slug>
+  slug: text("slug").notNull().unique(), // identificador interno (e endereço reserva /loja/<slug>)
+  /** Endereço na plataforma: <subdomain>.<STORE_ROOT_DOMAIN> (ex.: viagensdaana.subrinho.com.br). */
+  subdomain: text("subdomain").unique(),
+  /** Domínio próprio da agência (ex.: viagensdaana.com.br ou loja.viagensdaana.com.br). */
+  customDomain: text("custom_domain").unique(),
+  /** O domínio próprio já respondeu pela loja: só então os links e o endereço oficial usam ele. */
+  customDomainVerifiedAt: ts("custom_domain_verified_at"),
   email: text("email"),
   phone: text("phone"),
   whatsapp: text("whatsapp"),

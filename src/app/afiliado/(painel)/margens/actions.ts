@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidateStore } from "@/server/store-links";
+import type { StoreAddress } from "@/lib/store-domains";
 import type { ActionState } from "@/components/ui-client";
 import { db } from "@/server/db";
 import type { Category } from "@/server/db/schema";
@@ -9,10 +11,10 @@ import { resolveTicketTarget } from "@/server/afiliado/margins";
 import { ACTIVE_CATEGORIES, CATEGORY_LABEL } from "@/server/suppliers/types";
 import { decimalField, requireAdminForAction, serviceErrorMessage, str } from "../../_lib/helpers";
 
-function revalidate(slug: string) {
+function revalidate(store: Pick<StoreAddress, "slug" | "subdomain" | "customDomain">) {
   revalidatePath("/afiliado", "layout");
   // A margem muda o preço exibido na loja.
-  revalidatePath(`/loja/${slug}`, "layout");
+  revalidateStore(store, "", "layout");
 }
 
 function readPct(fd: FormData): string | { error: string } {
@@ -32,7 +34,7 @@ export async function saveDefaultMarginAction(_prev: ActionState, fd: FormData):
   } catch (e) {
     return { error: serviceErrorMessage(e) };
   }
-  revalidate(affiliate.slug);
+  revalidate(affiliate);
   return { ok: true, message: "Margem padrão salva." };
 }
 
@@ -53,7 +55,7 @@ export async function saveCategoryMarginAction(_prev: ActionState, fd: FormData)
   } catch (e) {
     return { error: serviceErrorMessage(e) };
   }
-  revalidate(affiliate.slug);
+  revalidate(affiliate);
   return { ok: true, message: `Margem de ${CATEGORY_LABEL[category]} salva.` };
 }
 
@@ -85,7 +87,7 @@ export async function saveTicketMarginAction(_prev: ActionState, fd: FormData): 
   } catch (e) {
     return { error: serviceErrorMessage(e) };
   }
-  revalidate(affiliate.slug);
+  revalidate(affiliate);
   return { ok: true, message: "Margem salva." };
 }
 
@@ -118,7 +120,7 @@ export async function updateMarginRuleAction(_prev: ActionState, fd: FormData): 
   } catch (e) {
     return { error: serviceErrorMessage(e) };
   }
-  revalidate(affiliate.slug);
+  revalidate(affiliate);
   return { ok: true, message: "Margem atualizada." };
 }
 
@@ -131,6 +133,6 @@ export async function deleteMarginRuleAction(_prev: ActionState, fd: FormData): 
   } catch (e) {
     return { error: serviceErrorMessage(e, "Não foi possível remover a regra.") };
   }
-  revalidate(affiliate.slug);
+  revalidate(affiliate);
   return { ok: true, message: "Regra removida." };
 }

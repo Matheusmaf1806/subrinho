@@ -64,7 +64,7 @@ export default async function AfiliadoCarrinhosPage({ searchParams }: { searchPa
             </THead>
             <tbody>
               {carts.map((c) => {
-                const link = cartShareLink(affiliate.slug, c.token);
+                const link = cartShareLink(affiliate, c.token);
                 return (
                   <Tr key={c.id}>
                     <Td className="whitespace-nowrap">{dateTime(c.createdAt)}</Td>
