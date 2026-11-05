@@ -39,6 +39,12 @@ import { cancelOrderAction, confirmPaymentAction } from "./actions";
 import { ItemBreakdown } from "./item-breakdown";
 import { isManualIssue, isSimulatedPayment, needsControlledIssue } from "@/server/bookings/service";
 import { getAdapter } from "@/server/suppliers/registry";
+import { invoicesForOrder } from "@/server/invoices";
+import { InvoiceForm } from "@/components/invoice-form";
+import { InvoiceList } from "@/components/invoice-list";
+import { todayLocal } from "@/lib/tz";
+import { InlineActionButton } from "../../../_components/inline-action";
+import { cancelInvoiceAction, registerOrderInvoiceAction } from "../../notas/actions";
 
 function cancelSimulation(code: string): boolean {
   try {
@@ -89,6 +95,7 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
   if (!data) notFound();
   const { order: o, affiliate, cart, items, events, views, creator } = data;
   const extras = await orderDetailExtras(db, o, items, events);
+  const orderInvoices = await invoicesForOrder(db, o.id);
   const canAct = canDo(user.role, PERMS.orders);
 
   const pd = o.paymentData as Record<string, unknown>;
@@ -235,6 +242,34 @@ export default async function SubrinhoOrderDetailPage({ params }: { params: Prom
                 {brl(o.affiliateCommission)}
               </DetailRow>
             </dl>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader title="Nota fiscal" subtitle="O cliente baixa na página do pedido e recebe o aviso por e-mail" />
+          <CardBody className="space-y-4">
+            <InvoiceList
+              list={orderInvoices}
+              fileHref={(f) => `/api/files/${f}`}
+              cancel={(inv) =>
+                canDo(user.role, PERMS.orders) ? (
+                  <InlineActionButton action={cancelInvoiceAction} fields={{ id: inv.id }} variant="ghost" confirmMessage={`Marcar a nota ${inv.number} como cancelada?`}>
+                    Cancelar
+                  </InlineActionButton>
+                ) : null
+              }
+            />
+            {o.status === "PAID" && canDo(user.role, PERMS.orders) ? (
+              orderInvoices.some((i) => i.status === "ISSUED") ? (
+                <Modal trigger={<span className="text-sm font-semibold text-brand-ink hover:underline">Registrar outra nota</span>} title="Registrar nota fiscal" size="lg">
+                  <InvoiceForm action={registerOrderInvoiceAction} hidden={{ orderId: o.id }} amount={String(o.amountCharged)} today={todayLocal()} />
+                </Modal>
+              ) : (
+                <InvoiceForm action={registerOrderInvoiceAction} hidden={{ orderId: o.id }} amount={String(o.amountCharged)} today={todayLocal()} />
+              )
+            ) : (
+              !orderInvoices.length && <p className="text-sm text-muted">A nota é registrada depois do pagamento.</p>
+            )}
           </CardBody>
         </Card>
 

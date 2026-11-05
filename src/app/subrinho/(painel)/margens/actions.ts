@@ -1,5 +1,6 @@
 "use server";
 
+import { audited } from "@/server/audit";
 import { revalidatePath } from "next/cache";
 import type { ActionState } from "@/components/ui-client";
 import { db } from "@/server/db";
@@ -52,7 +53,7 @@ export async function upsertSubrinhoMarginAction(_prev: ActionState, fd: FormDat
       upsertMarginRule(tx, { owner: "SUBRINHO", scope, category, supplierCode, productId, optionId, label, marginPct }, user.id),
     );
     revalidatePath("/subrinho/margens");
-    return { ok: true, message: `Margem ${SCOPE_LABEL[scope].toLowerCase()} salva: ${pct(rule.marginPct)}` };
+    return audited(db, { type: "SUBRINHO", id: user.id, name: user.name }, "margin.upsert", { ok: true, message: `Margem ${SCOPE_LABEL[scope].toLowerCase()} salva: ${pct(rule.marginPct)}` }, { entity: "margin_rule", entityId: rule.id });
   } catch (e) {
     return actionError(e);
   }
@@ -60,11 +61,11 @@ export async function upsertSubrinhoMarginAction(_prev: ActionState, fd: FormDat
 
 export async function deleteSubrinhoMarginAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   try {
-    await requireSubrinhoUser(PERMS.margins);
+    const user = await requireSubrinhoUser(PERMS.margins);
     const id = uuid(fd, "id", "Regra");
     await db.transaction((tx) => deleteMarginRule(tx, id, { owner: "SUBRINHO" }));
     revalidatePath("/subrinho/margens");
-    return { ok: true, message: "Regra removida" };
+    return audited(db, { type: "SUBRINHO", id: user.id, name: user.name }, "margin.delete", { ok: true, message: "Regra removida" }, { entity: "margin_rule" });
   } catch (e) {
     return actionError(e);
   }

@@ -1,5 +1,6 @@
 "use server";
 
+import { audited } from "@/server/audit";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -34,7 +35,7 @@ export async function createUserAction(_prev: ActionState, fd: FormData): Promis
     return { error: serviceErrorMessage(e, "Não foi possível criar o usuário.") };
   }
   revalidatePath("/afiliado/usuarios");
-  return { ok: true, message: `Usuário ${parsed.data.name} criado. Envie o e-mail e a senha para ele acessar o painel.` };
+  return audited(db, { type: "AFFILIATE", id: g.session.user.id, name: g.session.user.name }, "affiliate_user.create", { ok: true, message: `Usuário ${parsed.data.name} criado. Envie o e-mail e a senha para ele acessar o painel.` }, { affiliateId: g.session.affiliate.id });
 }
 
 export async function setUserActiveAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
@@ -52,5 +53,5 @@ export async function setUserActiveAction(_prev: ActionState, fd: FormData): Pro
     .returning({ id: affiliateUsers.id });
   if (!updated.length) return { error: "Usuário não encontrado." };
   revalidatePath("/afiliado/usuarios");
-  return { ok: true, message: active ? "Usuário reativado." : "Usuário desativado." };
+  return audited(db, { type: "AFFILIATE", id: g.session.user.id, name: g.session.user.name }, "affiliate_user.toggle", { ok: true, message: active ? "Usuário reativado." : "Usuário desativado." }, { affiliateId: g.session.affiliate.id });
 }

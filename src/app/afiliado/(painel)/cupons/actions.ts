@@ -1,5 +1,6 @@
 "use server";
 
+import { audited } from "@/server/audit";
 import { revalidatePath } from "next/cache";
 import { revalidateStore } from "@/server/store-links";
 import type { StoreAddress } from "@/lib/store-domains";
@@ -68,7 +69,7 @@ export async function createCouponAction(_prev: ActionState, fd: FormData): Prom
     return { error: serviceErrorMessage(e, "Não foi possível criar o cupom.") };
   }
   revalidate(affiliate);
-  return { ok: true, message: `Cupom ${code} criado.` };
+  return audited(db, { type: "AFFILIATE", id: g.session.user.id, name: g.session.user.name }, "coupon.create", { ok: true, message: `Cupom ${code} criado.` }, { affiliateId: g.session.affiliate.id });
 }
 
 export async function updateCouponAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
@@ -86,7 +87,7 @@ export async function updateCouponAction(_prev: ActionState, fd: FormData): Prom
     return { error: serviceErrorMessage(e, "Não foi possível salvar o cupom.") };
   }
   revalidate(affiliate);
-  return { ok: true, message: "Cupom atualizado." };
+  return audited(db, { type: "AFFILIATE", id: g.session.user.id, name: g.session.user.name }, "coupon.update", { ok: true, message: "Cupom atualizado." }, { affiliateId: g.session.affiliate.id });
 }
 
 export async function setCouponActiveAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
@@ -102,5 +103,5 @@ export async function setCouponActiveAction(_prev: ActionState, fd: FormData): P
     return { error: serviceErrorMessage(e, "Não foi possível alterar o cupom.") };
   }
   revalidate(affiliate);
-  return { ok: true, message: active ? "Cupom ativado." : "Cupom desativado." };
+  return audited(db, { type: "AFFILIATE", id: g.session.user.id, name: g.session.user.name }, "coupon.toggle", { ok: true, message: active ? "Cupom ativado." : "Cupom desativado." }, { affiliateId: g.session.affiliate.id });
 }

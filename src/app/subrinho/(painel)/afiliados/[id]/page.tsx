@@ -34,8 +34,9 @@ import { periodLabel } from "../../../_lib/dates";
 import { isUuid } from "../../../_lib/form";
 import { canDo, PERMS, SCOPE_LABEL } from "../../../_lib/labels";
 import { ruleTarget } from "../../../_lib/rules";
-import { addAffiliateUserAction, updateAffiliateAction, updateAffiliateBrandingAction, updateAffiliateDomainsAction, verifyAffiliateDomainAction } from "../actions";
+import { addAffiliateUserAction, updateAffiliateAction, updateAffiliateBrandingAction, updateAffiliateDomainsAction, updateAffiliateLegalAction, verifyAffiliateDomainAction } from "../actions";
 import { StoreDomainCard } from "@/components/store-domain-card";
+import { StoreLegalCard } from "@/components/store-legal-card";
 import { BrandingEditor } from "@/components/branding-editor";
 import { brandingInitial, brandPresets } from "@/lib/branding-view";
 import { AffiliateFields } from "../affiliate-fields";
@@ -114,6 +115,7 @@ export default async function AffiliateDetailPage({
 
       <div className="mt-6">
         <StoreDomainCard store={a} save={updateAffiliateDomainsAction} verify={verifyAffiliateDomainAction} readOnly={!canEdit} hidden={{ affiliateId: a.id }} />
+        <StoreLegalCard store={a} save={updateAffiliateLegalAction} readOnly={!canEdit} hidden={{ affiliateId: a.id }} />
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[3fr_2fr]">

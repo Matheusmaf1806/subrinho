@@ -10,8 +10,7 @@ import {
   Store,
   TicketPercent,
   Users,
-  Wallet,
-} from "lucide-react";
+  Wallet, History } from "lucide-react";
 import { SubrinhoLogo } from "@/components/brand";
 import { monogram, themeStyle } from "@/lib/theme";
 import { PanelShell, type NavItem } from "@/components/panel-shell";
@@ -34,6 +33,7 @@ export default async function PainelAfiliadoLayout({ children }: { children: Rea
     { href: "/afiliado/cupons", label: "Cupons", icon: <TicketPercent /> },
     { href: "/afiliado/loja", label: "Minha loja", icon: <Store /> },
     ...(isAdmin ? [{ href: "/afiliado/usuarios", label: "Usuários", icon: <Users /> }] : []),
+    { href: "/afiliado/historico", label: "Histórico", icon: <History /> },
   ];
 
   // White-label: o painel do afiliado usa a identidade da agência (cores, fonte e logo).

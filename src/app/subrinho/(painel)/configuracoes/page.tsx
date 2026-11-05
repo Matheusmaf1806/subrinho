@@ -4,7 +4,7 @@ import { Badge, Card, CardBody, CardHeader, EmptyState, Field, Input, PageHeader
 import { ActionForm, Modal, SubmitButton } from "@/components/ui-client";
 import { db } from "@/server/db";
 import { requireSubrinhoUser } from "@/server/auth/session";
-import { getSettings } from "@/server/settings";
+import { getCompanyInfo, getSettings } from "@/server/settings";
 import { nationalHolidays } from "@/server/payouts/calendar";
 import { listExtraHolidays, listSubrinhoUsers } from "@/server/subrinho/admin";
 import { todayLocal } from "@/lib/tz";
@@ -12,7 +12,7 @@ import { dateTime, weekdayDate } from "@/lib/format";
 import { ActiveBadge, ReadOnlyNotice, SectionTitle } from "../../_components/bits";
 import { InlineActionButton } from "../../_components/inline-action";
 import { canDo, PERMS, ROLE_LABEL } from "../../_lib/labels";
-import { addHolidayAction, createSubrinhoUserAction, deleteHolidayAction, toggleSubrinhoUserAction, updateSettingsAction } from "./actions";
+import { addHolidayAction, createSubrinhoUserAction, deleteHolidayAction, toggleSubrinhoUserAction, updateCompanyAction, updateSettingsAction } from "./actions";
 import { resetUserTotpAction } from "../seguranca/actions";
 
 export const metadata = { title: "Configurações" };
@@ -28,7 +28,7 @@ export default async function SubrinhoSettingsPage() {
   const canEdit = canDo(user.role, PERMS.settings);
   const today = todayLocal();
   const year = Number(today.slice(0, 4));
-  const [s, extra, users] = await Promise.all([getSettings(db), listExtraHolidays(db), listSubrinhoUsers(db)]);
+  const [s, extra, users, company] = await Promise.all([getSettings(db), listExtraHolidays(db), listSubrinhoUsers(db), getCompanyInfo(db)]);
   const national = [...nationalHolidays(year), ...nationalHolidays(year + 1)]
     .filter(([dt]) => dt >= today)
     .sort(([a], [b]) => a.localeCompare(b))
@@ -86,6 +86,34 @@ export default async function SubrinhoSettingsPage() {
               {canEdit && (
                 <div className="flex items-end">
                   <SubmitButton className="w-full">Salvar parâmetros</SubmitButton>
+                </div>
+              )}
+            </fieldset>
+          </ActionForm>
+        </CardBody>
+      </Card>
+
+      <Card className="mt-4">
+        <CardHeader title="Dados da empresa" subtitle="Aparecem nas páginas de Termos e Privacidade de todas as lojas, como responsável pela tecnologia e pelos pagamentos" />
+        <CardBody className="py-5">
+          <ActionForm action={updateCompanyAction}>
+            <fieldset disabled={!canEdit} className="grid gap-5 sm:grid-cols-2">
+              <legend className="sr-only">Dados da empresa</legend>
+              <Field label="Razão social">
+                <Input name="legalName" defaultValue={company.legalName} placeholder="Subrinho Tecnologia Ltda." />
+              </Field>
+              <Field label="CNPJ">
+                <Input name="document" defaultValue={company.document} placeholder="00.000.000/0001-00" />
+              </Field>
+              <Field label="Endereço">
+                <Input name="address" defaultValue={company.address} placeholder="Rua, número, cidade, UF" />
+              </Field>
+              <Field label="E-mail de privacidade (encarregado LGPD)">
+                <Input name="privacyEmail" type="email" defaultValue={company.privacyEmail} placeholder="privacidade@subrinho.com.br" />
+              </Field>
+              {canEdit && (
+                <div className="sm:col-span-2">
+                  <SubmitButton>Salvar dados da empresa</SubmitButton>
                 </div>
               )}
             </fieldset>

@@ -23,6 +23,8 @@ import {
 } from "@/server/cart/service";
 import { CheckoutError, findOrCreateCustomer, markOrderPaid, placeOrder } from "@/server/checkout/service";
 import { validOrderAccessKey } from "@/server/order-access";
+import { deleteCustomerAccount } from "@/server/customer-data";
+import { recordAudit } from "@/server/audit";
 import { loginBlocked, recordLogin } from "@/server/auth/limits";
 import { RESET_SENT_MESSAGE, requestPasswordReset, resetPassword, ResetError } from "@/server/auth/reset";
 import { autoIssueOrder } from "@/server/bookings/service";
@@ -243,6 +245,15 @@ export async function setMarginOverrideAction(slug: string, token: string, _prev
     if (!reset && (raw === "" || !Number.isFinite(Number(raw)))) return { error: "Informe a margem em %" };
     if (!reset && Number(raw) < 0) return { error: "A margem não pode ser menor que 0%" };
     await setAffiliateMarginOverride(db, cart, String(fd.get("itemId")), reset ? null : raw, viewer.user);
+    await recordAudit(db, {
+      actor: { type: "AFFILIATE", id: viewer.user.id, name: viewer.user.name },
+      affiliateId: store.id,
+      action: "cart.margin_override",
+      entity: "cart",
+      entityId: cart.token,
+      summary: reset ? "Restaurou a margem padrão de um item no carrinho" : `Alterou a margem de um item no carrinho para ${raw}%`,
+      data: { itemId: String(fd.get("itemId")) },
+    });
     await refreshCart(slug, token);
     return { ok: true, message: reset ? "Margem padrão restaurada" : "Margem alterada neste carrinho" };
   } catch (e) {
@@ -356,6 +367,17 @@ export async function resetCustomerPasswordAction(slug: string, _prev: ActionSta
   await endSession("loja");
   await startSession("loja", { userType: "CUSTOMER", userId, storeAffiliateId: store.id });
   redirect(await storePath(store, "/minha-conta"));
+}
+
+export async function deleteAccountAction(slug: string, _prev: ActionState, fd: FormData): Promise<ActionState> {
+  const store = await getStore(slug);
+  const viewer = await viewerFor(store);
+  if (!viewer || viewer.kind !== "CUSTOMER") return { error: "Entre na sua conta" };
+  if (String(fd.get("confirm") ?? "").trim().toUpperCase() !== "EXCLUIR") return { error: "Digite EXCLUIR para confirmar" };
+  if (!(await verifyPassword(String(fd.get("password") ?? ""), viewer.customer.passwordHash))) return { error: "Senha incorreta" };
+  await deleteCustomerAccount(db, viewer.customer.id);
+  await endSession("loja");
+  redirect(await storePath(store, "/?conta=excluida"));
 }
 
 export async function logoutAction(slug: string) {

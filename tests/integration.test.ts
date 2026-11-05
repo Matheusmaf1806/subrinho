@@ -741,4 +741,148 @@ describe.skipIf(!url)("fluxo completo (integração)", () => {
     expect(res.order.paymentProvider).toBe("mock");
     expect((res.order.paymentData as { simulated?: boolean }).simulated).toBe(true);
   });
+
+  // ───────────── e-mails, nova senha, limite de login, carrinho abandonado, notas, monitoramento ─────────────
+
+  const outbox = (where: Partial<{ kind: string; orderId: string }>) =>
+    db
+      .select()
+      .from(schema.emailOutbox)
+      .where(sql`${where.kind ? sql`${schema.emailOutbox.kind} = ${where.kind}` : sql`true`} and ${where.orderId ? sql`${schema.emailOutbox.orderId} = ${where.orderId}` : sql`true`}`);
+
+  it("e-mails do pedido: Pix criado, pagamento confirmado (cliente e agência), voucher; sem repetir", async () => {
+    const { flushEmails } = await import("@/server/email/outbox");
+    const { customer } = await findOrCreateCustomer(db, affiliateId, { name: "Carla Souza", email: "carla@cliente.com", password: "12345678" });
+    const cart = await createCart(db, affiliateId, { type: "CUSTOMER", id: customer.id });
+    await addQuoteToCart(db, cart, specQuote());
+    const { order } = await placeOrder(db, { cart, customer, payer: { name: "Carla Souza", email: "carla@cliente.com" }, travelers: [{ name: "Carla Souza" }], paymentMethod: "PIX", installments: 1, revalidate: false });
+    const placed = await outbox({ kind: "order.placed", orderId: order.id });
+    expect(placed).toHaveLength(1);
+    expect(placed[0].toEmail).toBe("carla@cliente.com");
+    expect(placed[0].subject).toMatch(/falta pagar o Pix/);
+    expect(placed[0].html).toContain(`/pedido/${order.id}?k=`);
+    expect(placed[0].fromName).toBe("Agência Teste");
+
+    await markOrderPaid(db, order.id, { paidAt: new Date() });
+    await markOrderPaid(db, order.id, { paidAt: new Date() }); // idempotente
+    const paid = await outbox({ kind: "order.paid", orderId: order.id });
+    expect(paid).toHaveLength(1);
+    const agency = await outbox({ kind: "order.paid.agency", orderId: order.id });
+    expect(agency.map((e) => e.toEmail)).toEqual(["admin@agencia.com"]);
+    expect(agency[0].html).toContain("Sua comissão");
+    expect(agency[0].html).not.toMatch(/custo|margem subrinho/i);
+    // catálogo simulado reserva na hora → voucher pronto
+    expect((await outbox({ kind: "item.voucher_ready", orderId: order.id })).length).toBe(1);
+    // cliente nunca vê o nome do fornecedor
+    for (const e of [...placed, ...paid]) expect(e.html).not.toContain("NADIO");
+
+    const sent: string[] = [];
+    const r = await flushEmails(db, { sender: async (m) => (sent.push(m.to), { ok: true, providerId: `p-${m.id}` }), limit: 100 });
+    expect(r.sent).toBeGreaterThanOrEqual(4);
+    expect((await outbox({ kind: "order.paid", orderId: order.id }))[0].status).toBe("SENT");
+    // sem provedor: fica registrado como não enviado
+    await db.insert(schema.emailOutbox).values({ kind: "test", toEmail: "x@x.com", subject: "t", html: "<p>t</p>", text: "t" });
+    const skipped = await flushEmails(db, { sender: null });
+    expect(skipped.skipped).toBe(1);
+  });
+
+  it("e-mail que falha volta para a fila e, na 5ª tentativa, fica como falha", async () => {
+    const { flushEmails, MAX_ATTEMPTS } = await import("@/server/email/outbox");
+    const [m] = await db.insert(schema.emailOutbox).values({ kind: "test.fail", toEmail: "y@y.com", subject: "t", html: "t", text: "t" }).returning();
+    for (let i = 0; i < MAX_ATTEMPTS; i++) {
+      await db.update(schema.emailOutbox).set({ nextAttemptAt: new Date(0) }).where(eq(schema.emailOutbox.id, m.id));
+      await flushEmails(db, { sender: async () => ({ ok: false, error: "HTTP 503", retry: true }) });
+    }
+    const [after] = await db.select().from(schema.emailOutbox).where(eq(schema.emailOutbox.id, m.id));
+    expect(after.status).toBe("FAILED");
+    expect(after.attempts).toBe(MAX_ATTEMPTS);
+  });
+
+  it("esqueci minha senha: link de uso único, sem revelar conta, com limite por hora", async () => {
+    const { requestPasswordReset, resetPassword, ResetError } = await import("@/server/auth/reset");
+    const { verifyPassword } = await import("@/server/auth/password");
+    await requestPasswordReset(db, { realm: "afiliado", email: "ninguem@agencia.com", ip: "10.0.0.1" });
+    expect(await outbox({ kind: "auth.reset" })).toHaveLength(0);
+    await requestPasswordReset(db, { realm: "afiliado", email: "ADMIN@agencia.com", ip: "10.0.0.1" });
+    const [mail] = await outbox({ kind: "auth.reset" });
+    expect(mail.toEmail).toBe("admin@agencia.com");
+    const token = decodeURIComponent(mail.text.match(/redefinir-senha\?t=([^\s]+)/)![1]);
+    await db.insert(schema.sessions).values({ id: "sess-antiga", userType: "AFFILIATE", userId: adminUser.id, expiresAt: new Date(Date.now() + 86400_000) });
+    await expect(resetPassword(db, { realm: "afiliado", token, password: "nova-senha-1", confirm: "outra" })).rejects.toBeInstanceOf(ResetError);
+    const uid = await resetPassword(db, { realm: "afiliado", token, password: "nova-senha-1", confirm: "nova-senha-1" });
+    expect(uid).toBe(adminUser.id);
+    const [u] = await db.select().from(schema.affiliateUsers).where(eq(schema.affiliateUsers.id, adminUser.id));
+    expect(await verifyPassword("nova-senha-1", u.passwordHash)).toBe(true);
+    expect(await db.select().from(schema.sessions).where(eq(schema.sessions.id, "sess-antiga"))).toHaveLength(0);
+    await expect(resetPassword(db, { realm: "afiliado", token, password: "nova-senha-2", confirm: "nova-senha-2" })).rejects.toThrow(/venceu ou já foi usado/);
+    // o token de agência não vale para a equipe Subrinho
+    await expect(resetPassword(db, { realm: "subrinho", token, password: "nova-senha-2", confirm: "nova-senha-2" })).rejects.toBeInstanceOf(ResetError);
+    for (let i = 0; i < 4; i++) await requestPasswordReset(db, { realm: "afiliado", email: "admin@agencia.com", ip: "10.0.0.2" });
+    expect((await outbox({ kind: "auth.reset" })).length).toBe(3); // 1 + 2 até o limite de 3 por hora
+  });
+
+  it("limite de login: 5 erros bloqueiam o e-mail; login certo libera", async () => {
+    const { loginBlocked, recordLogin } = await import("@/server/auth/limits");
+    for (let i = 0; i < 5; i++) await recordLogin(db, "subrinho", "alvo@subrinho.com", "1.1.1.1", false);
+    expect(await loginBlocked(db, "subrinho", "ALVO@subrinho.com", "2.2.2.2")).toMatch(/Muitas tentativas/);
+    expect(await loginBlocked(db, "afiliado", "alvo@subrinho.com", "2.2.2.2")).toBeNull();
+    await recordLogin(db, "subrinho", "alvo@subrinho.com", "1.1.1.1", true);
+    expect(await loginBlocked(db, "subrinho", "alvo@subrinho.com", "2.2.2.2")).toBeNull();
+  });
+
+  it("carrinho abandonado: um lembrete por carrinho, só para cliente conhecido", async () => {
+    const { sendAbandonedCartReminders } = await import("@/server/cart/reminders");
+    const { customer } = await findOrCreateCustomer(db, affiliateId, { name: "Duda Lima", email: "duda@cliente.com", password: "12345678" });
+    const cart = await createCart(db, affiliateId, { type: "CUSTOMER", id: customer.id });
+    await addQuoteToCart(db, cart, specQuote());
+    const anon = await createCart(db, affiliateId, { type: "ANONYMOUS" });
+    await addQuoteToCart(db, anon, specQuote());
+    const old = new Date(Date.now() - 25 * 3600_000);
+    await db.update(schema.carts).set({ updatedAt: old }).where(sql`${schema.carts.id} in (${cart.id}, ${anon.id})`);
+    const r1 = await sendAbandonedCartReminders(db);
+    expect(r1.sent).toBeGreaterThanOrEqual(1);
+    const mails = (await outbox({ kind: "cart.reminder" })).filter((m) => m.toEmail === "duda@cliente.com");
+    expect(mails).toHaveLength(1);
+    expect(mails[0].html).toContain(`/carrinho/${cart.token}`);
+    const r2 = await sendAbandonedCartReminders(db);
+    expect((await outbox({ kind: "cart.reminder" })).filter((m) => m.toEmail === "duda@cliente.com")).toHaveLength(1);
+    expect(r2.sent).toBe(0);
+  });
+
+  it("nota fiscal: do pedido (cliente avisado) e da comissão (só a própria agência), com histórico", async () => {
+    const { registerOrderInvoice, registerPayoutInvoice, InvoiceError, invoicesForOrder } = await import("@/server/invoices");
+    const [o] = await db.select().from(schema.orders).where(eq(schema.orders.status, "PAID")).limit(1);
+    const actor = { type: "SUBRINHO" as const, id: staffId, name: "Staff" };
+    await expect(registerOrderInvoice(db, o.id, { number: "77", issuedAt: "2026-11-05", amount: "10,00" }, actor)).rejects.toBeInstanceOf(InvoiceError);
+    const pdf = { filename: "nf.pdf", mimeType: "application/pdf", data: Buffer.from("%PDF-1.4 teste") };
+    const inv = await registerOrderInvoice(db, o.id, { number: "77", series: "1", issuedAt: "2026-11-05", amount: "1.234,56", pdf }, actor);
+    expect(inv.amount).toBe("1234.56");
+    expect(inv.fileId).toBeTruthy();
+    expect(await invoicesForOrder(db, o.id)).toHaveLength(1);
+    expect((await outbox({ kind: "invoice.order", orderId: o.id })).length).toBe(1);
+    const [p] = await db.select().from(schema.payouts).where(eq(schema.payouts.affiliateId, affiliateId)).limit(1);
+    const other = await createAffiliate(db, { name: "Outra", slug: "outra-agencia" }, { name: "Admin 2", email: "admin2@outra.com", password: "12345678" });
+    await expect(registerPayoutInvoice(db, p.id, { number: "9", issuedAt: "2026-11-05", amount: "1", pdf }, { type: "AFFILIATE", id: null, name: "x", affiliateId: other.id })).rejects.toThrow(/não encontrado/);
+    const pinv = await registerPayoutInvoice(db, p.id, { number: "9", issuedAt: "2026-11-05", amount: p.amount, url: "https://nfse.prefeitura.sp.gov.br/x" }, { type: "AFFILIATE", id: adminUser.id, name: "Admin", affiliateId });
+    expect(pinv.kind).toBe("PAYOUT");
+    const audit = await db.select().from(schema.auditLog).where(sql`${schema.auditLog.action} in ('invoice.order', 'invoice.payout')`);
+    expect(audit.map((a) => a.action).sort()).toEqual(["invoice.order", "invoice.payout"]);
+  });
+
+  it("monitoramento: 3 falhas do fornecedor em 15 min alertam a equipe uma vez", async () => {
+    const { recordSupplierFailure } = await import("@/server/monitoring");
+    const { SupplierIntegrationError } = await import("@/server/suppliers/types");
+    await db.insert(schema.errorEvents).values([
+      { source: "supplier", key: "TESTE_FORN", message: "falha 1", code: "T" },
+      { source: "supplier", key: "TESTE_FORN", message: "falha 2", code: "T" },
+    ]);
+    await recordSupplierFailure(db, "TESTE_FORN", new SupplierIntegrationError("eSIMX /x: bloqueado", { status: 403, cloudflare: "challenge", ray: "abc" }), "busca");
+    await recordSupplierFailure(db, "TESTE_FORN", new SupplierError("Informe o destino"), "busca"); // erro de negócio não conta
+    await recordSupplierFailure(db, "TESTE_FORN", new SupplierIntegrationError("outra", { status: 500 }), "busca");
+    const alerts = await outbox({ kind: "alert.supplier" });
+    expect(alerts.map((a) => a.toEmail)).toEqual(["staff@test.com"]);
+    expect(alerts[0].subject).toContain("TESTE_FORN");
+    const events = await db.select().from(schema.errorEvents).where(eq(schema.errorEvents.key, "TESTE_FORN"));
+    expect(events.map((e) => e.code)).toContain("F403c Ray abc");
+  });
 });

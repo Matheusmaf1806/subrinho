@@ -6,6 +6,7 @@ import { themeStyle } from "@/lib/theme";
 import { StoreMark } from "./_components/store-mark";
 import { StoreHeader } from "./_components/store-header";
 import { ScrollState } from "./_components/scroll-state";
+import { CookiePrefsButton, StoreTracking } from "./_components/tracking";
 import { storeCategories } from "./_lib/categories";
 import { paymentProvider } from "@/server/payments/provider";
 
@@ -33,6 +34,7 @@ export default async function StoreLayout({ children, params }: { children: Reac
   const [viewer, count, token, cats] = await Promise.all([viewerFor(store), cartBadgeCount(store), currentCartToken(store), storeCategories()]);
   const base = await storeBase(store);
   const brand = storeBrand(store, base);
+  const tracking = !!(store.metaPixelId || store.ga4Id);
   return (
     <div style={themeStyle(store)} className="flex min-h-screen flex-col bg-white font-sans text-ink">
       <StoreHeader store={store} base={base} viewer={viewer} cartCount={count} cartHref={token ? `${base}/carrinho/${token}` : `${base}/carrinho`} categories={cats.live} pixAvailable={paymentProvider().pixAvailable} />
@@ -89,8 +91,26 @@ export default async function StoreLayout({ children, params }: { children: Reac
               </div>
             )}
           </div>
+          <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-white/10 px-6 py-5 text-[12px] text-white/55 sm:px-12">
+            <p>
+              {[store.legalName || store.name, store.document && `CNPJ ${store.document}`, store.cadastur && `Cadastur ${store.cadastur}`, store.address].filter(Boolean).join(" · ")}
+            </p>
+            <nav aria-label="Políticas" className="flex flex-wrap gap-x-4 gap-y-1">
+              <Link href={`${base}/termos`} className="hover:text-white">
+                Termos de uso
+              </Link>
+              <Link href={`${base}/privacidade`} className="hover:text-white">
+                Privacidade
+              </Link>
+              <Link href={`${base}/cancelamento`} className="hover:text-white">
+                Cancelamento e reembolso
+              </Link>
+              {tracking && <CookiePrefsButton className="hover:text-white" />}
+            </nav>
+          </div>
         </div>
       </footer>
+      <StoreTracking pixelId={store.metaPixelId} ga4Id={store.ga4Id} privacyHref={`${base}/privacidade`} />
     </div>
   );
 }

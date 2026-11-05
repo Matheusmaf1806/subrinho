@@ -1,5 +1,6 @@
 "use server";
 
+import { audited, recordAudit } from "@/server/audit";
 import { revalidatePath } from "next/cache";
 import type { ActionState } from "@/components/ui-client";
 import { db } from "@/server/db";
@@ -27,6 +28,7 @@ export async function closeFortnightAction(_prev: ActionState, fd: FormData): Pr
 
     const r = await db.transaction((tx) => closeFortnight(tx, period, { type: "SUBRINHO", id: user.id }));
     revalidatePath("/subrinho", "layout");
+    await recordAudit(db, { actor: { type: "SUBRINHO", id: user.id, name: user.name }, action: "fortnight.close", entity: "fortnight", entityId: period.start, summary: `Fechou a quinzena ${periodLabel(period.start, period.end)} (${r.payouts.length} repasse(s))` });
     return {
       ok: true,
       message: `Quinzena ${periodLabel(period.start, period.end)} fechada: ${r.summary.totals.orders} pedido(s), ${r.payouts.length} repasse(s) com pagamento previsto para ${date(r.summary.payoutDate)}.`,

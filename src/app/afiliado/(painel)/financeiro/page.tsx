@@ -7,6 +7,14 @@ import { db } from "@/server/db";
 import { requireAffiliateUser } from "@/server/auth/session";
 import { affiliatePayoutsOverview, recentFortnights } from "@/server/afiliado/payouts";
 import { fileHref, fortnightLabel, reportHref } from "../../_lib/helpers";
+import { and, desc, eq, gt, inArray } from "drizzle-orm";
+import { payouts } from "@/server/db/schema";
+import { invoicesForPayouts } from "@/server/invoices";
+import { Modal } from "@/components/ui-client";
+import { InvoiceForm } from "@/components/invoice-form";
+import { InvoiceList } from "@/components/invoice-list";
+import { todayLocal } from "@/lib/tz";
+import { sendPayoutInvoiceAction } from "./actions";
 
 export const metadata: Metadata = { title: "Financeiro" };
 
@@ -26,6 +34,13 @@ export default async function AfiliadoFinanceiroPage() {
   const next = ov.upcoming[0];
   const fortnights = recentFortnights(6);
   const hasBank = !!(affiliate.pixKey || affiliate.bankAccount);
+  const payoutRows = await db
+    .select()
+    .from(payouts)
+    .where(and(eq(payouts.affiliateId, affiliate.id), inArray(payouts.status, ["SCHEDULED", "PAID"]), gt(payouts.amount, "0")))
+    .orderBy(desc(payouts.periodStart))
+    .limit(12);
+  const payoutInvoices = await invoicesForPayouts(db, payoutRows.map((p) => p.id));
 
   return (
     <>
@@ -200,6 +215,51 @@ export default async function AfiliadoFinanceiroPage() {
           </Card>
         </div>
       </div>
+
+      <Card className="mt-6">
+        <CardHeader title="Notas fiscais da comissão" subtitle="Envie a nota de cada repasse (PDF e, se tiver, o XML). A equipe Subrinho confere por aqui." />
+        {payoutRows.length === 0 ? (
+          <EmptyState icon={<FileText className="h-10 w-10" aria-hidden />} title="Nenhum repasse ainda" description="Os repasses aparecem aqui depois do fechamento de cada quinzena." />
+        ) : (
+          <Table>
+            <THead>
+              <tr>
+                <Th>Período</Th>
+                <Th>Repasse</Th>
+                <Th className="text-right">Comissão</Th>
+                <Th>Nota fiscal</Th>
+              </tr>
+            </THead>
+            <tbody>
+              {payoutRows.map((p) => {
+                const list = payoutInvoices.filter((i) => i.payoutId === p.id);
+                const issued = list.some((i) => i.status === "ISSUED");
+                return (
+                  <Tr key={p.id}>
+                    <Td className="whitespace-nowrap font-semibold">{fortnightLabel(p.periodStart, p.periodEnd)}</Td>
+                    <Td>
+                      <Badge tone={p.status === "PAID" ? "success" : "info"}>{PAYOUT_STATUS_LABEL[p.status] ?? p.status}</Badge>
+                      <span className="block text-xs text-muted">{date(p.scheduledDate)}</span>
+                    </Td>
+                    <Td className="text-right tabular whitespace-nowrap">{brl(p.amount)}</Td>
+                    <Td className="min-w-[16rem]">
+                      <InvoiceList list={list} fileHref={fileHref} />
+                      {!issued && <span className="text-xs text-muted">Aguardando a nota da agência</span>}
+                      {user.role === "ADMIN" && (
+                        <div className="mt-2">
+                          <Modal trigger={<span className={buttonClass(issued ? "ghost" : "outline", "sm")}>{issued ? "Enviar outra nota" : "Enviar nota fiscal"}</span>} title={`Nota da comissão: ${fortnightLabel(p.periodStart, p.periodEnd)}`} size="lg">
+                            <InvoiceForm action={sendPayoutInvoiceAction} hidden={{ payoutId: p.id }} amount={p.amount} today={todayLocal()} submitLabel="Enviar nota" />
+                          </Modal>
+                        </div>
+                      )}
+                    </Td>
+                  </Tr>
+                );
+              })}
+            </tbody>
+          </Table>
+        )}
+      </Card>
     </>
   );
 }

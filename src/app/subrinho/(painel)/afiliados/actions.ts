@@ -1,5 +1,7 @@
 "use server";
 
+import { audited, recordAudit } from "@/server/audit";
+import { parseStoreLegal, StoreLegalError, updateStoreLegal } from "@/server/admin/store-legal";
 import { revalidatePath } from "next/cache";
 import { revalidateStore, storePublicUrl } from "@/server/store-links";
 import { redirect } from "next/navigation";
@@ -41,7 +43,7 @@ function affiliateInput(fd: FormData, withActive: boolean): AffiliateInput {
 export async function createAffiliateAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   let id: string;
   try {
-    await requireSubrinhoUser(PERMS.affiliates);
+    const user = await requireSubrinhoUser(PERMS.affiliates);
     const input = affiliateInput(fd, false);
     const admin = UserSchema.safeParse({
       name: text(fd, "adminName"),
@@ -51,6 +53,7 @@ export async function createAffiliateAction(_prev: ActionState, fd: FormData): P
     if (!admin.success) throw new FormError(admin.error.issues[0]?.message ?? "Dados do usuário ADMIN inválidos");
     const a = await db.transaction((tx) => createAffiliate(tx, input, admin.data));
     id = a.id;
+    await recordAudit(db, { actor: { type: "SUBRINHO", id: user.id, name: user.name }, affiliateId: a.id, action: "affiliate.create", entity: "affiliate", entityId: a.id, summary: `Criou a loja ${a.name}` });
     revalidatePath("/subrinho/afiliados");
   } catch (e) {
     return actionError(e);
@@ -60,14 +63,14 @@ export async function createAffiliateAction(_prev: ActionState, fd: FormData): P
 
 export async function updateAffiliateAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   try {
-    await requireSubrinhoUser(PERMS.affiliates);
+    const user = await requireSubrinhoUser(PERMS.affiliates);
     const id = uuid(fd, "id", "Afiliado");
     const input = affiliateInput(fd, true);
     const a = await db.transaction((tx) => updateAffiliate(tx, id, input));
     if (!a) throw new FormError("Afiliado não encontrado");
     revalidatePath("/subrinho/afiliados");
     revalidatePath(`/subrinho/afiliados/${id}`);
-    return { ok: true, message: `Dados de ${a.name} salvos. Loja: ${storePublicUrl(a)}` };
+    return audited(db, { type: "SUBRINHO", id: user.id, name: user.name }, "affiliate.update", { ok: true, message: `Dados de ${a.name} salvos. Loja: ${storePublicUrl(a)}` }, { affiliateId: a.id, entity: "affiliate", entityId: a.id });
   } catch (e) {
     return actionError(e);
   }
@@ -75,7 +78,7 @@ export async function updateAffiliateAction(_prev: ActionState, fd: FormData): P
 
 export async function addAffiliateUserAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   try {
-    await requireSubrinhoUser(PERMS.affiliates);
+    const user = await requireSubrinhoUser(PERMS.affiliates);
     const affiliateId = uuid(fd, "affiliateId", "Afiliado");
     const role = text(fd, "role") === "ADMIN" ? "ADMIN" : "AGENT";
     const parsed = UserSchema.safeParse({
@@ -86,7 +89,7 @@ export async function addAffiliateUserAction(_prev: ActionState, fd: FormData): 
     if (!parsed.success) throw new FormError(parsed.error.issues[0]?.message ?? "Dados inválidos");
     const u = await db.transaction((tx) => createAffiliateUser(tx, affiliateId, { ...parsed.data, role }));
     revalidatePath(`/subrinho/afiliados/${affiliateId}`);
-    return { ok: true, message: `Usuário ${u.name} criado (${role === "ADMIN" ? "ADMIN" : "Agente"}).` };
+    return audited(db, { type: "SUBRINHO", id: user.id, name: user.name }, "affiliate.user_create", { ok: true, message: `Usuário ${u.name} criado (${role === "ADMIN" ? "ADMIN" : "Agente"}).` }, { entity: "affiliate_user", entityId: u.id });
   } catch (e) {
     return actionError(e);
   }
@@ -104,7 +107,7 @@ export async function updateAffiliateBrandingAction(_prev: ActionState, fd: Form
     revalidatePath(`/subrinho/afiliados/${id}`);
     revalidateStore(a, "", "layout");
     revalidatePath("/afiliado", "layout");
-    return { ok: true, message: `Identidade da loja ${a.name} salva.` };
+    return audited(db, { type: "SUBRINHO", id: user.id, name: user.name }, "store.branding", { ok: true, message: `Identidade da loja ${a.name} salva.` }, { affiliateId: a.id, entity: "affiliate", entityId: a.id });
   } catch (e) {
     if (e instanceof BrandingError) return { error: e.message };
     return actionError(e);
@@ -114,12 +117,12 @@ export async function updateAffiliateBrandingAction(_prev: ActionState, fd: Form
 /** Endereço da loja (subdomínio e domínio próprio), pela equipe Subrinho. */
 export async function updateAffiliateDomainsAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   try {
-    await requireSubrinhoUser(PERMS.affiliates);
+    const user = await requireSubrinhoUser(PERMS.affiliates);
     const id = uuid(fd, "affiliateId");
     const row = await updateStoreDomains(db, id, { subdomain: text(fd, "subdomain"), customDomain: optText(fd, "customDomain") ?? "" });
     revalidatePath(`/subrinho/afiliados/${id}`);
     if (row) revalidateStore(row, "", "layout");
-    return { ok: true, message: row?.customDomain && !row.customDomainVerifiedAt ? "Endereço salvo. Adicione o domínio ao projeto na Vercel e clique em Verificar domínio." : "Endereço salvo." };
+    return audited(db, { type: "SUBRINHO", id: user.id, name: user.name }, "store.domains", { ok: true, message: row?.customDomain && !row.customDomainVerifiedAt ? "Endereço salvo. Adicione o domínio ao projeto na Vercel e clique em Verificar domínio." : "Endereço salvo." }, { affiliateId: id, entity: "affiliate", entityId: id });
   } catch (e) {
     if (e instanceof StoreDomainError) return { error: e.message };
     return actionError(e);
@@ -135,6 +138,21 @@ export async function verifyAffiliateDomainAction(_prev: ActionState, fd: FormDa
     return r.ok ? { ok: true, message: r.message } : { error: r.message };
   } catch (e) {
     if (e instanceof StoreDomainError) return { error: e.message };
+    return actionError(e);
+  }
+}
+
+/** Dados legais e IDs de rastreamento da loja, pela equipe Subrinho. */
+export async function updateAffiliateLegalAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  try {
+    const user = await requireSubrinhoUser(PERMS.affiliates);
+    const id = uuid(fd, "affiliateId");
+    const row = await updateStoreLegal(db, id, parseStoreLegal(fd), { type: "SUBRINHO", id: user.id, name: user.name });
+    revalidatePath(`/subrinho/afiliados/${id}`);
+    revalidateStore(row, "", "layout");
+    return { ok: true, message: "Dados legais e rastreamento salvos." };
+  } catch (e) {
+    if (e instanceof StoreLegalError) return { error: e.message };
     return actionError(e);
   }
 }

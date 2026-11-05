@@ -1,5 +1,6 @@
 "use server";
 
+import { audited, recordAudit } from "@/server/audit";
 import { revalidatePath } from "next/cache";
 import type { ActionState } from "@/components/ui-client";
 import { db } from "@/server/db";
@@ -17,7 +18,7 @@ export async function updateDomainsAction(_prev: ActionState, fd: FormData): Pro
     revalidatePath("/afiliado", "layout");
     revalidateStore(before, "", "layout");
     if (row) revalidateStore(row, "", "layout");
-    return { ok: true, message: row?.customDomain && !row.customDomainVerifiedAt ? "Endereço salvo. Configure o DNS do domínio e clique em Verificar domínio." : "Endereço salvo." };
+    return audited(db, { type: "AFFILIATE", id: g.session.user.id, name: g.session.user.name }, "store.domains", { ok: true, message: row?.customDomain && !row.customDomainVerifiedAt ? "Endereço salvo. Configure o DNS do domínio e clique em Verificar domínio." : "Endereço salvo." }, { affiliateId: g.session.affiliate.id });
   } catch (e) {
     if (e instanceof StoreDomainError) return { error: e.message };
     console.error("[painel-afiliado] domínio:", e);

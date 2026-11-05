@@ -1,4 +1,6 @@
+import { TrackEvent } from "../../_components/tracking";
 import { validOrderAccessKey } from "@/server/order-access";
+import { invoicesForOrder } from "@/server/invoices";
 import { and, eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 import QRCode from "qrcode";
@@ -51,6 +53,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
   }
   const paypalClientId = order.paymentProvider === "paypal" ? (paypalConfig()?.clientId ?? null) : null;
   let items = await db.select().from(orderItems).where(eq(orderItems.orderId, id));
+  const orderInvoices = (await invoicesForOrder(db, id)).filter((i) => i.kind === "ORDER" && i.status === "ISSUED");
   // eSIM em emissão: consulta o fornecedor ao abrir (o QR Code costuma ficar pronto em segundos)
   const esimPending = (list: typeof items) => list.filter((i) => i.category === "CHIP" && i.supplierStatus === "PENDING" && !!i.supplierBookingRef);
   if (order.status === "PAID" && esimPending(items).length) {
@@ -67,6 +70,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
 
   return (
     <main className="mx-auto max-w-[1100px] space-y-4 px-4 py-10 sm:px-8">
+      {order.status === "PAID" && <TrackEvent name="purchase" once={`purchase-${order.id}`} params={{ value: Number(order.amountCharged), id: String(order.number), items: items.length }} />}
       {pending && pix && !pixExpired && <AutoRefresh seconds={5} />}
       {pending && paypalInfo?.status === "PENDING" && <AutoRefresh seconds={15} />}
       {preparingEsim && <AutoRefresh seconds={8} />}
@@ -91,6 +95,36 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
         <Alert tone="success" title="Tudo certo com a sua compra">
           <CircleCheck className="mr-1 inline h-4 w-4" /> Pago em {dateTime(order.paidAt)}. Os vouchers ficam disponíveis nesta página assim que cada reserva for confirmada.
         </Alert>
+      )}
+
+      {orderInvoices.length > 0 && (
+        <Card>
+          <CardHeader title="Nota fiscal" />
+          <CardBody>
+            <ul className="flex flex-wrap gap-2">
+              {orderInvoices.map((inv) => (
+                <li key={inv.id} className="flex flex-wrap items-center gap-2 rounded-full bg-surface px-4 py-2 text-[14px]">
+                  <span className="font-semibold">NF {inv.number}</span>
+                  {inv.fileId && (
+                    <a href={`${sb}/pedido/${order.id}/nota/${inv.fileId}${keyQs}`} target="_blank" rel="noopener noreferrer" className="font-semibold underline">
+                      Baixar PDF
+                    </a>
+                  )}
+                  {inv.xmlFileId && (
+                    <a href={`${sb}/pedido/${order.id}/nota/${inv.xmlFileId}${keyQs}`} target="_blank" rel="noopener noreferrer" className="underline">
+                      XML
+                    </a>
+                  )}
+                  {inv.url && (
+                    <a href={inv.url} target="_blank" rel="noopener noreferrer" className="underline">
+                      Consultar
+                    </a>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </CardBody>
+        </Card>
       )}
 
       {pending && order.paymentMethod === "CARD" && order.paymentProvider === "paypal" && (

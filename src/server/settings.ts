@@ -56,3 +56,26 @@ export async function updateSettings(tx: Tx, patch: Partial<PlatformSettings>) {
     }
   }
 }
+
+/** Dados da empresa da plataforma (páginas legais das lojas: quem processa pagamentos e dados). */
+export type CompanyInfo = { legalName: string; document: string; address: string; privacyEmail: string };
+
+export const EMPTY_COMPANY: CompanyInfo = { legalName: "", document: "", address: "", privacyEmail: "" };
+
+export async function getCompanyInfo(tx: Tx): Promise<CompanyInfo> {
+  const [row] = await tx.select().from(settings).where(eq(settings.key, "company"));
+  const v = (row?.value ?? {}) as Partial<CompanyInfo>;
+  return {
+    legalName: String(v.legalName ?? ""),
+    document: String(v.document ?? ""),
+    address: String(v.address ?? ""),
+    privacyEmail: String(v.privacyEmail ?? ""),
+  };
+}
+
+export async function updateCompanyInfo(tx: Tx, info: CompanyInfo) {
+  await tx
+    .insert(settings)
+    .values({ key: "company", value: info as never })
+    .onConflictDoUpdate({ target: settings.key, set: { value: info as never, updatedAt: new Date() } });
+}

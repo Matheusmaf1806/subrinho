@@ -4,7 +4,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { db } from "@/server/db";
 import { orders } from "@/server/db/schema";
-import { Badge, Card, CardHeader, EmptyState, statusTone, Table, Td, Th, THead, Tr } from "@/components/ui";
+import { Badge, buttonClass, Card, CardBody, CardHeader, EmptyState, Field, Input, statusTone, Table, Td, Th, THead, Tr } from "@/components/ui";
+import { ActionForm, Modal, SubmitButton } from "@/components/ui-client";
+import { deleteAccountAction } from "../actions";
 import { brl, dateTime, ORDER_STATUS_LABEL, orderNumber } from "@/lib/format";
 import { getStore, storeBase, viewerFor } from "../_lib/store";
 
@@ -60,6 +62,35 @@ export default async function AccountPage({ params }: { params: Promise<{ slug: 
             </tbody>
           </Table>
         )}
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader title="Seus dados" subtitle="Privacidade (LGPD): baixe uma cópia dos seus dados ou exclua a sua conta" />
+        <CardBody className="flex flex-wrap items-center gap-3">
+          <a href={`${sb}/minha-conta/dados`} className={buttonClass("outline", "md")} download>
+            Baixar meus dados
+          </a>
+          <Modal trigger={<span className={buttonClass("ghost", "md")}>Excluir minha conta</span>} title="Excluir minha conta">
+            <p className="text-[14px] text-muted">
+              Os seus dados pessoais da conta são apagados e você sai da loja. Os pedidos já feitos ficam guardados pelo prazo exigido por lei (veja a{" "}
+              <a href={`${sb}/privacidade`} className="underline">
+                Política de privacidade
+              </a>
+              ). Não dá para desfazer.
+            </p>
+            <ActionForm action={deleteAccountAction.bind(null, slug)} className="mt-4 space-y-3">
+              <Field label="Sua senha">
+                <Input type="password" name="password" required autoComplete="current-password" />
+              </Field>
+              <Field label="Digite EXCLUIR para confirmar">
+                <Input name="confirm" required autoComplete="off" />
+              </Field>
+              <SubmitButton variant="danger" pendingText="Excluindo…">
+                Excluir conta
+              </SubmitButton>
+            </ActionForm>
+          </Modal>
+        </CardBody>
       </Card>
     </main>
   );

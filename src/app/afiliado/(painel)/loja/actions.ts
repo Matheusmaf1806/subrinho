@@ -1,11 +1,13 @@
 "use server";
 
+import { audited } from "@/server/audit";
 import { revalidatePath } from "next/cache";
 import { revalidateStore } from "@/server/store-links";
 import { z } from "zod";
 import type { ActionState } from "@/components/ui-client";
 import { db } from "@/server/db";
 import { updateAffiliate } from "@/server/admin/affiliates";
+import { parseStoreLegal, StoreLegalError, updateStoreLegal } from "@/server/admin/store-legal";
 import { requireAdminForAction, serviceErrorMessage, str } from "../../_lib/helpers";
 
 const optional = (max: number) => z.string().trim().max(max, `Use no máximo ${max} caracteres.`);
@@ -53,5 +55,20 @@ export async function updateStoreAction(_prev: ActionState, fd: FormData): Promi
   }
   revalidatePath("/afiliado", "layout");
   revalidateStore(affiliate, "", "layout");
-  return { ok: true, message: "Dados da loja salvos." };
+  return audited(db, { type: "AFFILIATE", id: g.session.user.id, name: g.session.user.name }, "store.update", { ok: true, message: "Dados da loja salvos." }, { affiliateId: g.session.affiliate.id });
+}
+
+export async function updateStoreLegalAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  const g = await requireAdminForAction();
+  if ("error" in g) return g;
+  const { affiliate, user } = g.session;
+  try {
+    const after = await updateStoreLegal(db, affiliate.id, parseStoreLegal(fd), { type: "AFFILIATE", id: user.id, name: user.name });
+    revalidatePath("/afiliado/loja");
+    revalidateStore(after, "", "layout");
+    return { ok: true, message: "Dados salvos. O rodapé e as páginas legais da loja já foram atualizados." };
+  } catch (e) {
+    if (e instanceof StoreLegalError) return { error: e.message };
+    return { error: serviceErrorMessage(e, "Não foi possível salvar.") };
+  }
 }

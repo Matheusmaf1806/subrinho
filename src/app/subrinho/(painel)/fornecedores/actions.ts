@@ -1,5 +1,6 @@
 "use server";
 
+import { audited } from "@/server/audit";
 import { revalidatePath } from "next/cache";
 import type { ActionState } from "@/components/ui-client";
 import { db } from "@/server/db";
@@ -12,14 +13,14 @@ import { PERMS } from "../../_lib/labels";
 
 export async function toggleSupplierAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   try {
-    await requireSubrinhoUser(PERMS.suppliers);
+    const user = await requireSubrinhoUser(PERMS.suppliers);
     const code = text(fd, "code");
     if (!/^[A-Z0-9_]{2,40}$/.test(code)) throw new FormError("Fornecedor inválido");
     const active = text(fd, "active") === "1";
     await db.transaction((tx) => setSupplierActive(tx, code, active));
     revalidatePath("/subrinho/fornecedores");
     const name = SUPPLIERS.find((s) => s.code === code)?.name ?? code;
-    return { ok: true, message: `${name} ${active ? "ativado" : "desativado"}` };
+    return audited(db, { type: "SUBRINHO", id: user.id, name: user.name }, "supplier.toggle", { ok: true, message: `${name} ${active ? "ativado" : "desativado"}` }, { entity: "supplier" });
   } catch (e) {
     return actionError(e);
   }
@@ -38,11 +39,11 @@ export async function testIntegrationAction(_prev: ActionState, fd: FormData): P
 
 export async function syncDestinationsAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   try {
-    await requireSubrinhoUser(PERMS.suppliers);
+    const user = await requireSubrinhoUser(PERMS.suppliers);
     const code = text(fd, "code");
     const n = await syncHotelDestinations(code);
     revalidatePath("/subrinho/fornecedores");
-    return { ok: true, message: `${n.toLocaleString("pt-BR")} destinos atualizados` };
+    return audited(db, { type: "SUBRINHO", id: user.id, name: user.name }, "supplier.sync", { ok: true, message: `${n.toLocaleString("pt-BR")} destinos atualizados` }, { entity: "supplier" });
   } catch (e) {
     return actionError(e);
   }

@@ -1,3 +1,4 @@
+import { TrackEvent } from "../../_components/tracking";
 import { DateInput } from "@/components/date-picker";
 import { notFound, redirect } from "next/navigation";
 import { Marked } from "../../_components/journal";
@@ -71,6 +72,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ slug:
   return (
     <main className="mx-auto max-w-[1440px] px-4 py-10 sm:px-8">
       <TrackView action={trackCartViewAction.bind(null, slug, token, "checkout")} />
+      <TrackEvent name="begin_checkout" params={{ value: Number(view.priced.totals.pix), items: view.items.length }} />
       <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
         <h1 data-enter className="display text-[clamp(3rem,7vw,6rem)] text-ink">
           <Marked text="Finalizar compra" mark="compra" />

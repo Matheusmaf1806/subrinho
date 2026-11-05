@@ -1,3 +1,4 @@
+import { TrackEvent } from "../../_components/tracking";
 import { notFound } from "next/navigation";
 import { db } from "@/server/db";
 import { parseProductRef, productRef } from "@/server/suppliers/refs";
@@ -69,6 +70,7 @@ export default async function TicketDetail({
 
   return (
     <main className="mx-auto max-w-[1440px] px-4 py-8 sm:px-8">
+      <TrackEvent name="view_item" params={{ name: p.title, category: "Ingressos e Experiências", value: p.price ? Number(p.price.pix) : undefined }} />
       <div className="grid gap-10 lg:grid-cols-[1fr_440px] xl:gap-16">
       <ProductHero p={p} back={{ href: `${sb}/ingressos?${toQuery({ destino: d.destino, data: d.data, adultos: d.adultos, criancas: d.criancas })}`, label: "Voltar para ingressos" }} />
       <BookingPanel title="Escolha seus ingressos">

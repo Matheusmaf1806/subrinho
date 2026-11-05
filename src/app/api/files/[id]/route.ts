@@ -2,8 +2,9 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/server/db";
 import { files, payoutProofs, payouts } from "@/server/db/schema";
 import { currentAffiliateUser, currentSubrinhoUser } from "@/server/auth/session";
+import { invoiceFileOwner } from "@/server/invoices";
 
-/** Download de arquivos (comprovantes de repasse). Subrinho vê todos; afiliado só os seus. */
+/** Download de arquivos (comprovantes de repasse e notas fiscais). Subrinho vê todos; afiliado só os seus. */
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) return new Response("Não encontrado", { status: 404 });
@@ -17,7 +18,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       .from(payoutProofs)
       .innerJoin(payouts, eq(payouts.id, payoutProofs.payoutId))
       .where(and(eq(payoutProofs.fileId, id), eq(payouts.affiliateId, aff.affiliate.id)));
-    if (!own) return new Response("Não encontrado", { status: 404 });
+    // notas fiscais da própria loja (do pedido ou da comissão)
+    const inv = own ? null : await invoiceFileOwner(db, id);
+    if (!own && inv?.affiliateId !== aff.affiliate.id) return new Response("Não encontrado", { status: 404 });
   }
 
   const [f] = await db.select().from(files).where(eq(files.id, id));

@@ -7,7 +7,7 @@ import { and, desc, eq, ilike, or, type SQL } from "drizzle-orm";
 import type { DB, Tx } from "@/server/db";
 import { auditLog } from "@/server/db/schema";
 
-export type AuditActor = { type: "SUBRINHO" | "AFFILIATE" | "CUSTOMER" | "SYSTEM"; id?: string | null; name?: string | null };
+export type AuditActor = { type: "SUBRINHO" | "AFFILIATE" | "CUSTOMER" | "SYSTEM"; id?: string | null; name?: string | null; /** Agência do ator (para travar o acesso às coisas da própria loja). */ affiliateId?: string | null };
 
 export type AuditInput = {
   actor: AuditActor;
@@ -72,4 +72,19 @@ export async function listAudit(db: DB, f: { affiliateId?: string | null; q?: st
     .orderBy(desc(auditLog.createdAt), desc(auditLog.id))
     .limit(f.limit ?? 100)
     .offset(f.offset ?? 0);
+}
+
+/**
+ * Registra a ação bem-sucedida de um painel usando a própria mensagem de sucesso como resumo e
+ * devolve o mesmo estado (para usar direto no `return` da Server Action).
+ */
+export async function audited<S extends { ok?: boolean; message?: string } | null>(
+  db: Tx,
+  actor: AuditActor,
+  action: string,
+  state: S,
+  ctx: { affiliateId?: string | null; entity?: string | null; entityId?: string | null; data?: Record<string, unknown> } = {},
+): Promise<S> {
+  if (state?.ok) await recordAudit(db, { actor, action, summary: state.message ?? action, ...ctx });
+  return state;
 }

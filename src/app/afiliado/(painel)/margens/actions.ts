@@ -1,5 +1,6 @@
 "use server";
 
+import { audited } from "@/server/audit";
 import { revalidatePath } from "next/cache";
 import { revalidateStore } from "@/server/store-links";
 import type { StoreAddress } from "@/lib/store-domains";
@@ -35,7 +36,7 @@ export async function saveDefaultMarginAction(_prev: ActionState, fd: FormData):
     return { error: serviceErrorMessage(e) };
   }
   revalidate(affiliate);
-  return { ok: true, message: "Margem padrão salva." };
+  return audited(db, { type: "AFFILIATE", id: g.session.user.id, name: g.session.user.name }, "margin.default", { ok: true, message: "Margem padrão salva." }, { affiliateId: g.session.affiliate.id });
 }
 
 export async function saveCategoryMarginAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
@@ -56,7 +57,7 @@ export async function saveCategoryMarginAction(_prev: ActionState, fd: FormData)
     return { error: serviceErrorMessage(e) };
   }
   revalidate(affiliate);
-  return { ok: true, message: `Margem de ${CATEGORY_LABEL[category]} salva.` };
+  return audited(db, { type: "AFFILIATE", id: g.session.user.id, name: g.session.user.name }, "margin.category", { ok: true, message: `Margem de ${CATEGORY_LABEL[category]} salva.` }, { affiliateId: g.session.affiliate.id });
 }
 
 /** Margem de um ingresso (todos os tipos) ou de um tipo de ingresso específico. */
@@ -88,7 +89,7 @@ export async function saveTicketMarginAction(_prev: ActionState, fd: FormData): 
     return { error: serviceErrorMessage(e) };
   }
   revalidate(affiliate);
-  return { ok: true, message: "Margem salva." };
+  return audited(db, { type: "AFFILIATE", id: g.session.user.id, name: g.session.user.name }, "margin.product", { ok: true, message: "Margem salva." }, { affiliateId: g.session.affiliate.id });
 }
 
 /** Altera o percentual de uma regra existente (mesmo alvo). */
@@ -121,7 +122,7 @@ export async function updateMarginRuleAction(_prev: ActionState, fd: FormData): 
     return { error: serviceErrorMessage(e) };
   }
   revalidate(affiliate);
-  return { ok: true, message: "Margem atualizada." };
+  return audited(db, { type: "AFFILIATE", id: g.session.user.id, name: g.session.user.name }, "margin.update", { ok: true, message: "Margem atualizada." }, { affiliateId: g.session.affiliate.id });
 }
 
 export async function deleteMarginRuleAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
@@ -134,5 +135,5 @@ export async function deleteMarginRuleAction(_prev: ActionState, fd: FormData): 
     return { error: serviceErrorMessage(e, "Não foi possível remover a regra.") };
   }
   revalidate(affiliate);
-  return { ok: true, message: "Regra removida." };
+  return audited(db, { type: "AFFILIATE", id: g.session.user.id, name: g.session.user.name }, "margin.delete", { ok: true, message: "Regra removida." }, { affiliateId: g.session.affiliate.id });
 }

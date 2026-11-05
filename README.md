@@ -69,6 +69,9 @@ e a página do pedido tem o botão “Simular pagamento”; no cartão, qualquer
    | `MASTER_VACATION_HOME_API_KEY` | Master Vacation Home (casas em Orlando): o `uid` de parceiro das cotações. Opcionais: `MASTER_VACATION_HOME_API_URL`, `MASTER_VACATION_HOME_ICAL_URL`, `MASTER_VACATION_HOME_FREE_CANCEL_DAYS` |
    | `ESIMX_API_KEY` | eSIMX (chip eSIM): chave da página "API Key" do console. Sem ela, a categoria Chip fica "em breve". Cada eSIM é pago com o saldo pré-pago da conta |
    | `SUPPLIER_BOOKING` | `manual` (padrão — a equipe emite as reservas no Painel Subrinho) ou `auto` (só com gateway real) |
+   | `RESEND_API_KEY`, `EMAIL_FROM` | E-mails automáticos (Resend): chave da API e remetente de um domínio verificado no Resend, ex.: `reservas@subrinho.com.br`. Sem eles, nenhum e-mail sai (ficam como “Não enviado” em Painel Subrinho › E-mails) |
+   | `ALERT_EMAILS` | opcional — e-mails extras (separados por vírgula) para os alertas da equipe |
+   | `AUTH_SECRET` | opcional — chave que cifra os segredos da verificação em duas etapas (sem ela, deriva do `CRON_SECRET`; trocar a chave obriga a ligar a verificação de novo) |
 
    Não defina `SUPPLIERS_MODE=mock` em produção (isso força o catálogo simulado mesmo com credenciais).
 
@@ -324,6 +327,23 @@ Endereço oficial (painéis, link de carrinho): domínio próprio verificado > s
 `STORE_ROOT_DOMAIN` definido, quem abre `/loja/<slug>` no navegador é levado ao subdomínio. Os painéis
 (`/afiliado`, `/subrinho`) ficam no endereço da plataforma (`APP_URL`).
 
+## E-mails, segurança, LGPD, rastreamento, histórico, monitoramento e notas fiscais
+
+| O quê | Como funciona |
+|---|---|
+| **E-mails automáticos** | Fila no banco (`email_outbox`, `src/server/email/`) gravada na mesma transação do evento e enviada logo depois pelo Resend; o cron diário reenvia o que ficou para trás. Cliente: pedido com Pix, pagamento confirmado, voucher/eSIM pronto, cancelamento, nota fiscal, lembrete de carrinho, nova senha (remetente = nome da loja, resposta vai para a agência, nunca cita fornecedor). Agência: nova venda. Equipe: emitir, falha na emissão, pagamento após cancelamento, alertas. O link do e-mail abre o pedido sem login (`?k=` assinado, `src/server/order-access.ts`). Painel Subrinho › E-mails mostra tudo, com prévia e reenvio |
+| **Esqueci minha senha** | Nas três áreas (`/subrinho/esqueci-senha`, `/afiliado/esqueci-senha`, `<loja>/esqueci-senha`): link por e-mail, vale 1 hora, uso único, encerra as sessões; resposta igual exista ou não a conta; no máximo 3 pedidos por hora |
+| **Limite de login** | 5 erros com o mesmo e-mail em 15 min bloqueiam aquele e-mail por 15 min; 30 erros do mesmo IP bloqueiam o IP (`src/server/auth/limits.ts`, no banco: vale para todas as instâncias) |
+| **Duas etapas (equipe)** | Painel Subrinho › Segurança: app autenticador (TOTP). Com ela ligada, o login pede o código. Celular perdido: um Proprietário desliga em Configurações |
+| **Páginas legais** | `<loja>/termos`, `/privacidade`, `/cancelamento` montadas com os dados da agência (razão social, CNPJ, Cadastur, endereço, observações) e da empresa da plataforma (Painel Subrinho › Configurações › Dados da empresa). São uma base em linguagem simples: revise com o jurídico antes de abrir para clientes |
+| **LGPD** | Minha conta › Baixar meus dados (JSON) e Excluir minha conta (apaga os dados pessoais; os pedidos ficam pelo prazo legal) |
+| **Pixel da Meta e GA4** | IDs por loja (Minha loja › Dados legais e rastreamento). Só carregam depois do “Aceitar todos” no aviso de cookies; eventos: visita, produto visto, item no carrinho, início do checkout e compra |
+| **SEO** | `robots.txt` e `sitemap.xml` por endereço (cada domínio/subdomínio de loja tem os seus) |
+| **Carrinho abandonado** | Rotina diária (`/api/cron/daily`): um lembrete por carrinho, para cliente conhecido, depois de 20 h parado (até 7 dias). Em Painel do Afiliado › Carrinhos, botão “Lembrar no WhatsApp” com mensagem pronta |
+| **Histórico** | `audit_log`: quem mudou margem, cupom, preço no checkout, emissão, marca, endereço, usuários, repasses, configurações e notas. Painel Subrinho › Histórico (tudo) e Painel do Afiliado › Histórico (da loja) |
+| **Monitoramento** | Erros do servidor (`src/instrumentation.ts`), falhas de fornecedor e e-mails que não saíram vão para `error_events`; 3 falhas de um fornecedor em 15 min ou um erro novo de página alertam a equipe por e-mail (no máximo 1 a cada 6 h por assunto). Painel Subrinho › Monitoramento |
+| **Notas fiscais** | Registro da nota (número, data, valor, PDF/XML ou link): do pedido, pela equipe no pedido (o cliente baixa na página do pedido e recebe e-mail); da comissão, pela agência em Financeiro. Painel Subrinho › Notas fiscais lista o que falta. A emissão em si continua no emissor da prefeitura ou no sistema fiscal da empresa |
+
 ## Fornecedores invisíveis na loja
 
 A loja (e o Painel do Afiliado) nunca mostra quem é o fornecedor: URLs com referência neutra (`/hospedagem/h1-862326`),
@@ -340,5 +360,9 @@ fornecedores de API real (categorias sem fornecedor aparecem como “Em breve”
   ou `awesomeapi`.
 - **Pix automático:** o Pix pelo PayPal é liberação limitada (depende da conta). Até lá, o Pix usa a chave `PIX_KEY`
   com confirmação no Painel Subrinho; um gateway de Pix entra como mais um `PaymentProvider`.
-- **Agendador:** chame `/api/cron/fortnight-close` nos dias 1 e 16 e `/api/cron/fx-refresh` periodicamente
-  (já configurado em `vercel.json`; em outro host, use qualquer cron com `Authorization: Bearer $CRON_SECRET`).
+- **Agendador:** chame `/api/cron/fortnight-close` nos dias 1 e 16, `/api/cron/fx-refresh` periodicamente e
+  `/api/cron/daily` uma vez por dia (já configurado em `vercel.json`; em outro host, use qualquer cron com
+  `Authorization: Bearer $CRON_SECRET`).
+- **Nota fiscal automática:** hoje a nota é registrada no painel. Para emitir sozinha, plugue um emissor de NFS-e
+  (ex.: NFE.io, Focus NFe) em `src/server/invoices.ts`, com os dados fiscais da empresa (inscrição municipal,
+  código de serviço, alíquota).

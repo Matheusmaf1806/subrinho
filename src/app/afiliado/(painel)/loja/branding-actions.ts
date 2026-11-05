@@ -1,5 +1,6 @@
 "use server";
 
+import { audited } from "@/server/audit";
 import { revalidatePath } from "next/cache";
 import { revalidateStore } from "@/server/store-links";
 import type { ActionState } from "@/components/ui-client";
@@ -23,5 +24,5 @@ export async function updateBrandingAction(_prev: ActionState, fd: FormData): Pr
   }
   revalidatePath("/afiliado", "layout");
   revalidateStore(affiliate, "", "layout");
-  return { ok: true, message: "Identidade da loja salva. Abra a loja para conferir." };
+  return audited(db, { type: "AFFILIATE", id: g.session.user.id, name: g.session.user.name }, "store.branding", { ok: true, message: "Identidade da loja salva. Abra a loja para conferir." }, { affiliateId: g.session.affiliate.id });
 }

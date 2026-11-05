@@ -1,5 +1,6 @@
 "use server";
 
+import { audited } from "@/server/audit";
 import { revalidatePath } from "next/cache";
 import type { ActionState } from "@/components/ui-client";
 import { db } from "@/server/db";
@@ -20,7 +21,7 @@ export async function recordManualFxAction(_prev: ActionState, fd: FormData): Pr
     await recordFxRate(db, { currency, rate, source: "manual", createdBy: user.id });
     revalidatePath("/subrinho/cambio");
     revalidatePath("/subrinho");
-    return { ok: true, message: `Cotação ${currency} → BRL registrada: R$ ${fxRate(rate)}. Novos preços já usam este valor.` };
+    return audited(db, { type: "SUBRINHO", id: user.id, name: user.name }, "fx.manual", { ok: true, message: `Cotação ${currency} → BRL registrada: R$ ${fxRate(rate)}. Novos preços já usam este valor.` }, { entity: "fx", entityId: currency });
   } catch (e) {
     return actionError(e);
   }
@@ -28,7 +29,7 @@ export async function recordManualFxAction(_prev: ActionState, fd: FormData): Pr
 
 export async function refreshFxAction(_prev: ActionState, _fd: FormData): Promise<ActionState> {
   try {
-    await requireSubrinhoUser(PERMS.fx);
+    const user = await requireSubrinhoUser(PERMS.fx);
     let r: { updated: number; provider: string };
     try {
       r = await db.transaction((tx) => refreshFxFromProvider(tx));
@@ -44,7 +45,7 @@ export async function refreshFxAction(_prev: ActionState, _fd: FormData): Promis
       };
     revalidatePath("/subrinho/cambio");
     revalidatePath("/subrinho");
-    return { ok: true, message: `Câmbio atualizado via ${r.provider}: ${r.updated} cotação(ões) registrada(s).` };
+    return audited(db, { type: "SUBRINHO", id: user.id, name: user.name }, "fx.refresh", { ok: true, message: `Câmbio atualizado via ${r.provider}: ${r.updated} cotação(ões) registrada(s).` }, { entity: "fx" });
   } catch (e) {
     return actionError(e);
   }

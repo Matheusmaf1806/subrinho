@@ -1,3 +1,4 @@
+import { TrackEvent } from "../../_components/tracking";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BadgeCheck, BedDouble, Coffee, Info, MapPin, Users } from "lucide-react";
@@ -97,6 +98,7 @@ export default async function HotelDetail({
 
   return (
     <main className="mx-auto max-w-[1440px] px-4 pb-28 pt-8 sm:px-8 lg:pb-16">
+      <TrackEvent name="view_item" params={{ name: p.title, category: "Hospedagem", value: p.price ? Number(p.price.pix) : undefined }} />
       {/* ───────── Cabeçalho ───────── */}
       <Link href={`${base}?${lodgingQuery(d)}`} className="group inline-flex h-9 items-center gap-2 rounded-full bg-white px-4 text-[13px] font-semibold text-ink shadow-[0_1px_2px_rgba(0,0,0,0.06)] ring-1 ring-black/[0.06] transition hover:ring-ink/20">
         <span className="transition group-hover:-translate-x-0.5">←</span> Voltar para hotéis

@@ -1,5 +1,6 @@
 "use server";
 
+import { audited, recordAudit } from "@/server/audit";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -43,6 +44,7 @@ export async function createSubrinhoCouponAction(_prev: ActionState, fd: FormDat
     const input = await couponInput(fd);
     const c = await db.transaction((tx) => createCoupon(tx, "SUBRINHO", input, { type: "SUBRINHO", id: user.id }));
     id = c.id;
+    await recordAudit(db, { actor: { type: "SUBRINHO", id: user.id, name: user.name }, action: "coupon.create", entity: "coupon", entityId: c.id, summary: `Criou o cupom ${c.code}` });
     revalidatePath("/subrinho/cupons");
   } catch (e) {
     return actionError(e);
@@ -52,13 +54,13 @@ export async function createSubrinhoCouponAction(_prev: ActionState, fd: FormDat
 
 export async function updateSubrinhoCouponAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   try {
-    await requireSubrinhoUser(PERMS.coupons);
+    const user = await requireSubrinhoUser(PERMS.coupons);
     const id = uuid(fd, "id", "Cupom");
     const input = await couponInput(fd);
     const c = await db.transaction((tx) => updateCoupon(tx, id, { issuer: "SUBRINHO" }, input));
     revalidatePath("/subrinho/cupons");
     revalidatePath(`/subrinho/cupons/${id}`);
-    return { ok: true, message: `Cupom ${c.code} salvo.` };
+    return audited(db, { type: "SUBRINHO", id: user.id, name: user.name }, "coupon.update", { ok: true, message: `Cupom ${c.code} salvo.` }, { entity: "coupon", entityId: c.id });
   } catch (e) {
     return actionError(e);
   }
@@ -66,13 +68,13 @@ export async function updateSubrinhoCouponAction(_prev: ActionState, fd: FormDat
 
 export async function toggleSubrinhoCouponAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   try {
-    await requireSubrinhoUser(PERMS.coupons);
+    const user = await requireSubrinhoUser(PERMS.coupons);
     const id = uuid(fd, "id", "Cupom");
     const active = text(fd, "active") === "1";
     await db.transaction((tx) => setCouponActive(tx, id, { issuer: "SUBRINHO" }, active));
     revalidatePath("/subrinho/cupons");
     revalidatePath(`/subrinho/cupons/${id}`);
-    return { ok: true, message: active ? "Cupom ativado" : "Cupom desativado" };
+    return audited(db, { type: "SUBRINHO", id: user.id, name: user.name }, "coupon.toggle", { ok: true, message: active ? "Cupom ativado" : "Cupom desativado" }, { entity: "coupon" });
   } catch (e) {
     return actionError(e);
   }

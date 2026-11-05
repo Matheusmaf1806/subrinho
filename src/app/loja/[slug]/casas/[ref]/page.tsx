@@ -1,3 +1,4 @@
+import { TrackEvent } from "../../_components/tracking";
 import { DateRange } from "@/components/date-picker";
 import { notFound } from "next/navigation";
 import { BadgeCheck, CalendarX2, Info } from "lucide-react";
@@ -61,6 +62,7 @@ export default async function HouseDetail({
 
   return (
     <main className="mx-auto max-w-[1440px] px-4 py-8 sm:px-8">
+      <TrackEvent name="view_item" params={{ name: p.title, category: "Casas", value: p.price ? Number(p.price.pix) : undefined }} />
       <div className="grid gap-10 lg:grid-cols-[1fr_440px] xl:gap-16">
       <ProductHero
         p={p}

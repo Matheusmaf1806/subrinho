@@ -1,5 +1,6 @@
 "use server";
 
+import { audited, recordAudit } from "@/server/audit";
 import { revalidatePath } from "next/cache";
 import type { ActionState } from "@/components/ui-client";
 import { db } from "@/server/db";
@@ -54,6 +55,7 @@ export async function markPayoutPaidAction(_prev: ActionState, fd: FormData): Pr
       return paid;
     });
     revalidatePayouts();
+    await recordAudit(db, { actor: { type: "SUBRINHO", id: user.id, name: user.name }, affiliateId: p.affiliateId, action: "payout.paid", entity: "payout", entityId: payoutId, summary: `Marcou como pago o repasse de ${brl(p.amount)}` });
     return {
       ok: true,
       message: `Repasse de ${brl(p.amount)} marcado como pago${proofs.length ? ` com ${proofs.length} comprovante(s)` : ""}.`,
@@ -75,7 +77,7 @@ export async function uploadPayoutProofAction(_prev: ActionState, fd: FormData):
       for (const f of proofs) await attachPayoutProof(tx, payoutId, f, user.id, note);
     });
     revalidatePayouts();
-    return { ok: true, message: `${proofs.length} comprovante(s) anexado(s).` };
+    return audited(db, { type: "SUBRINHO", id: user.id, name: user.name }, "payout.proof", { ok: true, message: `${proofs.length} comprovante(s) anexado(s).` }, { entity: "payout" });
   } catch (e) {
     return actionError(e);
   }
