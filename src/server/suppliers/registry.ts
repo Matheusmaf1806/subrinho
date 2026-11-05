@@ -7,6 +7,7 @@ import { createHotelbedsFromEnv } from "./hotelbeds/adapter";
 import { createMaproFromEnv } from "./mapro/adapter";
 import { createTueFromEnv } from "./tue/adapter";
 import { createEsimxFromEnv } from "./esimx/adapter";
+import { createMvhFromEnv } from "./mvh/adapter";
 import { SupplierError, type SupplierAdapter } from "./types";
 
 /** `ref` = apelido neutro usado nas URLs e formulários da loja (nunca mostrar o nome do fornecedor ao cliente). */
@@ -38,7 +39,7 @@ function build(): Map<string, SupplierAdapter> {
   // simulado. O catálogo simulado existe só com SUPPLIERS_MODE=mock (desenvolvimento e testes).
   // Para integrar outro fornecedor, implemente SupplierAdapter (types.ts) e registre aqui.
   if (suppliersMode() === "auto") {
-    const live = [createTueFromEnv(), createGgtFromEnv(), createHotelbedsFromEnv(), createMaproFromEnv(), createEsimxFromEnv()].filter((a): a is NonNullable<typeof a> => !!a);
+    const live = [createTueFromEnv(), createGgtFromEnv(), createHotelbedsFromEnv(), createMaproFromEnv(), createMvhFromEnv(), createEsimxFromEnv()].filter((a): a is NonNullable<typeof a> => !!a);
     return new Map(live.map((a) => [a.code, a as SupplierAdapter]));
   }
   const list: SupplierAdapter[] = [

@@ -9,6 +9,8 @@ import { HB_CODE, createHotelbedsAdapter } from "../hotelbeds/adapter";
 import { hotelbedsConfig, hotelbedsMissing, inspectCertificate, type CertificateInfo } from "../hotelbeds/client";
 import { MAPRO_CODE, MAPRO_DEMO_CUSTOMERS, createMaproFromEnv } from "../mapro/adapter";
 import { maproConfig, maproMissing } from "../mapro/client";
+import { MVH_CODE, createMvhFromEnv } from "../mvh/adapter";
+import { mvhConfig, mvhMissing } from "../mvh/client";
 import { TUE_CODE, createTueFromEnv } from "../tue/adapter";
 import { TueApiError, TueClient, tueConfig, tueMissing } from "../tue/client";
 import { ESIMX_SUPPLIER, createEsimxFromEnv } from "../esimx/adapter";
@@ -90,6 +92,20 @@ export async function hotelIntegrations(): Promise<HotelIntegration[]> {
         return c ? new URL(c.baseUrl).host : null;
       })(),
       missing: maproMissing(),
+      destinations: null,
+      destinationsUpdatedAt: null,
+    },
+    {
+      code: MVH_CODE,
+      name: "Master Vacation Home",
+      category: "HOUSES",
+      configured: !!mvhConfig(),
+      live: isLiveSupplier(MVH_CODE),
+      environment: (() => {
+        const c = mvhConfig();
+        return c ? `${new URL(c.baseUrl).host} · reserva manual` : null;
+      })(),
+      missing: mvhMissing(),
       destinations: null,
       destinationsUpdatedAt: null,
     },
@@ -183,6 +199,17 @@ export async function testHotelIntegration(code: string): Promise<{ ok: boolean;
       if (who.customer_id && MAPRO_DEMO_CUSTOMERS.includes(who.customer_id))
         return done(process.env.VERCEL_ENV !== "production", `Token da conta DEMO da MAPRO (casas fictícias)${process.env.VERCEL_ENV === "production" ? ", bloqueado em produção; use o token de produção" : ", só para testes"}`);
       return done(true, `Conectado à MAPRO · administradora: ${who.customer_name ?? "?"} · canal: ${who.integration ?? "?"}`);
+    }
+    if (code === MVH_CODE) {
+      const a = createMvhFromEnv();
+      if (!a) return done(false, `Faltam variáveis: ${mvhMissing().join(", ")}`);
+      // cadastro de casas + casas livres daqui a ~45 dias: valida o endereço da API e o uid (somente leitura)
+      const props = await a.client.get<unknown[]>("getproperties", {}, { timeoutMs: 30_000 });
+      const from = addDays(todayLocal(), 45);
+      const free = await a.client.get<unknown[]>("quote", { ArriveDate: from, DepartDate: addDays(from, 7) }, { withUid: true, timeoutMs: 45_000 });
+      const n = (v: unknown) => (Array.isArray(v) ? v.length : 0);
+      if (!n(props)) return done(false, "A API respondeu, mas sem casas no cadastro (getproperties vazio)");
+      return done(true, `Conectado à Master Vacation Home · ${n(props)} casas no cadastro · ${n(free)} livres em ${from.split("-").reverse().join("/")} (7 noites) · reserva manual (a API não reserva)`);
     }
     if (code === ESIMX_SUPPLIER) {
       const a = createEsimxFromEnv();

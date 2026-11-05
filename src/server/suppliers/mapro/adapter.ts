@@ -24,7 +24,6 @@ import {
   type BookingResult,
   type CancelResult,
   type OfferOption,
-  type PaxRule,
   type ProductDetail,
   type ProductSummary,
   type Quote,
@@ -36,8 +35,24 @@ import {
 } from "../types";
 import { cached, cacheGet } from "../hotels/cache";
 import { asCurrency, ascii, brDate, money2, splitName, stableId, validateStay } from "../hotels/common";
-import { bathroomsText, cityLabel, hasAmenity, hourText, matchesHouseDestination, propertyTypeLabel, rankAmenities, sqftToM2 } from "../houses/common";
+import {
+  bathroomsText,
+  cancellationFor,
+  cityLabel,
+  hasAmenity,
+  hourText,
+  houseGuests as guestsOf,
+  housePaxRules,
+  matchesHouseDestination,
+  normalizeHousePax,
+  propertyTypeLabel,
+  rankAmenities,
+  sqftToM2,
+} from "../houses/common";
 import { MaproApiError, MaproClient, maproConfig, type MaproConfig, type Transport } from "./client";
+
+/** Política de cancelamento: a API não informa, vale MAPRO_FREE_CANCEL_DAYS (ver houses/common). */
+export { cancellationFor };
 
 export const MAPRO_CODE = "MAPRO";
 const NAME = "Mapro";
@@ -150,12 +165,6 @@ const pick = (t: I18n): string => {
 
 const photoUrl = (p: MpPhoto | string | null | undefined): string | null => (typeof p === "string" ? p : (p?.preview ?? p?.original ?? p?.small ?? null)) || null;
 
-const guestsOf = (pax: Partial<PaxConfig>) => Math.max(1, Number(pax.adults ?? 0)) + Math.max(0, Number(pax.children ?? 0));
-
-function normalizeHousePax(pax: Partial<PaxConfig> | undefined): PaxConfig {
-  return { adults: Math.max(1, Math.floor(Number(pax?.adults ?? 2)) || 1), children: Math.max(0, Math.floor(Number(pax?.children ?? 0)) || 0) };
-}
-
 /** Nome da taxa da administradora em português. */
 export function feeLabel(name: string): string {
   const n = name.toLowerCase();
@@ -222,15 +231,6 @@ export function bedsText(rooms: MpRoom[] | undefined): string | null {
     .join(" · ");
 }
 
-/** Política de cancelamento: a API não informa — vale a regra configurada (MAPRO_FREE_CANCEL_DAYS). */
-export function cancellationFor(checkIn: string, freeCancelDays: number | null): { until: string | null; text: string } {
-  if (freeCancelDays && freeCancelDays > 0) {
-    const until = addDays(checkIn, -freeCancelDays);
-    if (until > todayLocal()) return { until, text: `Cancelamento grátis até ${brDate(until)}` };
-  }
-  return { until: null, text: "Não reembolsável" };
-}
-
 type Unavailability = { reason: string };
 
 /** Por que a casa não está disponível nas datas (calendário diário da MAPRO). */
@@ -245,11 +245,6 @@ export function unavailableReason(calendar: Record<string, { minStayDays?: numbe
   if (nights.some((d) => !calendar[d])) return { reason: "As datas ainda não foram abertas pela administradora." };
   return { reason: "A casa não está disponível para estas datas." };
 }
-
-const housePaxRules = (max: number): PaxRule[] => [
-  { type: "ADULT", label: "Adultos", min: 1, max: Math.max(1, max), hint: `A casa acomoda até ${max} hóspedes` },
-  { type: "CHILD", label: "Crianças", min: 0, max: Math.max(0, max - 1), hint: "Crianças contam na capacidade da casa" },
-];
 
 /** Somente o que a listagem precisa (o cache não guarda descrição nem galeria). */
 function slim(p: MpQuoted): MpQuoted {

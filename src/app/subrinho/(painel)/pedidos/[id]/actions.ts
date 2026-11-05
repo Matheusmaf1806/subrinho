@@ -5,7 +5,7 @@ import type { ActionState } from "@/components/ui-client";
 import { db } from "@/server/db";
 import { requireSubrinhoUser } from "@/server/auth/session";
 import { cancelPendingOrder, confirmPaymentManually } from "@/server/subrinho/orders";
-import { autoIssueOrder, cancelItemBooking, issueItemBooking, refreshItemBooking } from "@/server/bookings/service";
+import { autoIssueOrder, cancelItemBooking, issueItemBooking, refreshItemBooking, registerManualBooking } from "@/server/bookings/service";
 import { after } from "next/server";
 import { date, orderNumber } from "@/lib/format";
 import { actionError, optText, uuid } from "../../../_lib/form";
@@ -52,6 +52,23 @@ export async function issueBookingAction(_prev: ActionState, fd: FormData): Prom
     const r = await issueItemBooking(itemId, { type: "SUBRINHO", id: user.id, name: user.name });
     revalidateOrder(orderId);
     return r.status === "CONFIRMED" || r.status === "PENDING" ? { ok: true, message: r.message } : { error: r.message };
+  } catch (e) {
+    return actionError(e);
+  }
+}
+
+export async function registerManualBookingAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  try {
+    const user = await requireSubrinhoUser(PERMS.orders);
+    const itemId = uuid(fd, "itemId", "Item");
+    const orderId = uuid(fd, "orderId", "Pedido");
+    const r = await registerManualBooking(itemId, { id: user.id, name: user.name }, {
+      bookingRef: optText(fd, "bookingRef") ?? "",
+      bookedCost: optText(fd, "bookedCost"),
+      note: optText(fd, "note"),
+    });
+    revalidateOrder(orderId);
+    return { ok: true, message: r.message };
   } catch (e) {
     return actionError(e);
   }

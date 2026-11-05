@@ -2,7 +2,36 @@
  * Utilidades das casas de temporada (comuns aos fornecedores de casas): nomes das comodidades em
  * português, tipo de imóvel, região de Orlando e busca por destino.
  */
-import { normalizeText, titleCase } from "../hotels/common";
+import type { PaxConfig } from "@/server/db/schema";
+import { addDays, todayLocal } from "@/lib/tz";
+import type { PaxRule } from "../types";
+import { brDate, normalizeText, titleCase } from "../hotels/common";
+
+// ───────────── Hóspedes e política (comuns a todas as casas) ─────────────
+
+/** Adultos + crianças (as duas idades contam na capacidade da casa). */
+export const houseGuests = (pax: Partial<PaxConfig>) => Math.max(1, Number(pax.adults ?? 0)) + Math.max(0, Number(pax.children ?? 0));
+
+export function normalizeHousePax(pax: Partial<PaxConfig> | undefined): PaxConfig {
+  return { adults: Math.max(1, Math.floor(Number(pax?.adults ?? 2)) || 1), children: Math.max(0, Math.floor(Number(pax?.children ?? 0)) || 0) };
+}
+
+export const housePaxRules = (max: number): PaxRule[] => [
+  { type: "ADULT", label: "Adultos", min: 1, max: Math.max(1, max), hint: `A casa acomoda até ${max} hóspedes` },
+  { type: "CHILD", label: "Crianças", min: 0, max: Math.max(0, max - 1), hint: "Crianças contam na capacidade da casa" },
+];
+
+/**
+ * Política de cancelamento quando a API do fornecedor não informa: vale a regra configurada
+ * (cancelamento grátis até N dias antes do check-in); sem ela, "Não reembolsável".
+ */
+export function cancellationFor(checkIn: string, freeCancelDays: number | null): { until: string | null; text: string } {
+  if (freeCancelDays && freeCancelDays > 0) {
+    const until = addDays(checkIn, -freeCancelDays);
+    if (until > todayLocal()) return { until, text: `Cancelamento grátis até ${brDate(until)}` };
+  }
+  return { until: null, text: "Não reembolsável" };
+}
 
 /** Comodidades (códigos MAPRO/OTA, sem o prefixo "amenity_") → português. */
 export const AMENITY_PT: Record<string, string> = {

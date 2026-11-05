@@ -12,7 +12,7 @@ Três tipos de usuário: **usuário da loja** (cliente), **usuário da Subrinho*
 (papéis ADMIN e AGENT; o ADMIN pode entrar na loja em “modo ADMIN” e alterar margens no checkout).
 
 Produtos: **Ingressos e Experiências** (Tu Experienza, Nadio), **Hospedagem** (GGT | Best Buy Hotels e Hotelbeds com
-**API real**; RateHawk), **Casas** (Master Vacation Home, Mapro), **Seguro Viagem** (Intermac, Hero) e **Chip** (esimx).
+**API real**; RateHawk), **Casas** (Master Vacation Home e Mapro com **API real**), **Seguro Viagem** (Intermac, Hero) e **Chip** (esimx).
 Em breve: Aluguel de Carro, Guiamento Remoto, Cruzeiros, Transfer e Roteirização (categorias já previstas no banco).
 
 As regras de preço, margens, cupons, carrinho, visibilidade e repasse estão em
@@ -66,6 +66,7 @@ e a página do pedido tem o botão “Simular pagamento”; no cartão, qualquer
    | `HOTELBEDS_ENVIRONMENT` | `production` ou `test` — o mesmo ambiente das credenciais |
    | `TUEXPERIENCIA_DISTRIBUTOR_ID`, `TUEXPERIENCIA_USERNAME`, `TUEXPERIENCIA_PASSWORD` | Tu Experienza (ingressos, API real) |
    | `MAPRO_API_TOKEN` | MAPRO (casas de temporada, API real) |
+   | `MASTER_VACATION_HOME_API_KEY` | Master Vacation Home (casas em Orlando): o `uid` de parceiro das cotações. Opcionais: `MASTER_VACATION_HOME_API_URL`, `MASTER_VACATION_HOME_ICAL_URL`, `MASTER_VACATION_HOME_FREE_CANCEL_DAYS` |
    | `ESIMX_API_KEY` | eSIMX (chip eSIM): chave da página "API Key" do console. Sem ela, a categoria Chip fica "em breve". Cada eSIM é pago com o saldo pré-pago da conta |
    | `SUPPLIER_BOOKING` | `manual` (padrão — a equipe emite as reservas no Painel Subrinho) ou `auto` (só com gateway real) |
 
@@ -259,8 +260,30 @@ abaixo do custo) e a cotação marca `costBasis: "sales"`.
 
 A API não informa política de cancelamento: configure `MAPRO_FREE_CANCEL_DAYS` (sem ela, “Não reembolsável”). Cauções
 cobradas pela administradora aparecem como “Caução (reembolsável pela administradora)”. O token da conta DEMO é
-bloqueado em produção. **Master Vacation Home:** aguardando a documentação da API (o token sozinho não diz o endereço
-nem as rotas) — até lá fica fora da vitrine sempre que a MAPRO estiver ativa.
+bloqueado em produção.
+
+## Casas de temporada com API real — Master Vacation Home
+
+`src/server/suppliers/mvh/` (rotas `api/v2` da Master, as mesmas da integração do airnext; `uid` de parceiro em
+`MASTER_VACATION_HOME_API_KEY`). Fluxo:
+
+| Etapa | Chamada |
+|---|---|
+| Busca | `GET /quote?ArriveDate&DepartDate` só para saber **quais** casas estão livres + `GET /getproperties` (conteúdo) → filtra destino, capacidade (`Sleeps`) e estadia mínima → `GET /quote/{id}?ArriveDate&DepartDate&Guests` de cada casa |
+| Casa | conteúdo + `GET /getdescription/{id}` + `GET /getimages/{id}` + a mesma cotação da busca; indisponível → calendário iCal (`mastervh.com/{id}/airbnb/ical.ics`) explica o motivo |
+| Cotação (carrinho e checkout) | `GET /quote/{id}` nova (capacidade e estadia mínima conferidas) |
+| Reserva | **manual**: a API não reserva. A equipe reserva com a Master e usa “Registrar reserva” no pedido (localizador + custo confirmado) |
+
+**Preço igual na busca, na casa e no carrinho:** a listagem da Master (`/quote` sem casa) devolve valores tabelados por
+tier (casas diferentes com o mesmo número), por isso ela nunca vira preço. Cada casa é cotada individualmente e a
+cotação fica numa tabela por período + hóspedes (15 min) lida pela busca e pela página da casa. A cotação do carrinho
+atualiza essa tabela. Casa que a Master não cotou a tempo fica fora da busca (entra na próxima), nunca com preço
+tabelado. **Cobrança:** o custo é o total da Master (aluguel − desconto + limpeza + serviço + impostos), em USD, e passa
+inteiro pela conta normal (câmbio → margens → parcelado).
+
+> Em 05/11/2026 as rotas `api/v2` respondiam 404 (o site da Master foi refeito). Se continuar assim, peça à Master o
+> novo endereço/documentação e configure `MASTER_VACATION_HOME_API_URL`. “Testar conexão” em Painel Subrinho ›
+> Fornecedores mostra a situação.
 
 ## Chip eSIM com API real — eSIMX (Wholesale API)
 
@@ -288,7 +311,7 @@ fornecedores de API real (categorias sem fornecedor aparecem como “Em breve”
 
 ## Integrações — o que falta plugar
 
-- **Fornecedores:** GGT, Hotelbeds, Tu Experienza, MAPRO e eSIMX já usam as APIs reais (veja acima). Os demais usam catálogo simulado com a mesma
+- **Fornecedores:** GGT, Hotelbeds, Tu Experienza, MAPRO, Master Vacation Home e eSIMX já usam as APIs reais (veja acima). Os demais usam catálogo simulado com a mesma
   interface (`SupplierAdapter` em `src/server/suppliers/types.ts`: `search`, `getProduct`, `quote`, `book`). Para
   cada um, implemente o adaptador com a API dele e registre em `src/server/suppliers/registry.ts`.
 - **Câmbio “Dólar Poolvo”:** `poolvoProvider` em `src/server/fx/index.ts` precisa do formato da API
