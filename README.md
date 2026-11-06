@@ -62,7 +62,7 @@ e a página do pedido tem o botão “Simular pagamento”; no cartão, qualquer
    | `PIX_KEY`, `PIX_MERCHANT_NAME`, `PIX_MERCHANT_CITY` | Pix com confirmação manual no painel (sem `PIX_KEY`, só cartão/PayPal) |
    | `GGT_API_BASE_URL`, `GGT_AGENCY_ID`, `GGT_USER`, `GGT_PASSWORD`, `GGT_ENVIRONMENT` | GGT \| Best Buy Hotels (API real) |
    | `HB_HOTEIS_API_KEY`, `HB_HOTEIS_SECRET` | Hotelbeds: API key e secret (também aceita `API_KEY_HH` / `SECRET_KEY_HH`) |
-   | `HB_HOTEIS_CLIENT_CRT`, `HB_HOTEIS_CLIENT_KEY`, `HB_HOTEIS_CA_CHAIN` | Hotelbeds: certificado mTLS, chave privada e cadeia da CA (PEM) |
+   | `HB_HOTEIS_CLIENT_CRT`, `HB_HOTEIS_CLIENT_KEY`, `HB_HOTEIS_CA_CHAIN` | Hotelbeds: certificado mTLS, chave privada e cadeia da CA (PEM). A conta da Subrinho é só mTLS (sem certificado, a Hotelbeds recusa as buscas). O certificado vence uma vez por ano: a rotina diária avisa a equipe 30 dias antes |
    | `HOTELBEDS_ENVIRONMENT` | `production` ou `test` — o mesmo ambiente das credenciais |
    | `TUEXPERIENCIA_DISTRIBUTOR_ID`, `TUEXPERIENCIA_USERNAME`, `TUEXPERIENCIA_PASSWORD` | Tu Experienza (ingressos, API real) |
    | `MAPRO_API_TOKEN` | MAPRO (casas de temporada, API real) |

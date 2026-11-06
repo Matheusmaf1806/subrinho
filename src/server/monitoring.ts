@@ -150,3 +150,31 @@ export async function conversionStats(db: DB, hours = 24 * 7) {
   const rows = await db.select({ status: conversionEvents.status, n: count() }).from(conversionEvents).where(gte(conversionEvents.createdAt, since)).groupBy(conversionEvents.status);
   return Object.fromEntries(rows.map((r) => [r.status, Number(r.n)])) as Record<string, number>;
 }
+
+/**
+ * Certificado do mTLS da Hotelbeds: vence uma vez por ano e, vencido, a Hotelbeds para de responder
+ * às buscas. A rotina diária avisa a equipe a partir de 30 dias antes (no máximo um aviso por semana).
+ */
+export async function alertExpiringCertificates(db: DB) {
+  const { hotelbedsConfig, inspectCertificate } = await import("@/server/suppliers/hotelbeds/client");
+  const cfg = hotelbedsConfig();
+  if (!cfg?.mtls) return { hotelbeds: "sem certificado" };
+  const info = inspectCertificate(cfg);
+  if (info.daysLeft === undefined) return { hotelbeds: info.error ?? "ilegível" };
+  if (info.daysLeft > 30) return { hotelbeds: `vence em ${info.daysLeft} dias` };
+  if (await claimAlert(db, "cert:hotelbeds", 24 * 7)) {
+    const { sendToTeam } = await import("@/server/email/notify");
+    const expired = info.daysLeft < 0;
+    await sendToTeam(db, "alerts", "alert.certificate", null, {
+      title: expired ? "Certificado da Hotelbeds vencido: hotéis da Hotelbeds fora da loja" : `Certificado da Hotelbeds vence em ${info.daysLeft} dias`,
+      paragraphs: [
+        expired
+          ? `O certificado do mTLS venceu em ${info.validTo?.slice(0, 10)}. Sem ele, a Hotelbeds recusa as buscas e a loja mostra só os outros fornecedores de hotel.`
+          : `O certificado do mTLS vence em ${info.validTo?.slice(0, 10)}. Depois disso, a Hotelbeds recusa as buscas.`,
+        "Peça o certificado novo à Hotelbeds e troque HB_HOTEIS_CLIENT_CRT, HB_HOTEIS_CLIENT_KEY e HB_HOTEIS_CA_CHAIN na Vercel (ambiente Production), depois faça Redeploy.",
+      ],
+      cta: { label: "Abrir Fornecedores", url: `${appUrl()}/subrinho/fornecedores` },
+    });
+  }
+  return { hotelbeds: info.daysLeft < 0 ? "vencido" : `vence em ${info.daysLeft} dias` };
+}

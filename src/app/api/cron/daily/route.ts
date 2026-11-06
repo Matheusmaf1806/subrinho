@@ -2,7 +2,7 @@ import { db } from "@/server/db";
 import { flushEmails } from "@/server/email/outbox";
 import { flushConversions } from "@/server/conversions/meta";
 import { sendAbandonedCartReminders } from "@/server/cart/reminders";
-import { cleanupOldRecords, recordError } from "@/server/monitoring";
+import { alertExpiringCertificates, cleanupOldRecords, recordError } from "@/server/monitoring";
 import { cronAuthorized } from "../auth";
 
 /**
@@ -17,6 +17,7 @@ async function handle(req: Request) {
     ["carrinhos", () => sendAbandonedCartReminders(db)],
     ["emails", () => flushEmails(db, { limit: 200 })],
     ["conversoes", () => flushConversions(db, { limit: 200 })],
+    ["certificados", () => alertExpiringCertificates(db)],
     ["limpeza", () => cleanupOldRecords(db).then(() => "ok")],
   ] as const) {
     try {

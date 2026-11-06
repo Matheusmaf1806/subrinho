@@ -38,6 +38,7 @@ const KIND: Record<string, string> = {
   "alert.supplier": "Alerta de fornecedor",
   "alert.request": "Alerta de erro",
   "alert.cron": "Alerta de rotina",
+  "alert.certificate": "Certificado vencendo",
 };
 
 type SP = Promise<Record<string, string | undefined>>;
