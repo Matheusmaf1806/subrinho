@@ -62,6 +62,9 @@ export default async function SubrinhoSuppliersPage() {
               <div className="flex flex-wrap gap-2">
                 <Badge tone={h.live ? "success" : "neutral"}>{h.live ? "API real" : h.configured ? "Simulado" : "Fora da loja"}</Badge>
                 {h.missing.length > 0 && <Badge tone="warning">Faltam: {h.missing.join(", ")}</Badge>}
+                {h.found && !h.configured && (
+                  <Badge tone="neutral">Variáveis encontradas: {h.found.length ? h.found.join(", ") : "nenhuma"}</Badge>
+                )}
                 {h.certificate &&
                   (h.certificate.ok ? (
                     <Badge tone={(h.certificate.daysLeft ?? 0) < 30 ? "warning" : "success"}>Certificado válido · vence em {h.certificate.daysLeft} dias</Badge>

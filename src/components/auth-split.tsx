@@ -26,7 +26,7 @@ export function AuthSplit({
 }) {
   return (
     <div className="glass-ui relative grid min-h-screen gap-3 p-3 lg:grid-cols-[1fr_1.05fr]">
-      <MeshBackground image={image ?? dailyBackdrop()} />
+      <MeshBackground image={dailyBackdrop()} />
       <section className="glass glass-edge flex flex-col justify-between rounded-[2.5rem] px-6 py-6 sm:px-10 lg:px-16 lg:py-10">
         <SubrinhoLogo size="md" />
         <div className="my-14 w-full max-w-md" data-enter>

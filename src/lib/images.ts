@@ -102,7 +102,8 @@ export function galleryFor(category: string, destination?: string | null): [stri
 }
 
 /** Fotos de viagem do fundo dos painéis (uma por dia, sempre a mesma no mesmo dia). */
-const BACKDROPS: PhotoKey[] = ["vernazza", "tropicalResort", "venice", "paris", "infinityPool", "lisbon", "palmPool", "floridaPalms", "florence", "villaPool"];
+// escolhidas pelo resultado desfocado: cores leves (mar, piscina, céu), nada de tom forte
+const BACKDROPS: PhotoKey[] = ["tropicalResort", "venice", "paris", "infinityPool", "palmPool", "villaPool", "eiffel", "florence", "whiteHouse", "housePool", "floridaPalms", "lisbon"];
 
 export function dailyBackdrop(date = new Date()): string {
   const day = Math.floor(date.getTime() / 86_400_000);

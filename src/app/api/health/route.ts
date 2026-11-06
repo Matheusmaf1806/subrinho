@@ -100,6 +100,7 @@ export async function GET(request: Request) {
           modo: h.live ? "API real" : h.configured ? "credenciais ok, mas SUPPLIERS_MODE=mock" : "fora da loja (sem credenciais)",
           ambiente: h.environment,
           variaveis_faltando: h.missing.length ? h.missing : undefined,
+          variaveis_encontradas: h.found?.length ? h.found : undefined,
           destinos: h.destinations ?? undefined,
           certificado: h.certificate ? (h.certificate.ok ? `válido, vence em ${h.certificate.daysLeft} dias` : h.certificate.error ?? (h.certificate.keyMatches === false ? "a chave não corresponde ao certificado" : "vencido")) : undefined,
           teste: test ? `${test.ok ? "ok" : "falhou"}: ${test.message}` : undefined,

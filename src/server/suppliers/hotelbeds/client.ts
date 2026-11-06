@@ -3,9 +3,10 @@
  *
  * Autenticação:
  *  - toda chamada leva Api-key + X-Signature = SHA-256(apiKey + secret + timestamp em segundos);
- *  - Booking API (disponibilidade, checkrate, reservas) exige mTLS em api-mtls.hotelbeds.com:
- *    certificado do cliente (HB_HOTEIS_CLIENT_CRT), chave privada (HB_HOTEIS_CLIENT_KEY) e cadeia
- *    da autoridade certificadora (HB_HOTEIS_CA_CHAIN);
+ *  - Booking API (disponibilidade, checkrate, reservas): com certificado do cliente
+ *    (HB_HOTEIS_CLIENT_CRT), chave privada (HB_HOTEIS_CLIENT_KEY) e cadeia da autoridade
+ *    certificadora (HB_HOTEIS_CA_CHAIN), usa mTLS em api-mtls.hotelbeds.com; sem certificado, usa o
+ *    endereço comum api.hotelbeds.com (só Api-key + assinatura), que vale para quem não tem mTLS;
  *  - Content API (fotos, descrições, destinos) usa api.hotelbeds.com, sem certificado.
  */
 import { createHash, createPrivateKey, X509Certificate } from "node:crypto";
@@ -26,44 +27,68 @@ export type HotelbedsConfig = {
   language: string;
   /** Mercado de origem do cliente (preços válidos para este país). */
   sourceMarket: string;
+  /** Booking API com certificado do cliente (mTLS). Ausente = sim (compatível com testes antigos). */
+  mtls?: boolean;
   /** Somente testes: confiar também neste CA ao validar o servidor. */
   extraServerCa?: string;
 };
 
 const first = (env: NodeJS.ProcessEnv, ...names: string[]) => names.map((n) => env[n]?.trim()).find((v) => !!v);
 
+/** Variáveis da Hotelbeds no ambiente (prefixo HB_ ou HOTELBEDS), só os nomes, para o diagnóstico. */
+export function hotelbedsEnvNames(env: NodeJS.ProcessEnv = process.env): string[] {
+  return Object.keys(env)
+    .filter((n) => /^(HB_|HOTELBEDS|API_KEY_HH$|SECRET_KEY_HH$)/i.test(n) && !!env[n]?.trim())
+    .sort();
+}
+
+/** Procura pelo nome exato e, se não achar, por variações (ex.: HOTELBEDS_API_SECRET, HB_HOTEIS_APIKEY). */
+function findVar(env: NodeJS.ProcessEnv, exact: string[], loose: (name: string) => boolean): string | undefined {
+  return first(env, ...exact) ?? first(env, ...hotelbedsEnvNames(env).filter(loose));
+}
+
+const API_KEY_NAMES = ["HB_HOTEIS_API_KEY", "HOTELBEDS_API_KEY", "API_KEY_HH"];
+const SECRET_NAMES = ["HB_HOTEIS_SECRET", "HOTELBEDS_SECRET", "SECRET_KEY_HH", "HB_HOTEIS_API_SECRET", "HOTELBEDS_API_SECRET"];
+const looseApiKey = (n: string) => /API_?KEY|APIKEY/i.test(n) && !/CLIENT|PRIVATE|CERT|CRT|SECRET/i.test(n);
+const looseSecret = (n: string) => /SECRET/i.test(n) && !/CLIENT|PRIVATE|CERT|CRT/i.test(n);
+
 export function hotelbedsConfig(env: NodeJS.ProcessEnv = process.env): HotelbedsConfig | null {
-  const apiKey = first(env, "HB_HOTEIS_API_KEY", "HOTELBEDS_API_KEY", "API_KEY_HH");
-  const secret = first(env, "HB_HOTEIS_SECRET", "HOTELBEDS_SECRET", "SECRET_KEY_HH");
-  const cert = first(env, "HB_HOTEIS_CLIENT_CRT");
-  const key = first(env, "HB_HOTEIS_CLIENT_KEY");
-  const caChain = first(env, "HB_HOTEIS_CA_CHAIN") ?? "";
-  if (!apiKey || !secret || !cert || !key) return null;
+  const apiKey = findVar(env, API_KEY_NAMES, looseApiKey);
+  const secret = findVar(env, SECRET_NAMES, looseSecret);
+  const cert = first(env, "HB_HOTEIS_CLIENT_CRT", "HOTELBEDS_CLIENT_CRT", "HB_HOTEIS_CLIENT_CERT", "HOTELBEDS_CLIENT_CERT");
+  const key = first(env, "HB_HOTEIS_CLIENT_KEY", "HOTELBEDS_CLIENT_KEY");
+  const caChain = first(env, "HB_HOTEIS_CA_CHAIN", "HOTELBEDS_CA_CHAIN") ?? "";
+  if (!apiKey || !secret) return null;
+  // certificado e chave juntos ligam o mTLS; sem eles, o endereço comum (só Api-key + assinatura)
+  const mtls = !!(cert && key);
   // As credenciais da Subrinho são de produção: só usa o ambiente de testes se pedido explicitamente.
   const environment = /^test/i.test(first(env, "HB_HOTEIS_ENVIRONMENT", "HOTELBEDS_ENVIRONMENT") ?? "") ? "test" : "production";
   const host = environment === "production" ? "hotelbeds.com" : "test.hotelbeds.com";
   return {
     apiKey,
     secret,
-    cert: normalizePem(cert),
-    key: normalizePem(key),
+    cert: cert ? normalizePem(cert) : "",
+    key: key ? normalizePem(key) : "",
     caChain: caChain ? normalizePem(caChain) : "",
     environment,
-    bookingUrl: (first(env, "HOTELBEDS_BOOKING_URL") ?? `https://api-mtls.${host}/hotel-api/1.0`).replace(/\/+$/, ""),
+    mtls,
+    bookingUrl: (first(env, "HOTELBEDS_BOOKING_URL") ?? `https://${mtls ? "api-mtls" : "api"}.${host}/hotel-api/1.0`).replace(/\/+$/, ""),
     contentUrl: (first(env, "HOTELBEDS_CONTENT_URL") ?? `https://api.${host}/hotel-content-api/1.0`).replace(/\/+$/, ""),
     language: first(env, "HOTELBEDS_LANGUAGE") ?? "POR",
     sourceMarket: (first(env, "HOTELBEDS_SOURCE_MARKET") ?? "BR").toUpperCase(),
   };
 }
 
-/** Variáveis faltando (para o diagnóstico). */
+/** Variáveis obrigatórias faltando (para o diagnóstico). O certificado é opcional (sem ele, sem mTLS). */
 export function hotelbedsMissing(env: NodeJS.ProcessEnv = process.env): string[] {
   const miss: string[] = [];
-  if (!first(env, "HB_HOTEIS_API_KEY", "HOTELBEDS_API_KEY", "API_KEY_HH")) miss.push("HB_HOTEIS_API_KEY");
-  if (!first(env, "HB_HOTEIS_SECRET", "HOTELBEDS_SECRET", "SECRET_KEY_HH")) miss.push("HB_HOTEIS_SECRET");
-  if (!first(env, "HB_HOTEIS_CLIENT_CRT")) miss.push("HB_HOTEIS_CLIENT_CRT");
-  if (!first(env, "HB_HOTEIS_CLIENT_KEY")) miss.push("HB_HOTEIS_CLIENT_KEY");
-  if (!first(env, "HB_HOTEIS_CA_CHAIN")) miss.push("HB_HOTEIS_CA_CHAIN");
+  if (!findVar(env, API_KEY_NAMES, looseApiKey)) miss.push("HB_HOTEIS_API_KEY");
+  if (!findVar(env, SECRET_NAMES, looseSecret)) miss.push("HB_HOTEIS_SECRET");
+  const cert = first(env, "HB_HOTEIS_CLIENT_CRT", "HOTELBEDS_CLIENT_CRT", "HB_HOTEIS_CLIENT_CERT", "HOTELBEDS_CLIENT_CERT");
+  const key = first(env, "HB_HOTEIS_CLIENT_KEY", "HOTELBEDS_CLIENT_KEY");
+  // só um dos dois do mTLS: avisa o que falta para fechar o par
+  if (cert && !key) miss.push("HB_HOTEIS_CLIENT_KEY");
+  if (key && !cert) miss.push("HB_HOTEIS_CLIENT_CRT");
   return miss;
 }
 
@@ -166,7 +191,7 @@ export class HotelbedsClient {
   }
 
   async booking<T>(method: "GET" | "POST" | "DELETE", path: string, body?: unknown, timeoutMs = 30_000): Promise<T> {
-    return this.call<T>(`${this.cfg.bookingUrl}${path}`, method, body, timeoutMs, true, path);
+    return this.call<T>(`${this.cfg.bookingUrl}${path}`, method, body, timeoutMs, this.cfg.mtls !== false, path);
   }
 
   async content<T>(path: string, timeoutMs = 30_000): Promise<T> {
@@ -197,7 +222,11 @@ export class HotelbedsClient {
     const apiErr = (data as { error?: { code?: string; message?: string } } | null)?.error;
     if (res.status >= 400 || apiErr) {
       if (res.status === 401 || res.status === 403) {
-        throw new HotelbedsApiError(res.status, apiErr?.code ?? "", apiErr?.message ?? "acesso negado, confira Api-key/secret, o certificado e se o ambiente (test/produção) corresponde às credenciais", label);
+        const hint =
+          this.cfg.mtls === false && /hotel-api/.test(url)
+            ? "acesso negado sem certificado: se a sua conta usa mTLS, cadastre HB_HOTEIS_CLIENT_CRT, HB_HOTEIS_CLIENT_KEY e HB_HOTEIS_CA_CHAIN; senão, confira Api-key/secret e o ambiente (test/produção)"
+            : "acesso negado, confira Api-key/secret, o certificado e se o ambiente (test/produção) corresponde às credenciais";
+        throw new HotelbedsApiError(res.status, apiErr?.code ?? "", apiErr?.message ? `${apiErr.message} (${hint})` : hint, label);
       }
       throw new HotelbedsApiError(res.status, apiErr?.code ?? "", apiErr?.message ?? (res.body.slice(0, 200) || "erro sem descrição"), label);
     }

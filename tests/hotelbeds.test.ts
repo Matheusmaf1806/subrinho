@@ -12,7 +12,7 @@ import path from "node:path";
 import zlib from "node:zlib";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildOptions, createHotelbedsAdapter, occupancyGroups, payAtHotel, type HbHotel } from "@/server/suppliers/hotelbeds/adapter";
-import { HotelbedsClient, hotelbedsConfig, inspectCertificate, normalizePem, signature, type HotelbedsConfig, type Transport } from "@/server/suppliers/hotelbeds/client";
+import { HotelbedsClient, hotelbedsConfig, hotelbedsEnvNames, hotelbedsMissing, inspectCertificate, normalizePem, signature, type HotelbedsConfig, type Transport } from "@/server/suppliers/hotelbeds/client";
 import { clearMemoryCache } from "@/server/suppliers/hotels/cache";
 import { SupplierIntegrationError } from "@/server/suppliers/types";
 
@@ -107,7 +107,21 @@ describe("Hotelbeds — credenciais", () => {
     expect(hotelbedsConfig({ ...env, HOTELBEDS_ENVIRONMENT: "" } as unknown as NodeJS.ProcessEnv)!.bookingUrl).toBe("https://api-mtls.hotelbeds.com/hotel-api/1.0");
     expect(hotelbedsConfig({ ...env, HOTELBEDS_ENVIRONMENT: "test" } as unknown as NodeJS.ProcessEnv)!.bookingUrl).toBe("https://api-mtls.test.hotelbeds.com/hotel-api/1.0");
     expect(c.sourceMarket).toBe("BR");
+    expect(c.mtls).toBe(true);
     expect(hotelbedsConfig({ ...env, API_KEY_HH: "" } as unknown as NodeJS.ProcessEnv)).toBeNull();
+  });
+
+  it("sem certificado usa o endereço comum (sem mTLS); aceita variações de nome da chave e do segredo", () => {
+    const plain = hotelbedsConfig({ HOTELBEDS_API_KEY: "k", HOTELBEDS_API_SECRET: "s" } as unknown as NodeJS.ProcessEnv)!;
+    expect(plain.mtls).toBe(false);
+    expect(plain.bookingUrl).toBe("https://api.hotelbeds.com/hotel-api/1.0");
+    expect(plain.secret).toBe("s");
+    // nomes parecidos (ex.: copiados de outro projeto) também valem; a chave privada do mTLS nunca vira a Api-key
+    const loose = hotelbedsConfig({ HB_HOTEIS_APIKEY: "k2", HB_HOTEIS_SECRET_KEY: "s2", HB_HOTEIS_CLIENT_KEY: "pem" } as unknown as NodeJS.ProcessEnv)!;
+    expect([loose.apiKey, loose.secret]).toEqual(["k2", "s2"]);
+    expect(hotelbedsMissing({ HB_HOTEIS_CLIENT_KEY: "pem", HB_HOTEIS_CLIENT_CRT: "pem", HB_HOTEIS_CA_CHAIN: "pem" } as unknown as NodeJS.ProcessEnv)).toEqual(["HB_HOTEIS_API_KEY", "HB_HOTEIS_SECRET"]);
+    expect(hotelbedsMissing({ API_KEY_HH: "k", SECRET_KEY_HH: "s", HB_HOTEIS_CLIENT_CRT: "pem" } as unknown as NodeJS.ProcessEnv)).toEqual(["HB_HOTEIS_CLIENT_KEY"]);
+    expect(hotelbedsEnvNames({ HB_HOTEIS_CLIENT_CRT: "x", HB_HOTEIS_CA_CHAIN: "", OTHER: "y" } as unknown as NodeJS.ProcessEnv)).toEqual(["HB_HOTEIS_CLIENT_CRT"]);
   });
 
   it("normaliza o PEM colado com \\n literais, numa linha só ou em base64", () => {

@@ -6,7 +6,7 @@ import { addDays, todayLocal } from "@/lib/tz";
 import { GGT_CODE, createGgtAdapter } from "../ggt/adapter";
 import { GGT_OP, ggtConfig, isNotFound } from "../ggt/client";
 import { HB_CODE, createHotelbedsAdapter } from "../hotelbeds/adapter";
-import { hotelbedsConfig, hotelbedsMissing, inspectCertificate, type CertificateInfo } from "../hotelbeds/client";
+import { hotelbedsConfig, hotelbedsEnvNames, hotelbedsMissing, inspectCertificate, type CertificateInfo } from "../hotelbeds/client";
 import { MAPRO_CODE, MAPRO_DEMO_CUSTOMERS, createMaproFromEnv } from "../mapro/adapter";
 import { maproConfig, maproMissing } from "../mapro/client";
 import { MVH_CODE, createMvhFromEnv } from "../mvh/adapter";
@@ -28,6 +28,8 @@ export type HotelIntegration = {
   live: boolean;
   environment: string | null;
   missing: string[];
+  /** Nomes das variáveis do fornecedor que a implantação enxerga (nunca os valores). */
+  found?: string[];
   /** null = o fornecedor não tem lista de destinos para sincronizar (casas). */
   destinations: number | null;
   destinationsUpdatedAt: Date | null;
@@ -75,11 +77,13 @@ export async function hotelIntegrations(): Promise<HotelIntegration[]> {
       category: "LODGING",
       configured: !!hb,
       live: isLiveSupplier(HB_CODE),
-      environment: hb?.environment ?? null,
+      environment: hb ? `${hb.environment} · ${hb.mtls ? "com certificado (mTLS)" : "sem certificado"}` : null,
       missing: hotelbedsMissing(),
+      // nomes das variáveis da Hotelbeds que a implantação enxerga (nunca os valores)
+      found: hotelbedsEnvNames(),
       destinations: Number(st(HB_CODE)?.n ?? 0),
       destinationsUpdatedAt: st(HB_CODE)?.at ?? null,
-      certificate: hb ? inspectCertificate(hb) : undefined,
+      certificate: hb?.mtls ? inspectCertificate(hb) : undefined,
     },
     {
       code: MAPRO_CODE,
@@ -154,17 +158,19 @@ export async function testHotelIntegration(code: string): Promise<{ ok: boolean;
     }
     if (code === HB_CODE) {
       const cfg = hotelbedsConfig();
-      if (!cfg) return done(false, `Faltam variáveis: ${hotelbedsMissing().join(", ")}`);
-      const cert = inspectCertificate(cfg);
-      if (cert.error) return done(false, `Certificado inválido: ${cert.error}`);
-      if (!cert.keyMatches) return done(false, "A chave privada (HB_HOTEIS_CLIENT_KEY) não corresponde ao certificado (HB_HOTEIS_CLIENT_CRT)");
-      if ((cert.daysLeft ?? 0) < 0) return done(false, "Certificado vencido, gere um novo no portal developer.hotelbeds.com");
+      const found = hotelbedsEnvNames();
+      if (!cfg) return done(false, `Faltam variáveis: ${hotelbedsMissing().join(", ")}. Variáveis da Hotelbeds encontradas nesta implantação: ${found.length ? found.join(", ") : "nenhuma"}`);
+      const cert = cfg.mtls ? inspectCertificate(cfg) : null;
+      if (cert?.error) return done(false, `Certificado inválido: ${cert.error}`);
+      if (cert && !cert.keyMatches) return done(false, "A chave privada (HB_HOTEIS_CLIENT_KEY) não corresponde ao certificado (HB_HOTEIS_CLIENT_CRT)");
+      if (cert && (cert.daysLeft ?? 0) < 0) return done(false, "Certificado vencido, gere um novo no portal developer.hotelbeds.com");
       const a = createHotelbedsAdapter(cfg);
-      // lista de reservas de hoje: exercita mTLS + assinatura, somente leitura
+      // Content API primeiro (só chave + assinatura): separa problema de credencial de problema de certificado
+      await a.client.content(`/types/languages?fields=all&from=1&to=1`, 20_000);
+      // lista de reservas de hoje: exercita a Booking API (com mTLS, se houver certificado), somente leitura
       const today = todayLocal();
       await a.client.booking("GET", `/bookings?start=${today}&end=${addDays(today, 1)}&filterType=CREATION&from=1&to=1`, undefined, 30_000);
-      await a.client.content(`/types/languages?fields=all&from=1&to=1`, 20_000);
-      return done(true, `Conectado à Hotelbeds (${cfg.environment}), mTLS e assinatura aceitos · certificado vence em ${cert.daysLeft} dias`);
+      return done(true, `Conectado à Hotelbeds (${cfg.environment}), ${cfg.mtls ? `mTLS e assinatura aceitos · certificado vence em ${cert!.daysLeft} dias` : "assinatura aceita (sem certificado)"}`);
     }
     if (code === TUE_CODE) {
       const a = createTueFromEnv();

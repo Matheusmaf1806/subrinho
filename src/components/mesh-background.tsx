@@ -8,9 +8,9 @@ export function MeshBackground({ image }: { image?: string | null }) {
     <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-[#eef0f5]">
       {image && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={image} alt="" decoding="async" className="absolute inset-0 h-full w-full scale-[1.35] object-cover blur-[70px] saturate-[1.4]" />
+        <img src={image} alt="" decoding="async" className="absolute inset-0 h-full w-full scale-[1.35] object-cover opacity-90 blur-[70px] saturate-[1.35]" />
       )}
-      <div className={image ? "absolute inset-0 bg-white/40" : "hidden"} />
+      <div className={image ? "absolute inset-0 bg-white/45" : "hidden"} />
       <div className={`blob absolute -left-[12%] -top-[22%] h-[70vh] w-[60vw] rounded-full bg-brand blur-[110px] ${image ? "opacity-[0.14]" : "opacity-[0.26]"}`} />
       <div className={`blob absolute -right-[14%] top-[8%] h-[60vh] w-[48vw] rounded-full bg-[#7c83ff] blur-[120px] [animation-delay:-9s] ${image ? "opacity-[0.1]" : "opacity-[0.22]"}`} />
       <div className={`blob absolute -bottom-[25%] left-[28%] h-[65vh] w-[52vw] rounded-full bg-[#38bdf8] blur-[120px] [animation-delay:-18s] ${image ? "opacity-[0.1]" : "opacity-[0.2]"}`} />

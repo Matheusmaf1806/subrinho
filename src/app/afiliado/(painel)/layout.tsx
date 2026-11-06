@@ -42,8 +42,7 @@ export default async function PainelAfiliadoLayout({ children }: { children: Rea
   return (
     <div style={themeStyle(affiliate)} className="font-sans">
     <PanelShell
-      // a foto de capa da própria loja; sem ela, uma foto de viagem do dia
-      backdrop={affiliate.heroImageUrl || dailyBackdrop()}
+      backdrop={dailyBackdrop()}
       brand={
         <Link href="/afiliado" aria-label={`${affiliate.name}, início`} className="flex min-w-0 items-center gap-3">
           {affiliate.logoUrl ? (
