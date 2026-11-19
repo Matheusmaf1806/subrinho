@@ -107,7 +107,9 @@ export async function hotelIntegrations(): Promise<HotelIntegration[]> {
       live: isLiveSupplier(MVH_CODE),
       environment: (() => {
         const c = mvhConfig();
-        return c ? `${new URL(c.baseUrl).host} · reserva manual` : null;
+        if (!c) return null;
+        const manual = createMvhFromEnv()?.manualIssue;
+        return `${new URL(c.baseUrl).host} · ${c.sandbox ? "sandbox (reservas simuladas)" : "produção"} · ${manual ? "reserva manual" : "reserva pela API"}`;
       })(),
       missing: mvhMissing(),
       destinations: null,
@@ -209,13 +211,14 @@ export async function testHotelIntegration(code: string): Promise<{ ok: boolean;
     if (code === MVH_CODE) {
       const a = createMvhFromEnv();
       if (!a) return done(false, `Faltam variáveis: ${mvhMissing().join(", ")}`);
-      // cadastro de casas + casas livres daqui a ~45 dias: valida o endereço da API e o uid (somente leitura)
-      const props = await a.client.get<unknown[]>("getproperties", {}, { timeoutMs: 30_000 });
+      // regiões + casas ativas + casas livres daqui a ~45 dias: valida a chave e o endereço (somente leitura)
+      const units = await a.client.get<{ count?: number }>("/api/v1/public/units", {}, { timeoutMs: 30_000 });
       const from = addDays(todayLocal(), 45);
-      const free = await a.client.get<unknown[]>("quote", { ArriveDate: from, DepartDate: addDays(from, 7) }, { withUid: true, timeoutMs: 45_000 });
-      const n = (v: unknown) => (Array.isArray(v) ? v.length : 0);
-      if (!n(props)) return done(false, "A API respondeu, mas sem casas no cadastro (getproperties vazio)");
-      return done(true, `Conectado à Master Vacation Home · ${n(props)} casas no cadastro · ${n(free)} livres em ${from.split("-").reverse().join("/")} (7 noites) · reserva manual (a API não reserva)`);
+      const free = await a.client.get<{ total?: number }>("/api/v1/public/availability", { from_date: from, to_date: addDays(from, 7), limit: 1 }, { timeoutMs: 30_000 });
+      if (!units.count) return done(false, "A API respondeu, mas sem casas ativas (/units vazio)");
+      const mode = a.manualIssue ? "reserva manual (MASTER_VACATION_HOME_MANUAL_ISSUE)" : "reserva pela API";
+      const env = a.sandbox ? "chave SANDBOX: reservas simuladas, não venda com ela" : "chave de produção";
+      return done(!a.sandbox || process.env.VERCEL_ENV !== "production", `Conectado à Master Vacation Home · ${units.count} casas ativas · ${free.total ?? "?"} livres em ${from.split("-").reverse().join("/")} (7 noites) · ${mode} · ${env}`);
     }
     if (code === ESIMX_SUPPLIER) {
       const a = createEsimxFromEnv();

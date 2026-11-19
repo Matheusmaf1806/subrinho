@@ -11,7 +11,7 @@ const liveBook = vi.hoisted(() => ({ calls: [] as { item: unknown; ctx: unknown 
 // MAPRO de verdade (adaptador real) com respostas no formato da API — sem rede.
 const mapro = vi.hoisted(() => ({ calls: [] as { method: string; path: string; body?: unknown }[], total: "2074.17", created: false, canceled: false }));
 // Master Vacation Home de verdade (adaptador real, reserva manual) com respostas no formato da API — sem rede.
-const mvh = vi.hoisted(() => ({ calls: [] as string[], total: "2595.30" }));
+const mvh = vi.hoisted(() => ({ calls: [] as string[], total: "2595.30", api: false, queueDone: false }));
 vi.mock("@/server/suppliers/registry", async (orig) => {
   const real = await orig<typeof import("@/server/suppliers/registry")>();
   const { SupplierError } = await import("@/server/suppliers/types");
@@ -77,24 +77,31 @@ vi.mock("@/server/suppliers/registry", async (orig) => {
     },
   );
   const { createMvhAdapter } = await import("@/server/suppliers/mvh/adapter");
-  const mvhHouse = { PropertyID: 398103, WebsitePropertyName: "Audit Pool Home", Community: "Windsor Hills", PropertyType: "House", Bedrooms: 5, Bathrooms: 4, Sleeps: 10, MinimumNightsStay: 3, XCO: "28.33", YCO: "-81.59", HasPool: "True" };
-  const mvhAdapter = createMvhAdapter(
-    { uid: "vpo-test", baseUrl: "https://mvh.test/api/v2", icalUrl: "https://ical.test" },
-    {
-      transport: async (req) => {
-        const u = new URL(req.url);
-        mvh.calls.push(u.pathname);
-        const json = (v: unknown) => ({ status: 200, body: JSON.stringify(v) });
-        if (u.pathname === "/api/v2/getproperties") return json([mvhHouse]);
-        if (u.pathname === "/api/v2/quote/398103")
-          return json({ QuoteBaseRate: "2100.00", discount_amount: "100.00", cleaning: "250.00", service: "45.00", taxes: (Number(mvh.total) - 2295).toFixed(2), QuoteIncludingTax: mvh.total });
-        return { status: 404, body: "<html>404</html>" };
-      },
-    },
-  );
+  const mvhHouse = { unit_id: 398103, name: "Audit Pool Home", headline: "Audit Pool Home", community_name: "Windsor Hills", property_type: "house", bedrooms: 5, bathrooms: 4, sleeps: 10, private_pool: 1, city: "Kissimmee", state: "FL", latitude: 28.33, longitude: -81.59, pricing: { minimum_nights_stay: 3 } };
+  const mvhTransport = async (req: { url: string; method: string }) => {
+    const u = new URL(req.url);
+    mvh.calls.push(u.pathname);
+    const json = (v: unknown, status = 200) => ({ status, body: JSON.stringify(v) });
+    if (u.pathname === "/api/v1/public/units/398103") return json(mvhHouse);
+    if (u.pathname === "/api/v1/public/quotes")
+      return json({
+        unit_id: 398103,
+        status: "ready",
+        quote: { total_amount: Number(mvh.total), currency: "USD", breakdown: [{ item: "Rental Rate", value: 2000 }, { item: "Clean Fee", value: 250 }, { item: "Other Fees", value: 45 }, { item: "Rental Rate Tax 1", value: Number((Number(mvh.total) - 2295).toFixed(2)) }] },
+      });
+    // fila de reservas: aguardando → confirmada
+    if (u.pathname === "/api/v1/internal/reservations" && req.method === "POST") return json({ queued: true, outbox_id: 7, correlation_id: "corr-int", status: "PENDING" }, 202);
+    if (u.pathname === "/api/v1/internal/reservations/status/corr-int")
+      return json(mvh.queueDone ? { correlation_id: "corr-int", status: "SENT", reservation: { id: 900000777, reference: "HMNINT0001", type: "confirmed" } } : { correlation_id: "corr-int", status: "SENDING" });
+    return json({ detail: "Not Found" }, 404);
+  };
+  const mvhCfg = { apiKey: "mvh_test", baseUrl: "https://mvh.test", sandbox: false };
+  // reserva manual (MASTER_VACATION_HOME_MANUAL_ISSUE: chave sem write:bookings) e reserva pela API
+  const mvhAdapter = createMvhAdapter(mvhCfg, { manualIssue: true, sleep: async () => {}, transport: mvhTransport });
+  const mvhApiAdapter = createMvhAdapter(mvhCfg, { sleep: async () => {}, bookingWaitMs: 1, transport: mvhTransport });
   return {
     ...real,
-    getAdapter: (code: string) => (code === "LIVE_TEST" ? fake : code === "MAPRO" ? maproAdapter : code === "MASTER_VACATION_HOME" ? mvhAdapter : real.getAdapter(code)),
+    getAdapter: (code: string) => (code === "LIVE_TEST" ? fake : code === "MAPRO" ? maproAdapter : code === "MASTER_VACATION_HOME" ? (mvh.api ? mvhApiAdapter : mvhAdapter) : real.getAdapter(code)),
     isLiveSupplier: (code: string) => code === "LIVE_TEST" || code === "MAPRO" || code === "MASTER_VACATION_HOME" || real.isLiveSupplier(code),
   };
 });
@@ -110,7 +117,7 @@ import { createCoupon } from "@/server/admin/coupons";
 import { recordFxRate } from "@/server/fx";
 import { SUPPLIERS, getAdapter } from "@/server/suppliers/registry";
 import { SupplierError, type Quote } from "@/server/suppliers/types";
-import { autoIssueOrder, BookingIssueError, cancelItemBooking, issueItemBooking, registerManualBooking } from "@/server/bookings/service";
+import { autoIssueOrder, BookingIssueError, cancelItemBooking, issueItemBooking, refreshItemBooking, registerManualBooking } from "@/server/bookings/service";
 import { applyDiscounts, priceItem } from "@/server/pricing/engine";
 import { addQuoteToCart, applyCouponToCart, changeItemPax, createCart, loadCartView, setAffiliateMarginOverride, CartError } from "@/server/cart/service";
 import { findOrCreateCustomer, markOrderPaid, placeOrder } from "@/server/checkout/service";
@@ -347,10 +354,10 @@ describe.skipIf(!url)("fluxo completo (integração)", () => {
     expect(q.lines.reduce((t, l) => t + Number(l.unitCost) * l.quantity, 0).toFixed(2)).toBe("2595.30");
     const cart = await createCart(db, affiliateId, { type: "CUSTOMER", id: customer.id });
     await addQuoteToCart(db, cart, q);
-    const quotesBefore = mvh.calls.filter((c) => c === "/api/v2/quote/398103").length;
+    const quotesBefore = mvh.calls.filter((c) => c === "/api/v1/public/quotes").length;
     const { order } = await placeOrder(db, { cart, customer, payer: { name: "Ana Souza", email: "ana@mvh.com" }, travelers: [{ name: "Ana Souza" }], paymentMethod: "PIX", installments: 1 });
     // o checkout cotou a casa de novo na Master
-    expect(mvh.calls.filter((c) => c === "/api/v2/quote/398103").length).toBeGreaterThan(quotesBefore);
+    expect(mvh.calls.filter((c) => c === "/api/v1/public/quotes").length).toBeGreaterThan(quotesBefore);
     await markOrderPaid(db, order.id, { paidAt: new Date(), ref: "PIX-MVH-1" });
     const [oi] = await db.select().from(schema.orderItems).where(eq(schema.orderItems.orderId, order.id));
 
@@ -378,6 +385,34 @@ describe.skipIf(!url)("fluxo completo (integração)", () => {
     await expect(registerManualBooking(oi.id, { name: "Staff" }, { bookingRef: "OUTRO-1" }, db)).rejects.toThrow(/já tem reserva/);
     const events = await db.select().from(schema.orderEvents).where(eq(schema.orderEvents.orderId, order.id));
     expect(events.find((e) => e.type === "BOOKING_CONFIRMED")?.data).toMatchObject({ manual: true, bookingRef: "MVH-88123", costAboveSold: true });
+  });
+
+  it("casa da Master (reserva pela API): pago → emissão entra na fila (aguardando) → atualizar status traz o localizador definitivo", async () => {
+    mvh.api = true;
+    mvh.queueDone = false;
+    mvh.total = "2595.30";
+    try {
+      const { customer } = await findOrCreateCustomer(db, affiliateId, { name: "Bia Lima", email: "bia@mvh.com", phone: "(11) 96666-2222", password: "12345678" });
+      const checkIn = addDays(todayLocal(), 90);
+      const q = await getAdapter("MASTER_VACATION_HOME").quote({ productId: "398103", checkIn, checkOut: addDays(checkIn, 7), pax: { adults: 2, children: 0 } });
+      const cart = await createCart(db, affiliateId, { type: "CUSTOMER", id: customer.id });
+      await addQuoteToCart(db, cart, q);
+      const { order } = await placeOrder(db, { cart, customer, payer: { name: "Bia Lima", email: "bia@mvh.com" }, travelers: [{ name: "Bia Lima" }], paymentMethod: "PIX", installments: 1 });
+      await markOrderPaid(db, order.id, { paidAt: new Date(), ref: "PIX-MVH-2" });
+      const [oi] = await db.select().from(schema.orderItems).where(eq(schema.orderItems.orderId, order.id));
+      expect(oi.supplierStatus).toBe("AWAITING_ISSUE");
+
+      const r = await issueItemBooking(oi.id, { type: "SUBRINHO", name: "Staff" }, db);
+      expect(r).toMatchObject({ status: "PENDING", bookingRef: "corr-int" });
+      mvh.queueDone = true;
+      const s = await refreshItemBooking(oi.id, db);
+      expect(s).toMatchObject({ status: "CONFIRMED", bookingRef: "HMNINT0001" });
+      const [done] = await db.select().from(schema.orderItems).where(eq(schema.orderItems.id, oi.id));
+      expect(done).toMatchObject({ supplierStatus: "CONFIRMED", supplierBookingRef: "HMNINT0001" });
+      expect(done.supplierPayload).toMatchObject({ reference: `SUB${order.number}-1`, correlationId: "corr-int", reservationId: "900000777" });
+    } finally {
+      mvh.api = false;
+    }
   });
 
   /**
