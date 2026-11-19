@@ -66,7 +66,7 @@ e a página do pedido tem o botão “Simular pagamento”; no cartão, qualquer
    | `HOTELBEDS_ENVIRONMENT` | `production` ou `test` — o mesmo ambiente das credenciais |
    | `TUEXPERIENCIA_DISTRIBUTOR_ID`, `TUEXPERIENCIA_USERNAME`, `TUEXPERIENCIA_PASSWORD` | Tu Experienza (ingressos, API real) |
    | `MAPRO_API_TOKEN` | MAPRO (casas de temporada, API real) |
-   | `MASTER_VACATION_HOME_API_KEY` | Master Vacation Home (casas em Orlando): o `uid` de parceiro das cotações. Opcionais: `MASTER_VACATION_HOME_API_URL`, `MASTER_VACATION_HOME_ICAL_URL`, `MASTER_VACATION_HOME_FREE_CANCEL_DAYS` |
+   | `MASTER_VACATION_HOME_API_KEY` | Master Vacation Home (casas em Orlando): chave da API de parceiros (`X-API-Key`). Opcionais: `MASTER_VACATION_HOME_API_URL`, `MASTER_VACATION_HOME_FREE_CANCEL_DAYS`, `MASTER_VACATION_HOME_MANUAL_ISSUE` (chave sem `write:bookings`) |
    | `ESIMX_API_KEY` | eSIMX (chip eSIM): chave da página "API Key" do console. Sem ela, a categoria Chip fica "em breve". Cada eSIM é pago com o saldo pré-pago da conta |
    | `SUPPLIER_BOOKING` | `manual` (padrão — a equipe emite as reservas no Painel Subrinho) ou `auto` (só com gateway real) |
    | `RESEND_API_KEY`, `EMAIL_FROM` | E-mails automáticos (Resend): chave da API e remetente de um domínio verificado no Resend, ex.: `reservas@subrinho.com.br`. Sem eles, nenhum e-mail sai (ficam como “Não enviado” em Painel Subrinho › E-mails) |
@@ -268,26 +268,33 @@ bloqueado em produção.
 
 ## Casas de temporada com API real — Master Vacation Home
 
-`src/server/suppliers/mvh/` (rotas `api/v2` da Master, as mesmas da integração do airnext; `uid` de parceiro em
-`MASTER_VACATION_HOME_API_KEY`). Fluxo:
+`src/server/suppliers/mvh/` — API de parceiros v1 da Master (<https://api.mastervh.one/api-docs>, página com senha
+fornecida pela Master), chave em `MASTER_VACATION_HOME_API_KEY` (cabeçalho `X-API-Key`). Fluxo:
 
 | Etapa | Chamada |
 |---|---|
-| Busca | `GET /quote?ArriveDate&DepartDate` só para saber **quais** casas estão livres + `GET /getproperties` (conteúdo) → filtra destino, capacidade (`Sleeps`) e estadia mínima → `GET /quote/{id}?ArriveDate&DepartDate&Guests` de cada casa |
-| Casa | conteúdo + `GET /getdescription/{id}` + `GET /getimages/{id}` + a mesma cotação da busca; indisponível → calendário iCal (`mastervh.com/{id}/airbnb/ical.ics`) explica o motivo |
-| Cotação (carrinho e checkout) | `GET /quote/{id}` nova (capacidade e estadia mínima conferidas) |
-| Reserva | **manual**: a API não reserva. A equipe reserva com a Master e usa “Registrar reserva” no pedido (localizador + custo confirmado) |
+| Busca | `GET /api/v1/public/availability?from_date&to_date&guests&sort=price_asc` (casas livres no período inteiro, estadia mínima e capacidade já conferidas pela Master; páginas só até ter casas suficientes) + `GET /units` (título e foto, cache de 6 h) → destino filtrado aqui → `GET /quotes/bulk` (25 por chamada) |
+| Casa | `GET /api/v1/public/units/{id}` (descrição, fotos, comodidades, horários, aquecimento da piscina) + a mesma cotação da busca; indisponível → `GET /availability?unit_id` explica o motivo (data ocupada / estadia mínima) |
+| Cotação (carrinho e checkout) | `GET /api/v1/public/quotes?unit_id&arrival&departure` nova (capacidade conferida) |
+| Reserva | cotação nova (nunca acima do custo vendido) → `POST /api/v1/internal/reservations` com `Idempotency-Key` = nossa referência (`SUB{pedido}-{item}`) → acompanha `GET /reservations/status/{correlation_id}` por até 30 s: **confirmada** (localizador da Master) ou **aguardando confirmação** (“Atualizar status” no pedido termina de acompanhar e grava o localizador definitivo) |
+| Cancelamento | `POST /api/v1/internal/reservations/{id}/cancel` (também em fila; “Atualizar status” acompanha) |
 
-**Preço igual na busca, na casa e no carrinho:** a listagem da Master (`/quote` sem casa) devolve valores tabelados por
-tier (casas diferentes com o mesmo número), por isso ela nunca vira preço. Cada casa é cotada individualmente e a
-cotação fica numa tabela por período + hóspedes (15 min) lida pela busca e pela página da casa. A cotação do carrinho
-atualiza essa tabela. Casa que a Master não cotou a tempo fica fora da busca (entra na próxima), nunca com preço
-tabelado. **Cobrança:** o custo é o total da Master (aluguel − desconto + limpeza + serviço + impostos), em USD, e passa
-inteiro pela conta normal (câmbio → margens → parcelado).
+**Cotação assíncrona:** a primeira consulta de uma casa/período devolve `pending` e a Master calcula em segundo plano
+(alguns segundos por casa; dezenas de segundos para um lote com datas novas). A busca cota até 50 casas, espera até
+25 s (ou até ter 24 prontas) e mostra só as já cotadas; as pendentes entram na próxima busca. Nunca usa o
+`display_nightly_rate` (estimativa da Master para 4 noites) como preço. Busca, página e carrinho leem a mesma tabela
+de cotações (15 min), então mostram o mesmo valor.
 
-> Em 05/11/2026 as rotas `api/v2` respondiam 404 (o site da Master foi refeito). Se continuar assim, peça à Master o
-> novo endereço/documentação e configure `MASTER_VACATION_HOME_API_URL`. “Testar conexão” em Painel Subrinho ›
-> Fornecedores mostra a situação.
+**Cobrança:** o custo é o `total_amount` da Master em USD (aluguel + limpeza + proteção contra danos + taxas de serviço
+e reserva + impostos; a taxa de reserva já vem embutida no total), e passa inteiro pela conta normal (câmbio → margens
+→ parcelado). O pagamento do cliente é nosso; as rotas de cobrança da Master (cartão/PIX) não são usadas.
+
+**Limite de requisições:** 120/min por chave (sandbox: 30/min). Uma busca nova gasta ~1 página de disponibilidade +
+2 lotes de cotação por rodada. Depois de um 429 o adaptador respeita o `Retry-After` sem chamar a Master.
+
+**Sandbox:** chave `mvh_sandbox_…` (compartilhada, na página da documentação): casas e preços reais, reservas
+simuladas (id 900000000+). Em produção (`VERCEL_ENV=production`) ela não reserva. **Sem `write:bookings`** na chave,
+`MASTER_VACATION_HOME_MANUAL_ISSUE=1` volta para a reserva manual (“Registrar reserva” no pedido).
 
 ## Chip eSIM com API real — eSIMX (Wholesale API)
 

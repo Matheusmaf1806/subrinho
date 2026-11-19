@@ -201,23 +201,29 @@ A visão do afiliado é montada por **lista branca** de campos (`getOrderForAffi
 
 ### Master Vacation Home
 
-> `src/server/suppliers/mvh/` · testes: `tests/mvh.test.ts`
+> `src/server/suppliers/mvh/` · testes: `tests/mvh.test.ts` · API de parceiros v1 (api.mastervh.one)
 
-- **Preço único:** todo preço (card da busca, página da casa, carrinho, checkout) vem da cotação daquela casa
-  (`/quote/{id}` com datas e número de hóspedes). A listagem da Master só diz quais casas estão livres; o valor dela é
-  tabelado por tier e nunca é exibido nem cobrado. A busca e a página da casa leem a mesma cotação (tabela por
-  período + hóspedes, 15 min); a cotação do carrinho atualiza a tabela, então os três mostram o mesmo valor.
-- **Custo:** o total que a Master cobra (aluguel − desconto + limpeza + serviço + impostos), em USD. Entra inteiro
-  na conta de todo item (§1): margem e taxa do parcelado incidem sobre o total, não só sobre o aluguel. As linhas somam
-  exatamente o total da Master; se não somarem, vira uma linha só com o total dela.
-- **Disponibilidade:** casa sem cotação válida (erro da Master ou total zero) fica fora da busca; na página, o
-  calendário iCal mostra o motivo (data ocupada) ou a estadia mínima da casa. Capacidade = `Sleeps` (adultos + crianças).
-- **Busca demorada:** a Master leva alguns segundos por cotação. A busca cota em paralelo dentro de um orçamento de
-  tempo; o que não coube fica para a próxima busca (a tabela vai se completando). Nunca entra com preço tabelado.
-- **Cancelamento:** a API não informa. Vale `MASTER_VACATION_HOME_FREE_CANCEL_DAYS`; sem ela, “Não reembolsável”.
-- **Reserva manual:** a API não reserva (`manualIssue`). Depois do pagamento real, a equipe reserva com a Master e usa
-  “Registrar reserva” no pedido (localizador, custo confirmado opcional, observação). Custo confirmado acima do vendido
-  fica marcado. Nunca há emissão automática; cancelamento e alterações direto com a Master.
+- **Preço único:** todo preço (card da busca, página da casa, carrinho, checkout) vem da cotação real daquela casa
+  para as datas (`/quotes`, `/quotes/bulk`). A estimativa da Master (`display_nightly_rate`) nunca é exibida nem
+  cobrada. A busca e a página da casa leem a mesma cotação (tabela por período, 15 min; a cotação da Master não
+  depende do número de hóspedes); a cotação do carrinho atualiza a tabela, então os três mostram o mesmo valor.
+- **Custo:** o `total_amount` da Master, em USD (aluguel, limpeza, proteção contra danos, taxas de serviço e reserva,
+  impostos). Entra inteiro na conta de todo item (§1). As linhas agrupam o detalhamento da Master e somam exatamente
+  o total; a diferença entre total e detalhamento (margem configurada na chave) entra nas taxas de serviço; se não
+  fechar, vira uma linha só com o total.
+- **Disponibilidade:** a busca só traz casas livres no período inteiro e que respeitam a estadia mínima da data de
+  chegada. Cotação `failed` = indisponível; na página, o calendário da casa mostra o motivo (data ocupada ou estadia
+  mínima). Capacidade = `sleeps` (adultos + crianças).
+- **Cotação assíncrona:** casa ainda `pending` fica fora da busca (entra na próxima). Na página aparece “ainda
+  calculando, atualize em alguns segundos”; no carrinho, erro para tentar de novo.
+- **Extras não incluídos:** aquecimento da piscina (diária informada pela Master) e caução aparecem como aviso.
+- **Cancelamento:** a API não informa a política. Vale `MASTER_VACATION_HOME_FREE_CANCEL_DAYS`; sem ela,
+  “Não reembolsável”. Cancelar pelo painel pede o cancelamento à Master (sem simulação de multa).
+- **Reserva:** depois do pagamento real, pela API (fila da Master): nunca acima do custo vendido, com o nome e o
+  e-mail do hóspede responsável e a nossa referência como `Idempotency-Key` (repetir não duplica; nova tentativa
+  depois de falha usa outra chave). Ficou na fila → “aguardando confirmação”; “Atualizar status” grava o localizador
+  definitivo. Chave sandbox não reserva em produção. Chave sem `write:bookings` →
+  `MASTER_VACATION_HOME_MANUAL_ISSUE=1` (reserva manual: a equipe reserva com a Master e usa “Registrar reserva”).
 
 ## 9. Pagamento simulado (ambiente sem gateway)
 

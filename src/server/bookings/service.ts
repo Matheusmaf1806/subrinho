@@ -290,13 +290,15 @@ export async function refreshItemBooking(itemId: string, db: DB = getDb()): Prom
     const voucher = await adapter.voucher(item.supplierBookingRef, next).catch(() => null);
     if (voucher) next.voucher = voucher;
   }
-  await db.update(orderItems).set({ supplierStatus: r.status, supplierPayload: next }).where(eq(orderItems.id, itemId));
+  // pedido que estava na fila do fornecedor (ex.: Master): o localizador provisório vira o definitivo
+  const bookingRef = item.supplierStatus === BOOKING_STATUS.PENDING && r.status === BOOKING_STATUS.CONFIRMED && r.bookingRef ? r.bookingRef : item.supplierBookingRef;
+  await db.update(orderItems).set({ supplierStatus: r.status, supplierBookingRef: bookingRef, supplierPayload: next }).where(eq(orderItems.id, itemId));
   if (r.status !== item.supplierStatus) {
     await db.insert(orderEvents).values({ orderId: item.orderId, type: "BOOKING_STATUS_CHANGED", data: { itemId, from: item.supplierStatus, to: r.status } });
     if (r.status === BOOKING_STATUS.CONFIRMED) await notifySafely(db, "reserva confirmada", (t) => notifyItemReady(t, itemId));
     if (r.status === BOOKING_STATUS.CANCELLED) await notifySafely(db, "reserva cancelada", (t) => notifyItemCancelled(t, itemId));
   }
-  return { itemId, status: r.status, bookingRef: item.supplierBookingRef, message: `Status no fornecedor: ${BOOKING_STATUS_LABEL[r.status] ?? r.status}` };
+  return { itemId, status: r.status, bookingRef, message: `Status no fornecedor: ${BOOKING_STATUS_LABEL[r.status] ?? r.status}` };
 }
 
 /** Depois do pagamento: emite automaticamente os itens pendentes (se habilitado). Nunca lança. */
